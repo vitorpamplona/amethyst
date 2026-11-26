@@ -63,7 +63,9 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.service.connectivity.IosConnectivity
 import com.vitorpamplona.amethyst.commons.service.connectivity.networkIdentityChanges
+import com.vitorpamplona.amethyst.commons.service.http.ConnectException
 import com.vitorpamplona.amethyst.commons.service.http.DualKtorClients
+import com.vitorpamplona.amethyst.commons.service.http.EOFException
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.KtorEsploraTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorLnurlTransport
@@ -72,7 +74,10 @@ import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
 import com.vitorpamplona.amethyst.commons.service.http.KtorWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.LoopbackProbe
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedKtorClients
+import com.vitorpamplona.amethyst.commons.service.http.SSLHandshakeException
 import com.vitorpamplona.amethyst.commons.service.http.SocketException
+import com.vitorpamplona.amethyst.commons.service.http.SocketTimeoutException
+import com.vitorpamplona.amethyst.commons.service.http.UnknownHostException
 import com.vitorpamplona.amethyst.commons.service.http.darwinHttpClient
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
@@ -95,6 +100,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
@@ -125,13 +131,26 @@ import okio.Path
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSOSStatusErrorDomain
 import platform.Foundation.NSPOSIXErrorDomain
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
 import platform.Foundation.NSURLErrorBadServerResponse
+import platform.Foundation.NSURLErrorCannotConnectToHost
+import platform.Foundation.NSURLErrorCannotFindHost
+import platform.Foundation.NSURLErrorClientCertificateRequired
+import platform.Foundation.NSURLErrorDNSLookupFailed
 import platform.Foundation.NSURLErrorDomain
+import platform.Foundation.NSURLErrorNetworkConnectionLost
+import platform.Foundation.NSURLErrorSecureConnectionFailed
+import platform.Foundation.NSURLErrorTimedOut
 import platform.Foundation.NSUserDomainMask
+import platform.posix.ECONNREFUSED
+import platform.posix.ECONNRESET
+import platform.posix.ENOTCONN
+import platform.posix.EPIPE
 import platform.posix.EPROTO
+import platform.posix.ETIMEDOUT
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
@@ -265,13 +284,18 @@ class IosAppModules(
             // only says the handshake failed (-1011), so it is reported with status 0 ("refused,
             // status unknown") to get the same treatment.
             refusedStatus = { e -> if (isDarwinWebSocketHandshakeRefusal(e)) UNKNOWN_REFUSAL_STATUS else null },
-            explainFailure = { url, _ ->
-                if (!torRelayState.shouldUseTorForRelay(url)) {
-                    null
-                } else {
-                    val address = Url(url.url)
-                    torService.connectFailures.explain(address.host, address.port)?.let { SocketException(socksReplyMessage(it.socksReply)) }
-                }
+            // NSURLSession's errors are renamed to what OkHttp raises for the same event (TLS
+            // alert -> SSLHandshakeException, a hang-up -> EOFException), so the backoff and the
+            // diagnostics treat a relay the same on both.
+            explainFailure = { url, e ->
+                val torReason =
+                    if (torRelayState.shouldUseTorForRelay(url)) {
+                        val address = Url(url.url)
+                        torService.connectFailures.explain(address.host, address.port)?.let { SocketException(socksReplyMessage(it.socksReply)) }
+                    } else {
+                        null
+                    }
+                torReason ?: jvmNamedFailure(url, e)
             },
             canDial = { url ->
                 !torRelayState.shouldUseTorForRelay(url) || torManager.isTorReady() || torManager.sessionBypass.value
@@ -554,6 +578,42 @@ private fun isDarwinWebSocketHandshakeRefusal(e: Throwable): Boolean {
     return origin.domain == NSURLErrorDomain &&
         origin.code == NSURLErrorBadServerResponse &&
         origin.userInfo.containsKey("_NSURLErrorWebSocketHandshakeFailureReasonKey")
+}
+
+/**
+ * The exception OkHttp raises for the event behind an NSURLSession [e], or null to keep [e].
+ * Matched on the error code, never the localized text.
+ */
+private fun jvmNamedFailure(
+    url: NormalizedRelayUrl,
+    e: Throwable,
+): Throwable? {
+    val origin = (e as? DarwinHttpRequestException)?.origin ?: return null
+    val code = origin.code
+    val host = Url(url.url).host
+    return when (origin.domain) {
+        NSURLErrorDomain ->
+            when {
+                code == NSURLErrorCannotFindHost || code == NSURLErrorDNSLookupFailed -> UnknownHostException("Unable to resolve host \"$host\"")
+                code == NSURLErrorTimedOut -> SocketTimeoutException("timeout")
+                code == NSURLErrorCannotConnectToHost -> ConnectException("Failed to connect to $host")
+                code == NSURLErrorNetworkConnectionLost -> EOFException()
+                // -1200 secure connection failed, -1201..-1206 certificate problems.
+                code in NSURLErrorClientCertificateRequired..NSURLErrorSecureConnectionFailed -> SSLHandshakeException(origin.localizedDescription)
+                else -> null
+            }
+        NSPOSIXErrorDomain ->
+            when (code) {
+                ENOTCONN.toLong(), EPIPE.toLong() -> EOFException()
+                ECONNRESET.toLong() -> SocketException("Connection reset")
+                ECONNREFUSED.toLong() -> ConnectException("Failed to connect to $host")
+                ETIMEDOUT.toLong() -> SocketTimeoutException("timeout")
+                else -> null
+            }
+        // Secure Transport's errSSL* codes (-9800 to -9899).
+        NSOSStatusErrorDomain -> if (code in -9899L..-9800L) SSLHandshakeException(origin.localizedDescription) else null
+        else -> null
+    }
 }
 
 /** The HTTP status of a refused upgrade whose real status NSURLSession does not report. */
