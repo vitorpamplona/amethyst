@@ -373,6 +373,8 @@ class DesktopAppModules(
 
     init {
         cache.appHost = DesktopLocalCacheHost(this, isDebug)
+        // The money-tier client for the default explorer, picked once at startup.
+        val moneyClient = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL)
         cache.onchainBackend =
             CachingOnchainBackend(
                 EsploraClient(
@@ -383,7 +385,7 @@ class DesktopAppModules(
                             usingTor = roleBasedHttpClientBuilder.shouldUseTorForMoneyOperations(OkHttpBitcoinExplorer.MEMPOOL_API_URL),
                         )
                     },
-                    transport = OkHttpEsploraTransport { roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL) },
+                    transport = OkHttpEsploraTransport { moneyClient },
                 ),
             )
         cache.lnurlEndpointResolver = OkHttpLnurlEndpointResolver(roleBasedHttpClientBuilder::okHttpClientForMoney)

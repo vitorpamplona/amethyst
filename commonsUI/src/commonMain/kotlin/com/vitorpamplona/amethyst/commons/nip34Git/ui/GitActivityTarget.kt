@@ -69,7 +69,8 @@ fun GitActivityTarget(
     val item = note.replyTo?.lastOrNull() ?: return
     val event = item.event
     if (event == null) {
-        RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
+        // The quoted card loads the item, and spends a level of the row's quote budget.
+        if (quotesLeft > 0) RenderTargetNote(note, quotesLeft, backgroundColor, accountViewModel, nav)
         return
     }
 
