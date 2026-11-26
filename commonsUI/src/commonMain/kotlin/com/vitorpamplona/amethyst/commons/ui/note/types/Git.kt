@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.resources.git_repo_personal_fork
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_issues
 import com.vitorpamplona.amethyst.commons.resources.git_repo_tab_patches
 import com.vitorpamplona.amethyst.commons.resources.kind_git_repo
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.CommandLine
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -482,6 +483,8 @@ private fun GitMarkdownBody(
                     callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    // Issues and pull requests are markdown (NIP-34); a patch keeps the guess.
+                    rendering = TextRendering.of(note.event),
                 )
             }
 

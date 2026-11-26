@@ -45,12 +45,6 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.halilibo.richtext.markdown.AstBlockNodeComposer
-import com.halilibo.richtext.markdown.node.AstBlockNodeType
-import com.halilibo.richtext.markdown.node.AstFencedCodeBlock
-import com.halilibo.richtext.markdown.node.AstIndentedCodeBlock
-import com.halilibo.richtext.markdown.node.AstNode
-import com.halilibo.richtext.ui.RichTextScope
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -58,7 +52,6 @@ import com.vitorpamplona.amethyst.commons.resources.copied_to_clipboard
 import com.vitorpamplona.amethyst.commons.resources.copy
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
-import com.vitorpamplona.amethyst.commons.ui.markdown.InlineCodeChips
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.quartz.utils.Log
@@ -67,30 +60,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * How a reply's blocks draw in the chat: paragraphs with their inline code on chips
- * ([InlineCodeChips]), and code blocks across the column, with their language and a copy button,
- * so a command the agent suggests is one click from the clipboard.
+ * A reply's code block, across the column, with its language and a copy button, so a command the
+ * agent suggests is one click from the clipboard.
  */
-internal class ChatBlockComposer(
-    private val chips: InlineCodeChips,
-) : AstBlockNodeComposer {
-    override fun predicate(astBlockNodeType: AstBlockNodeType): Boolean = astBlockNodeType is AstFencedCodeBlock || astBlockNodeType is AstIndentedCodeBlock || chips.predicate(astBlockNodeType)
-
-    @Composable
-    override fun RichTextScope.Compose(
-        astNode: AstNode,
-        visitChildren: @Composable (AstNode) -> Unit,
-    ) {
-        when (val type = astNode.type) {
-            is AstFencedCodeBlock -> ChatCodeBlock(type.literal, type.info.substringBefore(' ').trim())
-            is AstIndentedCodeBlock -> ChatCodeBlock(type.literal, "")
-            else -> with(chips) { Compose(astNode, visitChildren) }
-        }
-    }
-}
-
 @Composable
-private fun ChatCodeBlock(
+internal fun ChatCodeBlock(
     literal: String,
     language: String,
 ) {

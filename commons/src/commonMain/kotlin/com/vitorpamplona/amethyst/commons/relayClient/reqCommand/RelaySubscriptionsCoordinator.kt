@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.relayClient.url.UrlFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.user.UserFinderFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.video.VideoFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.wallet.OnchainZapsFilterAssembler
+import com.vitorpamplona.amethyst.commons.relayClient.wiki.WikiFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.workouts.WorkoutsFilterAssembler
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -197,6 +198,9 @@ class RelaySubscriptionsCoordinator(
 
     // The NIPs screen, the kind page and an open NIP: kind 30817 and the kinds NIPs define.
     val nips = NipsFilterAssembler(client)
+
+    // A wiki topic's screen: every author's NIP-54 article and redirect under one slug.
+    val wikiTopics = WikiFilterAssembler(client)
     val geohashes = GeoHashFilterAssembler(client)
     val urls = UrlFilterAssembler(client)
     val relayFeed = RelayFeedFilterAssembler(client)
@@ -323,6 +327,7 @@ class RelaySubscriptionsCoordinator(
             profile,
             hashtags,
             nips,
+            wikiTopics,
             geohashes,
             urls,
             relayFeed,

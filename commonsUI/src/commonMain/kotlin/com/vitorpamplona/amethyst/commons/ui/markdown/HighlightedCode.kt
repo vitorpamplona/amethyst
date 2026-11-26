@@ -41,6 +41,8 @@ class CodeColors(
     val comment: Color,
     val punctuation: Color,
     val placeholder: Color,
+    val type: Color,
+    val function: Color,
 ) {
     companion object {
         val Dark =
@@ -52,6 +54,8 @@ class CodeColors(
                 comment = Color(0xFF8B949E),
                 punctuation = Color(0xFFA0A8B4),
                 placeholder = Color(0xFFDCDCAA),
+                type = Color(0xFF4EC9B0),
+                function = Color(0xFFDCDCAA),
             )
 
         val Light =
@@ -63,6 +67,8 @@ class CodeColors(
                 comment = Color(0xFF6A737D),
                 punctuation = Color(0xFF57606A),
                 placeholder = Color(0xFF795E26),
+                type = Color(0xFF267F99),
+                function = Color(0xFF795E26),
             )
     }
 }
@@ -87,6 +93,8 @@ fun highlightCode(
                     CodeTokenType.COMMENT -> SpanStyle(color = colors.comment, fontStyle = FontStyle.Italic)
                     CodeTokenType.PUNCTUATION -> SpanStyle(color = colors.punctuation)
                     CodeTokenType.PLACEHOLDER -> SpanStyle(color = colors.placeholder, fontStyle = FontStyle.Italic)
+                    CodeTokenType.TYPE -> SpanStyle(color = colors.type)
+                    CodeTokenType.FUNCTION -> SpanStyle(color = colors.function)
                 }
             addStyle(style, token.start, token.end)
         }

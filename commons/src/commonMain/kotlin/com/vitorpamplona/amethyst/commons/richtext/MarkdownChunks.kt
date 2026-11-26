@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.richtext
 
 import androidx.compose.runtime.Immutable
-import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
 /** A heading of a Markdown document: its level (1 for `#`), its text and the anchor that links to it. */
 @Immutable
@@ -31,33 +30,10 @@ data class MarkdownHeading(
     val anchor: String,
 )
 
-/** A piece of a Markdown document the renderer draws on its own. */
-@Immutable
-sealed interface MarkdownChunk {
-    /** Markdown prose. [anchor] is the anchor of the heading it opens with, if any. */
-    @Immutable
-    data class Prose(
-        val markdown: String,
-        val anchor: String?,
-    ) : MarkdownChunk
-
-    /** A top-level fenced code block, drawn by the app so it can be highlighted. */
-    @Immutable
-    data class Code(
-        val language: String?,
-        val code: String,
-    ) : MarkdownChunk
-}
-
 /**
- * Splits Markdown into the pieces the app draws itself: top-level fenced code blocks, so they can be
- * syntax highlighted (the Markdown library only draws plain code), and, when asked, a piece per
- * heading, so a reader can scroll to a section. Reference-link definitions (`[Blossom]: https://…`)
- * are repeated at the end of every prose piece, since each piece is parsed on its own and they draw
- * nothing.
- *
- * Only what sits at the top level counts: a fence or heading indented into a list stays inside the
- * prose around it. The scan is line-based and linear.
+ * What the renderers need from Markdown's lines without parsing it: the headings a long document
+ * lists for its reader (with GitHub's anchors), and which code blocks get highlighted. The scan is
+ * line-based and linear; a fence or heading indented into a list does not count.
  */
 object MarkdownChunks {
     private val HIGHLIGHTED = setOf("json", "jsonc", "json5", "jsonl", "ndjson", "js", "javascript", "ts", "typescript", "yaml", "yml")
@@ -68,7 +44,7 @@ object MarkdownChunks {
         code: String,
     ): Boolean {
         val lang = language?.lowercase()?.ifBlank { null }
-        if (lang != null) return lang in HIGHLIGHTED
+        if (lang != null) return lang in HIGHLIGHTED || ProgramGrammar.of(lang) != null
         val start = code.trimStart()
         return start.startsWith('{') || start.startsWith('[')
     }
@@ -81,97 +57,6 @@ object MarkdownChunks {
             if (line is Line.Heading) result.add(MarkdownHeading(line.level, line.text, uniqueAnchor(line.text, seen)))
         }
         return result
-    }
-
-    /**
-     * The pieces of [markdown], or null when it needs no splitting: no highlightable code block
-     * and, unless [atHeadings], no heading to stop at. Null too for a document with footnotes,
-     * whose definitions would repeat in every piece.
-     */
-    fun split(
-        markdown: String,
-        atHeadings: Boolean,
-    ): List<MarkdownChunk>? {
-        // Most notes have no fence: without one and without anchors to place, nothing to split.
-        if (!atHeadings && !markdown.contains("```") && !markdown.contains("~~~")) return null
-
-        val lines = markdown.lines()
-        val parsed = ArrayList<Line>(lines.size)
-        scan(lines) { parsed.add(it) }
-
-        if (parsed.any { it is Line.Text && FOOTNOTE_DEF.containsMatchIn(it.raw) }) return null
-
-        val hasHeading = atHeadings && parsed.any { it is Line.Heading }
-        val hasCode = parsed.any { it is Line.Fence && isHighlightable(it.language, it.code) }
-        if (!hasHeading && !hasCode) return null
-
-        val definitions =
-            parsed
-                .filter { it is Line.Text && REFERENCE_DEF.containsMatchIn(it.raw) }
-                .joinToString("\n") { (it as Line.Text).raw }
-
-        val chunks = ArrayList<MarkdownChunk>()
-        val seen = HashMap<String, Int>()
-        val prose = StringBuilder()
-        var anchor: String? = null
-
-        fun flush() {
-            val text = prose.toString().trim('\n')
-            if (text.isNotBlank() || anchor != null) {
-                val withDefs = if (definitions.isNotEmpty() && text.isNotBlank()) text + "\n\n" + definitions else text
-                chunks.add(MarkdownChunk.Prose(withDefs, anchor))
-            }
-            prose.clear()
-            anchor = null
-        }
-
-        for (line in parsed) {
-            when (line) {
-                is Line.Fence -> {
-                    flush()
-                    chunks.add(MarkdownChunk.Code(line.language, line.code))
-                }
-
-                is Line.Heading -> {
-                    if (atHeadings) {
-                        flush()
-                        anchor = uniqueAnchor(line.text, seen)
-                    }
-                    prose.append(line.raw).append('\n')
-                }
-
-                is Line.Text -> {
-                    // Definitions are appended to every piece; leaving them in place too would be harmless,
-                    // but a piece made only of definitions would draw as an empty block.
-                    if (!REFERENCE_DEF.containsMatchIn(line.raw)) prose.append(line.raw).append('\n')
-                }
-            }
-        }
-        flush()
-        return chunks
-    }
-
-    private class CachedSplit(
-        val markdown: String,
-        val atHeadings: Boolean,
-        val chunks: List<MarkdownChunk>?,
-    )
-
-    private val splitCache = ConcurrentLruCache<Int, CachedSplit>(200)
-
-    /**
-     * [split], remembered across compositions: a feed card that scrolls back into view re-renders
-     * its Markdown without scanning it again.
-     */
-    fun cachedSplit(
-        markdown: String,
-        atHeadings: Boolean,
-    ): List<MarkdownChunk>? {
-        val key = 31 * markdown.hashCode() + atHeadings.hashCode()
-        splitCache.get(key)?.takeIf { it.markdown == markdown && it.atHeadings == atHeadings }?.let { return it.chunks }
-        val chunks = split(markdown, atHeadings)
-        splitCache.put(key, CachedSplit(markdown, atHeadings, chunks))
-        return chunks
     }
 
     /** GitHub's anchor for a heading: lower case, punctuation dropped, spaces to hyphens. */
@@ -218,8 +103,6 @@ object MarkdownChunks {
     private val SETEXT = Regex("^ {0,3}(=+|-+)[ \\t]*$")
     private val FENCE_OPEN = Regex("^( {0,3})(`{3,}|~{3,})[ \\t]*([^`\\s]*)[^`]*$")
     private val BLOCK_START = Regex("^\\s*([-*+>|]|\\d+[.)])(\\s|$)")
-    private val REFERENCE_DEF = Regex("^ {0,3}\\[[^\\]^][^\\]]*\\]:\\s*\\S")
-    private val FOOTNOTE_DEF = Regex("^ {0,3}\\[\\^[^\\]]+\\]:")
     private val INLINE_LINK = Regex("!?\\[([^\\]]*)\\](\\([^)]*\\)|\\[[^\\]]*\\])")
 
     /**
