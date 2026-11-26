@@ -27,10 +27,30 @@ suite_resolve() {
   return 0
 }
 
+# MDK's marmot-markdown crate compiles Odin code in its build script and wants one exact
+# Odin release (dev-2026-10 at the time of writing), found as $ODIN or `odin` on PATH.
+# MDK ships scripts/install-odin.sh, which downloads that release and checks it against a
+# pinned sha256; running the checkout's own copy keeps each commit on the Odin it asks for.
+# Installed per script version, and only when wn/wnd must be built.
+install_odin() {
+  local script="$MDK_DIR/scripts/install-odin.sh"
+  [[ -f "$script" ]] || return 0   # an MDK from before marmot-markdown needs no Odin
+  local dir
+  dir="$SUITE_CACHE/odin/$(sha256sum "$script" | cut -c1-16)"
+  if [[ ! -x "$dir/odin" ]]; then
+    echo "installing Odin with MDK's scripts/install-odin.sh into $dir"
+    rm -rf "$dir"
+    bash "$script" "$dir" || return 1
+  fi
+  export ODIN="$dir/odin"
+  "$ODIN" version
+}
+
 suite_prepare() {
   git_checkout "$MDK_URL" "$MDK_DIR" "$REF" || return 1
   local bin="$SUITE_CACHE/bin/$REF" rel="$MDK_DIR/target/release"
   if [[ ! -x "$bin/wn" || ! -x "$bin/wnd" ]]; then
+    install_odin || return 1
     echo "building wn + wnd at $REF"
     ( cd "$MDK_DIR" && cargo build --release -p wn-cli --bin wn --bin wnd ) || return 1
     rm -rf "${SUITE_CACHE:?}/bin"   # keep only this commit's pair in the cache

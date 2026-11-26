@@ -237,6 +237,9 @@ object NotificationUtils {
     /** The Marmot chat (Nostr group id) a group-message notification belongs to. */
     const val EXTRA_MARMOT_GROUP = "com.vitorpamplona.amethyst.notification.MARMOT_GROUP"
 
+    /** The hex id of the event a notification was posted for, so a sweep that finds it can guard it ([markDismissed]). */
+    const val EXTRA_EVENT_ID = "com.vitorpamplona.amethyst.notification.EVENT_ID"
+
     fun notificationAccountFor(account: Account) =
         NotificationAccount(
             npub = NotificationRoutes.accountNpub(account),
@@ -341,6 +344,7 @@ object NotificationUtils {
 
         if (category.colorized) builder.setColorized(true)
         builder.stampAccount(forAccount)
+        builder.addExtras(Bundle().apply { putString(EXTRA_EVENT_ID, id) })
 
         if (bigPicture != null) {
             builder.setStyle(
@@ -495,6 +499,7 @@ object NotificationUtils {
         }
         builder.addPerson(sender)
         builder.stampAccount(forAccount)
+        builder.addExtras(Bundle().apply { putString(EXTRA_EVENT_ID, id) })
         if (marmotGroupId != null) builder.addExtras(Bundle().apply { putString(EXTRA_MARMOT_GROUP, marmotGroupId) })
 
         when (replyAction) {
@@ -503,7 +508,7 @@ object NotificationUtils {
             null -> publicInlineReply?.let { builder.addAction(publicReplyAction(applicationContext, notId, id, it)) }
         }
 
-        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id))
+        if (addMarkRead) builder.addAction(markReadAction(applicationContext, notId, id, forAccount?.npub))
 
         notify(notId, builder.build())
         sendGroupSummary(category, groupKey, summaryId, time, applicationContext)
@@ -643,12 +648,15 @@ object NotificationUtils {
         applicationContext: Context,
         notId: Int,
         eventId: String,
+        accountNpub: String?,
     ): NotificationCompat.Action {
         val markReadIntent =
             Intent(applicationContext, NotificationReplyReceiver::class.java).apply {
                 action = MARK_READ_ACTION
                 putExtra(KEY_NOTIFICATION_ID, notId)
                 putExtra(KEY_EVENT_ID, eventId)
+                // So the receiver can mark the chat read in the app too, not only clear the shade.
+                accountNpub?.let { putExtra(KEY_ACCOUNT_NPUB, it) }
             }
         val markReadPendingIntent =
             PendingIntent.getBroadcast(
@@ -829,6 +837,43 @@ object NotificationUtils {
         if (activeNotifications.none { it.id == notId }) return
 
         cancelAndPrune(notId)
+    }
+
+    /**
+     * Takes down the notifications of the account [npub] that its Notifications tab now counts as
+     * read: every one on a tab channel ([NotificationCategory.readOnNotificationsTab]) whose event
+     * was made at or before [readUpTo], the tab's last-read marker in seconds. Reading the tab moves
+     * the marker to the newest card seen, and every older card then shows as read, so the tray
+     * follows the same rule, whether or not the user scrolled down to each card.
+     *
+     * Notifications are posted with their event's time as `when`, which is what is compared here.
+     * Called when the marker moves, never to block a post: an event that reaches the device after
+     * the user read past its time (a slow relay, an author's clock behind) still notifies, and goes
+     * at the next move of the marker.
+     */
+    fun NotificationManager.dismissNotificationsReadUpTo(
+        npub: String,
+        readUpTo: Long,
+    ) {
+        val readUpToMillis = readUpTo * 1000
+        val gone =
+            activeNotifications
+                .filter { sbn ->
+                    val notification = sbn.notification
+                    val group = notification.group
+                    notification.flags and Notification.FLAG_GROUP_SUMMARY == 0 &&
+                        notification.`when` <= readUpToMillis &&
+                        notification.extras.getString(EXTRA_ACCOUNT_NPUB) == npub &&
+                        group != null &&
+                        NotificationCategory.entries.any { it.readOnNotificationsTab && it.owns(group) }
+                }.onEach { sbn ->
+                    // An enrichment re-post would otherwise bring it back within the guard window.
+                    sbn.notification.extras
+                        .getString(EXTRA_EVENT_ID)
+                        ?.let { markDismissed(it) }
+                    cancel(sbn.tag, sbn.id)
+                }.mapTo(HashSet()) { it.id }
+        if (gone.isNotEmpty()) cancelChildlessGroupSummaries(gone)
     }
 
     /**

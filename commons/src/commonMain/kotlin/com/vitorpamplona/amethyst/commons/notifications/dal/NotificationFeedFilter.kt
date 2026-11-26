@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.feeds.rebuildFeed
 import com.vitorpamplona.amethyst.commons.feeds.sortedByDefaultFeedOrder
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.MAX_CLOCK_SKEW_SECS
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.buzz.BuzzRelayDialect
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -109,6 +110,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.zap.OnchainZapEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.episode.PodcastEpisodeEvent
 import com.vitorpamplona.quartz.nipF4Podcasts.metadata.PodcastMetadataEvent
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.flow.StateFlow
 
 class NotificationFeedFilter(
@@ -771,6 +773,12 @@ class NotificationFeedFilter(
         // relevance check (tagsAnEventByUser is skipped below); it still scopes
         // to genuine replies, so unrelated channel chatter never leaks through.
         return noteEvent?.kind in NOTIFICATION_KINDS &&
+            // An event dated ahead would sit on top until that date and carry the tab's last-read
+            // marker with it, keeping the badge off and marking every real notification read. The
+            // allowance is minutes of clock skew, wider than the minute other feeds give: a reply
+            // filtered here is not checked again until the tab rebuilds, so a friend's clock a few
+            // minutes fast would hide it.
+            noteEvent != null && noteEvent.createdAt <= TimeUtils.now() + MAX_CLOCK_SKEW_SECS &&
             (noteEvent is ZapReceiptEvent || noteEvent is Bolt12ZapEvent || notifAuthor != loggedInUserHex) &&
             (isChessEvent || isConcord || isReactionToMe || isThreadReplyToMe || filterParams.isGlobal() || notifAuthor == null || filterParams.isAuthorInFollows(notifAuthor)) &&
             (noteEvent?.isTaggedUser(loggedInUserHex) == true || isNotifiablePublicChatReply(it, loggedInUserHex) || isReactionToMe || isThreadReplyToMe) &&

@@ -159,6 +159,8 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 // RouteForPointerTest stubs an Account (already the app's and androidHostTest's mock lib).
                 implementation(libs.mockk)
+                // DockControllerTest backs the dock's preferences with an in-memory store (commons' own dependency).
+                implementation(libs.androidx.datastore.preferences)
             }
         }
 

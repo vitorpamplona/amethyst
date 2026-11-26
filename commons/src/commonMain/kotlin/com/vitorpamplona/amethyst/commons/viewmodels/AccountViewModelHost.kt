@@ -146,6 +146,16 @@ interface AccountViewModelHost {
     /** Removes the system notification posted for [eventId], if there is one. */
     fun dismissNotificationFor(eventId: HexKey)
 
+    /**
+     * Removes the system notifications of the account [npub] that its Notifications tab now counts
+     * as read: those for events created at or before [createdAt] (seconds), the tab's last-read
+     * marker. Chats keep theirs, since a conversation is read in the chat, not on the tab.
+     */
+    fun dismissNotificationsReadUpTo(
+        npub: String,
+        createdAt: Long,
+    ) = Unit
+
     /** Hands a BOLT11 [invoice] to an installed wallet app. False when none could take it. */
     fun openLightningWallet(invoice: String): Boolean
 }

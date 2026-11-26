@@ -39,7 +39,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntOffset
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicesDockPanel
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
+import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -206,7 +208,9 @@ class DesktopAppRoot(
     }
 
     /** The assistant beside the screen, as an IDE's tool window. */
-    override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> = listOf(AssistantDockPanel)
+    override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> =
+        // The device panel only where there is an Android SDK to drive devices with.
+        listOfNotNull(AssistantDockPanel, DevicesDockPanel.takeIf { hasAndroidSdk })
 
     override val supportsPanelWindows: Boolean = true
 
@@ -334,7 +338,9 @@ class DesktopAppRoot(
                 if (npub != null && npub != sessionManager.currentAccountNPub()) {
                     sessionManager.checkAndSwitchUserSync(npub) { account -> uriToRoute(uri, account) }
                 } else {
-                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.nav(route) }
+                    // A new stack, as Android opens a link: a push would leave a second Notifications
+                    // screen (back arrow, no bar) over the tab the link meant, one more per link.
+                    uriToRoute(uri, accountViewModel.account)?.let { route -> nav.newStack(route) }
                 }
                 // A link opens where it can be seen: a main window hidden (kept for a print, or closed
                 // beside screen windows) comes back.
@@ -356,7 +362,8 @@ class DesktopAppRoot(
                         // The Observer already on top, on a past edition: opening its route again does
                         // nothing, so it is told to show today, the paper the notification is about.
                         if (NotificationClickRules.showsToday(plan.target)) modules.frontPagePrinters.existing(account.signer.pubKey)?.showToday()
-                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.nav(it) }
+                        // A new stack, like a deep link above and a tapped Android notification.
+                        NotificationClickRules.routeFor(plan.target, account)?.let { nav.newStack(it) }
                     }
                     is NotificationClickPlan.SwitchAndOpen ->
                         sessionManager.checkAndSwitchUserSync(plan.account.hexToByteArray().toNpub()) { switched ->
@@ -389,3 +396,6 @@ private fun KeyNotKeptDialog(modules: DesktopAppModules) {
 
 // The id of a pinned web app's page: one per app, so its tab finds its title.
 internal const val PINNED_WEB_APP = "pinned:"
+
+/** Looked up once: the dock's panel list is asked for on every composition of the shell. */
+private val hasAndroidSdk: Boolean by lazy { AndroidSdk.home() != null }

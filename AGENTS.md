@@ -21,7 +21,7 @@ relay-server code; smaller modules are `benchmark` (Android macrobenchmarks) and
 relay binaries, replays a shared deterministic corpus, measures ingest/query/
 NIP-77 sync; `./relayBench/run.sh`, see `relayBench/README.md`), plus `claudeCodeClient` and `codexClient` (unofficial JVM clients for the user's Claude
 Code and Codex CLIs, behind the desktop coding-agent screens; no Amethyst/Nostr deps; see their
-READMEs) on `agentCore`. `nestsClient` runs
+READMEs) on `agentCore`; `androidDeviceClient` (adb + emulator gRPC for a chat's device panel). `nestsClient` runs
 the audio-room protocol on top of quic-kmp for the NIP-53 audio-rooms feature. It implements both IETF `draft-ietf-moq-transport-17` (under
 `moq/`) and **moq-lite Lite-03** (kixelated's variant, under `moq/lite/`); the
 production listener AND speaker paths both run on moq-lite to interop with the
@@ -151,7 +151,7 @@ amethyst/
   standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
-module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
+module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`).
 The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Android Runtime Processes (IMPORTANT — the app runs in TWO processes)
@@ -167,8 +167,8 @@ never a shared singleton. Details: `.claude/skills/android-expert/references/two
 
 ## Tech Stack
 
-Exact versions live in `gradle/libs.versions.toml` (the source of truth — check
-there rather than trusting a number copied here).
+Exact versions live in `gradle/libs.versions.toml`, the source of truth; don't trust a
+number copied here.
 
 | Layer | Technology |
 |-------|------------|

@@ -297,6 +297,16 @@ enum class NotificationCategory(
     ),
     ;
 
+    /**
+     * Read on the Notifications tab, so the tab's last-read marker decides when the tray entry goes
+     * ([NotificationUtils.dismissNotificationsReadUpTo]). Messages are read in their chat, and a
+     * received payment is not on the tab.
+     */
+    val readOnNotificationsTab: Boolean get() = this != DIRECT_MESSAGE && this != PAYMENT_RECEIVED
+
+    /** Whether a notification posted under [groupKey] is one of this category's (replies group per thread: `group:root`). */
+    fun owns(groupKey: String): Boolean = groupKey == group || groupKey.startsWith("$group:")
+
     suspend fun channelId(context: Context): String = loadStringRes(channelIdRes)
 
     @Volatile private var channelEnsured = false

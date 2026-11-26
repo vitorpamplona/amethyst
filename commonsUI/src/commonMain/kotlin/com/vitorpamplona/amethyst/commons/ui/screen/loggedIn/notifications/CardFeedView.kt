@@ -49,6 +49,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,7 +103,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.util.logTime
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 @Composable
 fun RenderCardFeed(
@@ -112,6 +116,7 @@ fun RenderCardFeed(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String? = null,
+    onScrolledToEvent: () -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     // Whether THIS feed drives the shared account history pager. False for an off-screen split tab / second
     // pane, so only the feed the user is actually looking at pages the pager (see #2 in the audit).
@@ -131,6 +136,7 @@ fun RenderCardFeed(
             nav = nav,
             routeForLastRead = routeForLastRead,
             scrollToEventId = scrollToEventId,
+            onScrolledToEvent = onScrolledToEvent,
             headerContent = headerContent,
             drivesPaging = drivesPaging,
         )
@@ -146,10 +152,23 @@ private fun RenderCardFeedContent(
     nav: INav,
     routeForLastRead: String,
     scrollToEventId: String?,
+    onScrolledToEvent: () -> Unit,
     headerContent: (@Composable () -> Unit)?,
     drivesPaging: Boolean,
 ) {
     val feedState by feedContent.feedContent.collectAsStateWithLifecycle()
+
+    // The card a deep link scrolled to, highlighted for a moment. Held here, above the state switch,
+    // so a refresh that flips the feed through Loading (arriving on the screen runs one) cannot drop
+    // it with the loaded list. Its own effect too: reporting the scroll drops the target, which
+    // would cancel a clear waiting there and leave the card highlighted.
+    var highlightedCardId by rememberSaveable { mutableStateOf<String?>(null) }
+    highlightedCardId?.let { id ->
+        LaunchedEffect(id) {
+            delay(2000)
+            highlightedCardId = null
+        }
+    }
 
     // A genuinely empty feed has no rows for the look-ahead buffer driver to measure, so step every relay
     // one page at a time to hunt for the first notifications. Once cards appear the buffer driver takes
@@ -183,6 +202,9 @@ private fun RenderCardFeedContent(
                 accountViewModel = accountViewModel,
                 nav = nav,
                 scrollToEventId = scrollToEventId,
+                onScrolledToEvent = onScrolledToEvent,
+                highlightedCardId = highlightedCardId,
+                onHighlight = { highlightedCardId = it },
                 headerContent = headerContent,
                 drivesPaging = drivesPaging,
             )
@@ -247,6 +269,9 @@ private fun FeedLoaded(
     accountViewModel: AccountViewModel,
     nav: INav,
     scrollToEventId: String? = null,
+    onScrolledToEvent: () -> Unit = {},
+    highlightedCardId: String? = null,
+    onHighlight: (String) -> Unit = {},
     headerContent: (@Composable () -> Unit)? = null,
     drivesPaging: Boolean = true,
 ) {
@@ -274,20 +299,27 @@ private fun FeedLoaded(
 
     StickToTopOnPrepend(listState, items.list.firstOrNull()?.id())
 
-    // Track which card is highlighted (will auto-clear after animation)
-    var highlightedCardId by remember { mutableStateOf<String?>(null) }
+    // Read when the scroll lands, not when the search started: open polls loading meanwhile add rows above.
+    val currentLeadingItemCount by rememberUpdatedState(leadingItemCount)
 
-    // Scroll to the card containing the target event ID
+    // Scroll to the card containing the target event ID, once: the screen stops passing the target
+    // after [onScrolledToEvent]. Until the card loads, every new page of items gets another look.
     if (scrollToEventId != null) {
         LaunchedEffect(scrollToEventId, items) {
-            val position = items.list.indexOfFirst { it.containsEventId(scrollToEventId) }
+            val cards = items.list
+            // Off the main thread: a grouped card checks each of its likes, boosts and zaps, and this
+            // runs again for every new page until the card turns up.
+            val position = withContext(Dispatchers.Default) { cards.indexOfFirst { it.containsEventId(scrollToEventId) } }
             if (position >= 0) {
-                // +1 offset for the donation card header item
-                val scrollIndex = position + 1 + openPolls.size
-                listState.animateScrollToItem(scrollIndex)
-                highlightedCardId = items.list[position].id()
-                delay(2000)
-                highlightedCardId = null
+                listState.animateScrollToItem(position + currentLeadingItemCount)
+                onHighlight(cards[position].id())
+                onScrolledToEvent()
+            } else if (isLoadedPastAndMissing(scrollToEventId, cards, accountViewModel)) {
+                // The feed holds cards older than the target and not it: this filter hides it (Curated,
+                // a mute). Stop looking, after a moment in case a page bringing it is still on its way;
+                // a new page restarts this and looks again.
+                delay(5000)
+                onScrolledToEvent()
             }
         }
     }
@@ -516,4 +548,19 @@ fun NoteCardCompose(
         accountViewModel = accountViewModel,
         nav = nav,
     )
+}
+
+/**
+ * Whether the cards already reach back past [eventId]'s time without holding it, so the feed's filter
+ * left it out. A card is as recent as the newest event in it, so a card holding the target is never
+ * older than the target. False while the target is not in the cache: its time is not known yet.
+ */
+private fun isLoadedPastAndMissing(
+    eventId: String,
+    cards: List<Card>,
+    accountViewModel: AccountViewModel,
+): Boolean {
+    val targetTime = accountViewModel.getNoteIfExists(eventId)?.createdAt() ?: return false
+    // Pending invites sort ahead of everything whatever their age, so they say nothing about how far back the feed reaches.
+    return cards.any { it !is ChannelInviteCard && it !is ConcordDirectInviteNotificationCard && it.createdAt() < targetTime }
 }

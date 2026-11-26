@@ -20,10 +20,15 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.cef.browser.CefBrowser
 import org.cef.callback.CefBeforeDownloadCallback
 import org.cef.callback.CefDownloadItem
@@ -46,6 +51,10 @@ class PageDownloadsTest {
     private val downloads = File(tmp, "home/Downloads")
     private var realHome: String? = null
 
+    // The pages' own background work (moves, deletes): stopped before [tmp] goes.
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(job + Dispatchers.IO)
+
     // The handler never looks at the browser.
     private val browser = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(CefBrowser::class.java)) { _, _, _ -> null } as CefBrowser
 
@@ -57,9 +66,18 @@ class PageDownloadsTest {
 
     @After
     fun tearDown() {
-        System.setProperty("user.home", realHome!!)
+        try {
+            // Stopped first: a delivery still running would resolve Downloads under the real home
+            // once it is back, and a delete still walking [tmp] when this one does trips
+            // kotlin.io's assertion (tests run with -ea), failing whichever coroutine test is next.
+            runBlocking { withTimeoutOrNull(5_000) { job.cancelAndJoin() } }
+        } finally {
+            System.setProperty("user.home", realHome!!)
+        }
         tmp.deleteRecursively()
     }
+
+    private fun page() = PageDownloads(holding, scope)
 
     private class Item(
         private val id: Int,
@@ -156,7 +174,7 @@ class PageDownloadsTest {
     @Test
     fun aDownloadWaitsInTheAppsFolderHeldThenMovesToDownloads() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val item = Item(1)
             val control = Control()
             val target = placed(start(page, item, control))
@@ -189,7 +207,7 @@ class PageDownloadsTest {
     @Test
     fun aSmallFileCompleteBeforeTheAnswerMovesOnSave() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val item = Item(1)
             val control = Control()
             val target = placed(start(page, item, control))
@@ -213,7 +231,7 @@ class PageDownloadsTest {
     @Test
     fun aDownloadDroppedWhileAskedStops() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val item = Item(1)
             val target = placed(start(page, item, Control()))
             item.inProgress = false
@@ -233,7 +251,7 @@ class PageDownloadsTest {
     @Test
     fun aCanceledQuestionLeavesTheList() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val control = Control()
             start(page, Item(1), control)
             page.cancel(1)
@@ -244,7 +262,7 @@ class PageDownloadsTest {
     @Test
     fun pastThreeQuestionsTheRestAreRefusedUnasked() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val controls = (1..5).map { Control() }
             controls.forEachIndexed { i, control -> start(page, Item(i + 1), control) }
             assertEquals(PageDownloads.MAX_QUESTIONS, page.list.value.count { it.state == BrowserDownload.State.ASKING })
@@ -254,7 +272,7 @@ class PageDownloadsTest {
     @Test
     fun closingThePageStopsItsDownloads() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             val asked = Control()
             val running = Control()
             start(page, Item(1), asked)
@@ -268,7 +286,7 @@ class PageDownloadsTest {
     @Test
     fun theListDropsOnlyFinishedOnesPastFive() =
         runBlocking {
-            val page = PageDownloads(holding)
+            val page = page()
             // Two finished, then three asking: five shown.
             for (id in 1..2) {
                 val item = Item(id)

@@ -113,8 +113,8 @@ object VideoCompressionHelper {
                 Pair(VideoCompressionRules.PROBE_FAILED_BITRATE_BPS, pixelAspectRatio?.let { SquarePixelsResizer(it, null) })
             }
 
-        // Get original file size safely
-        val originalSize = applicationContext.getFileSize(uri)
+        // 0 when unknown, which turns off the larger-than-original guard and the size toast below.
+        val originalSize = applicationContext.uriByteSize(uri) ?: 0L
 
         val result =
             withTimeoutOrNull(timeoutMs) {
@@ -240,17 +240,6 @@ object VideoCompressionHelper {
     private fun deleteOutput(path: String) {
         File(path).deleteOrWarn(LOG_TAG, "compressed output")
     }
-
-    private fun Context.getFileSize(uri: Uri): Long =
-        try {
-            contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { cursor ->
-                val sizeIndex = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
-                if (cursor.moveToFirst()) cursor.getLong(sizeIndex) else 0L
-            } ?: 0L
-        } catch (e: Exception) {
-            Log.w(LOG_TAG) { "Failed to get file size: ${e.message}" }
-            0L
-        }
 
     private fun Context.notifyUser(
         message: String,

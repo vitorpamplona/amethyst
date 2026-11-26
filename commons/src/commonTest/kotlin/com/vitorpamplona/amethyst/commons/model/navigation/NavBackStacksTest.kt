@@ -113,6 +113,21 @@ class NavBackStacksTest {
     }
 
     @Test
+    fun aDeepLinkToTheTabOnScreenKeepsItATabRoot() {
+        // Tapping a notification while on the Notifications tab: the tab takes the target in place,
+        // with no back arrow and its bottom bar, not a second Notifications screen pushed over it.
+        val stacks = NavBackStacks()
+        stacks.switchTab(Route.Notification())
+        val notifications = stacks.top
+
+        stacks.newStack(Route.Notification(scrollToEventId = "e1"))
+
+        assertSame(notifications, stacks.top)
+        assertFalse(stacks.model.canGoBack(stacks.top, wide = false))
+        assertTrue(stacks.model.showsBar(stacks.top, wide = false))
+    }
+
+    @Test
     fun reTappingAReArguedTabStaysOnIt() {
         val stacks = NavBackStacks()
         stacks.switchTab(Route.Notification())

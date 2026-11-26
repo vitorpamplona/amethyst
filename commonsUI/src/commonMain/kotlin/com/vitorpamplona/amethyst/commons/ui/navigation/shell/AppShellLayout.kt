@@ -332,8 +332,6 @@ private fun MultiPaneShell(
     val dock = LocalDockController.current
     val roomForDock = LocalScreenLayout.current.hasRoomForNotificationPanel
     val wantsWidth = fullWidthHere(nav)
-    // Beside the deck too: its columns and the dock share the room, the dock giving way first.
-    val canDock = dock != null && roomForDock && !wantsWidth
 
     val saved by (dock?.layoutFlow ?: EmptyDockFlow).collectAsStateWithLifecycle()
     val layout = remember(saved, dock) { if (dock != null) saved.ensure(dock.ids) else saved }
@@ -346,11 +344,18 @@ private fun MultiPaneShell(
         remember(dock, layout, hiddenHere, deckNotifications) {
             dock?.allIds(layout)?.filter { it !in hiddenHere && !(deckNotifications && it == PanelId.NOTIFICATIONS) }.orEmpty()
         }
+    // A screen that wants the width keeps only the panels made to sit beside it ([DockPanelSpec.besideFullWidth]).
+    val dockOnly =
+        remember(dock, available, wantsWidth) {
+            if (wantsWidth && dock != null) available.filter { dock.spec(it)?.besideFullWidth == true }.toSet() else null
+        }
+    // Beside the deck too: its columns and the dock share the room, the dock giving way first.
+    val canDock = dock != null && roomForDock && dockOnly?.isNotEmpty() != false
     val overlay = dock?.overlay
     val maximized = dock?.maximized
     val view =
-        remember(layout, available, canDock, overlay, maximized) {
-            if (canDock) layout.view(available.toSet() - setOfNotNull(overlay, maximized)) else DockView.Empty
+        remember(layout, available, canDock, dockOnly, overlay, maximized) {
+            if (canDock) layout.view((dockOnly ?: available.toSet()) - setOfNotNull(overlay, maximized)) else DockView.Empty
         }
     // The strip shows wherever the dock does, and on a docked-drawer window too narrow for it (its
     // panels then open over the screen). With only the notification feed, as on a phone build, it
@@ -362,12 +367,14 @@ private fun MultiPaneShell(
     if (dock != null) {
         SideEffect {
             dock.canDock = canDock
+            dock.dockOnly = dockOnly
             dock.stripShown = stripShown
         }
         // A phone-sized window has no dock: a panel asked for there would open nowhere.
         DisposableEffect(dock) {
             onDispose {
                 dock.canDock = false
+                dock.dockOnly = null
                 dock.stripShown = false
             }
         }
@@ -582,6 +589,7 @@ val FullWidthRoutes: Set<KClass<out Route>> =
         Route.ClaudeCodeChanges::class,
         Route.ClaudeCodePropose::class,
         Route.ClaudeCodePullRequests::class,
+        Route.AndroidDevices::class,
     )
 
 /**

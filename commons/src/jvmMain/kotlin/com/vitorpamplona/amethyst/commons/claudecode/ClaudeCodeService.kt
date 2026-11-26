@@ -31,6 +31,8 @@ import com.vitorpamplona.agents.HostToolServer
 import com.vitorpamplona.agents.PermissionDecision
 import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.TranscriptEntry
+import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
+import com.vitorpamplona.amethyst.commons.androiddevices.DeviceToolServer
 import com.vitorpamplona.amethyst.commons.util.appDataDir
 import com.vitorpamplona.claudecode.ClaudeBackend
 import com.vitorpamplona.codex.CodexBackend
@@ -157,6 +159,8 @@ class ClaudeCodeService(
     val assistantDir: File = File(appDataDir, ASSISTANT_FOLDER),
     /** The assistant on the user's own AI key, for when no agent program here can run it. */
     val online: OnlineAgentBackend = OnlineAgentBackend(OnlineSessionStore(File(appDataDir, ONLINE_SESSIONS_FOLDER))),
+    /** Whether coding chats get the Android device tools: when an Android SDK is installed here. */
+    private val deviceTools: Boolean = AndroidSdk.home() != null,
 ) {
     /** Every agent whose sessions the list shows: the coding agents, and the assistant's online one. */
     private val allAgents: List<AgentBackend> get() = backends + online
@@ -165,7 +169,7 @@ class ClaudeCodeService(
         backend: AgentBackend,
         scope: CoroutineScope,
         agentWorkspaces: AgentWorkspaces,
-    ) : this(listOf(backend), scope, agentWorkspaces)
+    ) : this(listOf(backend), scope, agentWorkspaces, deviceTools = false)
 
     /** The default agent: Claude Code. */
     val backend: AgentBackend get() = backends.first()
@@ -359,6 +363,8 @@ class ClaudeCodeService(
         recountNeedsYou()
         agentWorkspaces.delete(workspace)
         workspacesState.update { list -> list.filter { it.id != workspace.id } }
+        // Its emulator copies held only its work.
+        AndroidDevices.shared.releaseOwner(workspace.id)
         if (thenRefresh) refresh()
     }
 
@@ -463,6 +469,8 @@ class ClaudeCodeService(
             try {
                 val freed = agentWorkspaces.free(current)
                 replaceWorkspace(freed)
+                // Idle long enough to give its disk back: its emulator copies go too.
+                AndroidDevices.shared.releaseOwner(freed.id)
                 workspaceSizes[freed.id] = 0L to System.currentTimeMillis()
                 true
             } catch (e: IOException) {
@@ -854,6 +862,9 @@ class ClaudeCodeService(
     ): ClaudeChat {
         // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
         val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
+        // With an Android SDK here, a coding agent can drive the device panel's emulator or phone.
+        val device = if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, owner = { deviceOwner(key, cwd.path) }, ownerLabel = { deviceOwnerLabel(key, cwd.path) }, folder = cwd) else null
+        val preApproved = listOfNotNull(publish?.qualifiedName(PublishToolServer.REQUEST)) + device?.let { DeviceToolServer.PRE_APPROVED.map(it::qualifiedName) }.orEmpty()
         val chat =
             ClaudeChat(
                 key,
@@ -867,20 +878,24 @@ class ClaudeCodeService(
                 onSessionChanged = { refreshInBackground() },
                 fork = fork,
                 heldElsewhere = ::isHeldElsewhere,
-                mcpServers = mcpServers + listOfNotNull(publish),
+                mcpServers = mcpServers + listOfNotNull(publish, device),
                 launchOptions =
-                    if (publish == null) {
+                    if (preApproved.isEmpty()) {
                         launchOptions
                     } else {
-                        // It only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
-                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + publish.qualifiedName(PublishToolServer.REQUEST)) } }
+                        // Publishing only asks: the user decides on the Pull requests screen, so the agent needn't ask to ask.
+                        // The device's looking and touching need no asking either: the user gave the chat that device.
+                        { options -> launchOptions(options).let { it.copy(preApprovedTools = it.preApprovedTools + preApproved) } }
                     },
                 kind = kind,
                 forkBefore = forkBefore,
                 workstreamOf = { agentWorkspaces.of(it) },
                 pushScopes = pushScopeStore,
                 restoreFolder = ::restoreBeforeStart,
-                folderBrief = { dir -> agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it } },
+                folderBrief = { dir ->
+                    val workspace = agentWorkspaces.of(dir)?.brief?.let { if (publish != null) it + "\n" + PublishToolServer.BRIEF else it }
+                    listOfNotNull(workspace, device?.let { DeviceToolServer.BRIEF }).joinToString("\n").ifEmpty { null }
+                },
                 folderKnown = folderKnown,
             )
         chats.update { it + (key to chat) }
@@ -923,6 +938,25 @@ class ClaudeCodeService(
             }
         return chat
     }
+
+    /**
+     * Whose device a chat uses: its workstream's, so the workstream's chats share one emulator copy
+     * and other workstreams get their own; a chat outside a workstream has its own.
+     */
+    fun deviceOwner(
+        key: String,
+        cwd: String?,
+    ): String = workspaceOf(cwd)?.id ?: key
+
+    /** What the device picker calls [deviceOwner]: the workstream's title, else the chat's. */
+    fun deviceOwnerLabel(
+        key: String,
+        cwd: String?,
+    ): String? =
+        workspaceOf(cwd)?.title ?: chats.value[key]
+            ?.state
+            ?.value
+            ?.let(::titleOf)
 
     /** The publish tool of the chat [key] working in [cwd]: its requests are saved with the workstream, and the user is told. */
     internal fun publishTool(
@@ -1133,6 +1167,8 @@ class ClaudeCodeService(
             withContext(Dispatchers.IO) { chat.kill() }
             watchers.remove(row.key)?.cancel()
             chats.update { it - row.key }
+            // A chat outside a workstream owns its emulator copy: it goes with the chat.
+            AndroidDevices.shared.releaseOwner(row.key)
             // Its own status watcher is gone: a chat deleted while waiting must leave the count.
             recountNeedsYou()
             rebuildRows()

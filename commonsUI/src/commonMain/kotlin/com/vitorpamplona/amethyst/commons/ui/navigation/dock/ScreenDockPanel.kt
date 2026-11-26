@@ -27,7 +27,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigationevent.compose.LocalNavigationEventDispatcherOwner
 import androidx.navigationevent.compose.rememberNavigationEventDispatcherOwner
 import com.vitorpamplona.amethyst.commons.model.dock.PanelId
-import com.vitorpamplona.amethyst.commons.model.navigation.NavBackStacks
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.dock_pinned_screen
@@ -73,7 +72,8 @@ private fun ScreenPanel(
     scope: DockPanelScope,
 ) {
     val coroutines = rememberCoroutineScope()
-    val inner = remember { Nav(NavBackStacks(route), coroutines) }
+    // The history lives in the dock, so folding the panel or moving it to a window keeps where it was.
+    val inner = remember(scope.id) { Nav(scope.dock.screenStacks(scope.id, route), coroutines) }
     RegisterOnScreen("Dock panel", inner)
     val destinations = LocalNavDestinations.current ?: return
     // Back and Esc stay with the main screen: the panel goes back through its own top bar's arrow.
