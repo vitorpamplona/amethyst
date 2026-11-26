@@ -34,60 +34,39 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.Message
 import android.os.Messenger
-import android.os.SystemClock
-import android.view.View
 import android.view.ViewGroup
 import android.webkit.ConsoleMessage
 import android.webkit.JsPromptResult
 import android.webkit.JsResult
-import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import android.widget.FrameLayout
 import androidx.annotation.RequiresApi
 import androidx.core.net.toUri
 import androidx.privacysandbox.ui.provider.toCoreLibInfo
-import androidx.webkit.JavaScriptReplyProxy
-import androidx.webkit.WebMessageCompat
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
-import com.vitorpamplona.amethyst.commons.napplet.HostProfile
-import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
-import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
-import com.vitorpamplona.amethyst.commons.napplet.NappletSiteServer
-import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
-import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
-import com.vitorpamplona.amethyst.commons.napplet.WebxdcLaunch
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
-import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.util.booleanOrNull
-import com.vitorpamplona.amethyst.commons.util.parseJsonObjectOrNull
 import com.vitorpamplona.amethyst.commons.util.stringOrNull
-import com.vitorpamplona.amethyst.commons.util.withString
-import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.serialization.json.JsonObject
-import kotlin.concurrent.thread
 
 /**
  * Provider for an **embedded** nsite/napplet tab — the in-app-tab counterpart of [NappletHostActivity].
- * Runs in the keyless `:napplet` process: it serves the trusted shell + the manifest's already-verified
- * blobs (via [NappletContentServer]), relays the applet's `window.napplet.*` calls to the main-process
- * broker (with this launch's single token), and exposes the WebView to the main app as a
+ * Runs in the keyless `:napplet` process: each tab is a [NappletSandboxSession] (the shared session core
+ * over a WebView, with the main-process broker as its trusted half), exposed to the main app as a
  * `SandboxedUiAdapter` so only pixels + input cross the process boundary — never the keys, which live
  * only in the main process where every brokered op is still consent-gated.
  *
- * Shares [NappletHostActivity]'s trust model and resource edge; differs only in being a windowless
- * Service whose surface the main app embeds (vs. an Activity that owns the screen). The trusted chrome
- * is drawn by the main process around the surface. Requires API 30+ (SurfaceControlViewHost).
+ * Shares [NappletHostActivity]'s session; differs only in being a windowless Service whose surface the
+ * main app embeds (vs. an Activity that owns the screen). The trusted chrome, the loading bar and the
+ * errors are drawn by the main process around the surface. Requires API 30+ (SurfaceControlViewHost).
  */
 @RequiresApi(Build.VERSION_CODES.R)
 class NappletHostService : Service() {
@@ -95,56 +74,35 @@ class NappletHostService : Service() {
 
     /**
      * Per-embedded-tab state. A single NappletHostService instance is shared by every embedded
-     * napplet/nSite tab (they bind the same Intent), so each tab's config, content server, WebView, and
-     * broker bridge live here, keyed by [sessionId]. Each tab has its OWN [replyMessenger] so broker
-     * responses AND unsolicited pushes come back tagged to the right tab (the broker echoes replyTo).
+     * napplet/nSite tab (they bind the same Intent), so each tab's launch, session and client live here,
+     * keyed by [sessionId]. Each session has its OWN reply Messenger, so broker responses AND unsolicited
+     * pushes come back to the right one (the broker echoes replyTo).
      */
     private inner class NappletTab(
         val sessionId: String,
         var clientMessenger: Messenger?,
-        val paths: List<PathTag>,
-        val servers: List<String>,
-        val author: String,
-        val identifier: String,
-        val launchToken: String,
-        val profile: HostProfile,
-        val useTor: Boolean,
+        val config: NappletSandboxLaunch,
+        // Tor's port, re-read by the client on a retry: it may have come up (or moved) since the tab was made.
         var proxyPort: Int,
         val bgColor: Int,
-        val themeType: String,
-        // Opaque per-account WebView storage-profile name (see NappletWebViewProfile).
-        val webViewProfile: String?,
-        val declaredDomains: List<String>,
-        // Set for a webxdc app: its archive and who runs it.
-        val webxdc: WebxdcLaunch? = null,
-        // Set for a front page: the one checked document it serves.
-        val paper: ByteArray? = null,
     ) {
-        // Read on the WebView worker thread in shouldInterceptRequest; written on the main thread in
-        // createHostWebView — @Volatile gives the happens-before so the worker never sees a stale null.
-        @Volatile var contentServer: NappletContentServer? = null
-        var webView: WebView? = null
+        // The launch running in the surface; replaced by a retry once it failed.
+        var session: NappletSandboxSession? = null
 
-        // The session's root view; a WebView lost to a renderer crash is rebuilt inside it on retry.
+        // The session's root view; a session that failed is rebuilt inside it on retry.
         var container: FrameLayout? = null
 
         // The client's last pause/resume. A parked tab is paused before its WebView exists (the WebView is
         // only built when the surface opens), so the flag is applied to every WebView built for the tab.
         var paused = false
 
-        // The applet wasn't built because its route can't be honored (Tor wanted, no port): a retry rebuilds it.
-        var routeBlocked = false
-
         // Whether the user is looking at this napplet (NappletEmbedContract.MSG_SET_ATTENDED). Requests that act
         // for the user (publish, pay, upload…) made while they aren't — or while the page is paused — are held
-        // here and sent when they're back: pausing the WebView doesn't stop JavaScript. Unattended until the
-        // client says otherwise: it sends its state right after every create.
+        // by the session and sent when they're back: pausing the WebView doesn't stop JavaScript. Unattended
+        // until the client says otherwise: it sends its state right after every create.
         var attended = false
-        val heldWhilePaused = NappletHeldRequests<Message>(SystemClock::elapsedRealtime)
 
         val mayAct: Boolean get() = attended && !paused
-        var bridgeReplyProxy: JavaScriptReplyProxy? = null
-        var fireSeq = 0
 
         // The in-flight `<input type="file">` pick for this surface. The picker itself runs in the main
         // process (this provider is windowless), so the callback waits here for MSG_FILE_CHOOSER_RESULT.
@@ -154,9 +112,10 @@ class NappletHostService : Service() {
         // surface (the embedded surface has no error page of its own).
         var loadFailed = false
 
-        // The user's text size, re-applied when a renderer crash forces a fresh WebView.
+        // The user's text size, re-applied when a retry builds a fresh WebView.
         var textZoom = BrowserChrome.DEFAULT_TEXT_ZOOM
-        val replyMessenger = Messenger(Handler(Looper.getMainLooper()) { onBrokerReply(this, it) })
+
+        fun liveWebView(): WebView? = session?.engine?.takeIf { !it.isGone }?.webView
 
         /**
          * Sends [msg] to this tab's client stamped with the session it belongs to, so the client can drop what
@@ -171,10 +130,6 @@ class NappletHostService : Service() {
     }
 
     private val tabs = mutableMapOf<String, NappletTab>()
-
-    // The shell HTML and shim never change; read+decode them once instead of per tab on the main thread.
-    private val shellHtml: ByteArray by lazy { readContractAsset(NappletWebResources.SHELL_HTML_PATH) }
-    private val shimJs: String by lazy { readContractAsset(NappletWebResources.SHIM_JS_PATH).decodeToString() }
 
     // ---- broker bridge: ONE binding shared by all tabs; per-message replyTo scopes the routing ----
     private var brokerMessenger: Messenger? = null
@@ -191,7 +146,7 @@ class NappletHostService : Service() {
                 pendingBrokerRequests.forEach { sendToBroker(it) }
                 pendingBrokerRequests.clear()
                 // A broker that restarted knows nothing about who is watching.
-                tabs.values.forEach { if (it.attended) reportAttended(it) }
+                tabs.values.forEach { it.session?.onBrokerConnected() }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -203,13 +158,7 @@ class NappletHostService : Service() {
 
     override fun onDestroy() {
         // Release before unbinding, while the broker can still hear it.
-        tabs.values.forEach {
-            WebViewProxyPolicy.release(it)
-            releaseFromBroker(it)
-            it.fileChooser.cancel()
-            it.contentServer?.close()
-            it.webView?.destroy()
-        }
+        tabs.values.toList().forEach(::closeTab)
         tabs.clear()
         if (brokerBound) {
             runCatching { unbindService(brokerConnection) }
@@ -220,14 +169,12 @@ class NappletHostService : Service() {
 
     private fun tabFor(msg: Message): NappletTab? = msg.data?.getString(NappletEmbedContract.KEY_SESSION_ID)?.let { tabs[it] }
 
-    private fun tabFor(view: WebView): NappletTab? = tabs.values.firstOrNull { it.webView === view }
-
     private fun onClientMessage(msg: Message): Boolean {
         when (msg.what) {
             NappletEmbedContract.MSG_CREATE_SESSION -> {
                 val tab = buildTab(msg) ?: return true
-                // A re-sent create for an id that is still live must not strand the old tab's WebView, content
-                // server and broker state with nothing left to close them.
+                // A re-sent create for an id that is still live must not strand the old tab's WebView, files
+                // and broker state with nothing left to close them.
                 tabs[tab.sessionId]?.let(::closeTab)
                 tabs[tab.sessionId] = tab
                 // Bind the broker once; a re-sent MSG_CREATE_SESSION must not leak a second binding.
@@ -236,7 +183,7 @@ class NappletHostService : Service() {
                 }
                 replyWithAdapter(tab)
             }
-            NappletEmbedContract.MSG_BACK -> tabFor(msg)?.webView?.let { if (it.canGoBack()) it.goBack() }
+            NappletEmbedContract.MSG_BACK -> tabFor(msg)?.liveWebView()?.let { if (it.canGoBack()) it.goBack() }
             NappletEmbedContract.MSG_RELOAD -> {
                 val tab = tabFor(msg) ?: return true
                 // The client re-reads Tor's port on a retry: it may have come up (or moved) since the tab was made.
@@ -245,13 +192,13 @@ class NappletHostService : Service() {
                     ?.takeIf { it != 0 }
                     ?.let { tab.proxyPort = it }
                 val container = tab.container
-                // After a renderer crash the tab has no WebView, and a tab blocked on its route has only a blank
-                // placeholder: the retry builds a fresh one.
-                if ((tab.webView == null || tab.routeBlocked) && container != null) {
+                val session = tab.session
+                // A launch that failed (no route, no files, a dead renderer) starts over in the same surface.
+                if ((session == null || session.isFailed) && container != null) {
                     val wv = createHostWebView(container.context, tab.sessionId, container)
                     container.addView(wv, 0, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                 } else {
-                    tab.webView?.reload()
+                    tab.liveWebView()?.reload()
                 }
             }
             // onPause()/onResume() are per-WebView (pause/resume THIS surface's JS/DOM). Do NOT call
@@ -261,37 +208,37 @@ class NappletHostService : Service() {
             NappletEmbedContract.MSG_PAUSE ->
                 tabFor(msg)?.let {
                     it.paused = true
-                    it.webView?.onPause()
+                    it.liveWebView()?.onPause()
+                    it.session?.setAttended(it.mayAct)
                 }
             NappletEmbedContract.MSG_RESUME ->
                 tabFor(msg)?.let {
                     it.paused = false
-                    it.webView?.onResume()
-                    releaseHeld(it)
+                    it.liveWebView()?.onResume()
+                    it.session?.setAttended(it.mayAct)
                 }
             NappletEmbedContract.MSG_SET_ATTENDED ->
                 tabFor(msg)?.let {
                     it.attended = msg.data?.getBoolean(NappletEmbedContract.KEY_ATTENDED, false) ?: false
-                    reportAttended(it)
-                    releaseHeld(it)
+                    it.session?.setAttended(it.mayAct)
                 }
             NappletEmbedContract.MSG_IME_OP -> {
                 val tab = tabFor(msg) ?: return true
                 val payload = msg.data?.getString(NappletEmbedContract.KEY_IME_PAYLOAD) ?: return true
                 // The proxy can belong to a page that has already gone away; that must not crash the sandbox.
-                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
+                tab.session?.postToShell(payload)
             }
             NappletEmbedContract.MSG_MAGNIFIER_REQUEST -> onMagnifierRequest(msg)
             NappletEmbedContract.MSG_FIND -> {
-                val wv = tabFor(msg)?.webView ?: return true
+                val wv = tabFor(msg)?.liveWebView() ?: return true
                 val query = msg.data?.getString(NappletEmbedContract.KEY_FIND_QUERY).orEmpty()
                 if (query.isEmpty()) wv.clearMatches() else wv.findAllAsync(query)
             }
-            NappletEmbedContract.MSG_FIND_NEXT -> tabFor(msg)?.webView?.findNext(msg.data?.getBoolean(NappletEmbedContract.KEY_FIND_FORWARD, true) ?: true)
+            NappletEmbedContract.MSG_FIND_NEXT -> tabFor(msg)?.liveWebView()?.findNext(msg.data?.getBoolean(NappletEmbedContract.KEY_FIND_FORWARD, true) ?: true)
             NappletEmbedContract.MSG_SET_TEXT_ZOOM -> {
                 val tab = tabFor(msg) ?: return true
                 tab.textZoom = msg.data?.getInt(NappletEmbedContract.KEY_TEXT_ZOOM, tab.textZoom) ?: tab.textZoom
-                tab.webView?.let { BrowserWebTools.setTextZoom(it, tab.textZoom) }
+                tab.liveWebView()?.let { BrowserWebTools.setTextZoom(it, tab.textZoom) }
             }
             NappletEmbedContract.MSG_FILE_CHOOSER_RESULT -> {
                 val tab = tabFor(msg) ?: return true
@@ -310,42 +257,14 @@ class NappletHostService : Service() {
     private fun buildTab(msg: Message): NappletTab? {
         val data = msg.data ?: return null
         val sessionId = data.getString(NappletEmbedContract.KEY_SESSION_ID) ?: return null
-        val pathList = data.getStringArrayList(NappletHostContract.EXTRA_PATHS) ?: return null
-        val hashList = data.getStringArrayList(NappletHostContract.EXTRA_HASHES) ?: return null
-        val webxdc = NappletHostContract.webxdcOf(data)
-        val profileName = data.getString(NappletHostContract.EXTRA_HOST_PROFILE)
-        // Only a PAPER launch may carry a page of its own; anything else serves its listed files.
-        val paper = NappletHostContract.paperOf(data)?.takeIf { HostProfile.fromName(profileName) == HostProfile.PAPER }
-        // A webxdc app's one file is its archive, and a front page's is its page: each its own extra.
-        if (pathList.size != hashList.size || (pathList.isEmpty() && webxdc == null && paper == null)) return null
-        val author = data.getString(NappletHostContract.EXTRA_AUTHOR).orEmpty()
-        val launchToken = data.getString(NappletHostContract.EXTRA_LAUNCH_TOKEN).orEmpty()
-        if (author.isEmpty() || launchToken.isEmpty()) return null
-
-        val requires = data.getStringArrayList(NappletHostContract.EXTRA_REQUIRES) ?: emptyList()
-        val profile = HostProfile.fromName(data.getString(NappletHostContract.EXTRA_HOST_PROFILE))
-        val declaredDomains = profile.declaredCapabilities(requires).map { it.name.lowercase() }.distinct()
-
-        val tab =
-            NappletTab(
-                sessionId = sessionId,
-                clientMessenger = msg.replyTo,
-                paths = pathList.indices.map { PathTag(pathList[it], hashList[it]) },
-                servers = data.getStringArrayList(NappletHostContract.EXTRA_SERVERS) ?: emptyList(),
-                author = author,
-                identifier = data.getString(NappletHostContract.EXTRA_IDENTIFIER).orEmpty(),
-                launchToken = launchToken,
-                profile = profile,
-                useTor = data.getBoolean(NappletHostContract.EXTRA_USE_TOR, true),
-                proxyPort = data.getInt(NappletHostContract.EXTRA_PROXY_PORT, -1),
-                bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
-                themeType = data.getString(NappletHostContract.EXTRA_THEME).orEmpty().ifBlank { "SYSTEM" },
-                webViewProfile = data.getString(NappletHostContract.EXTRA_WEBVIEW_PROFILE),
-                declaredDomains = declaredDomains,
-                webxdc = webxdc,
-                paper = paper,
-            )
-        return tab
+        val config = NappletSandboxLaunch.from(data) ?: return null
+        return NappletTab(
+            sessionId = sessionId,
+            clientMessenger = msg.replyTo,
+            config = config,
+            proxyPort = config.proxyPort,
+            bgColor = data.getInt(NappletHostContract.EXTRA_BG_COLOR, android.graphics.Color.WHITE),
+        )
     }
 
     /**
@@ -355,7 +274,7 @@ class NappletHostService : Service() {
      */
     private fun onMagnifierRequest(msg: Message) {
         val tab = tabFor(msg) ?: return
-        val wv = tab.webView ?: return
+        val wv = tab.liveWebView() ?: return
         val data = msg.data ?: return
         val reqT = data.getLong(NappletEmbedContract.KEY_MAG_REQ_T)
         MagnifierCapture.capture(
@@ -396,8 +315,7 @@ class NappletHostService : Service() {
 
     /**
      * Builds the session WebView (called by the adapter on the main thread when the client attaches the
-     * surface). Mirrors [NappletHostActivity]: serves the shell + verified blobs through the content
-     * server, installs the origin-restricted shell bridge, loads the trusted shell URL.
+     * surface, and on a retry). The launch is a [NappletSandboxSession], the same as the full-screen host's.
      */
     fun createHostWebView(
         context: Context,
@@ -408,109 +326,97 @@ class NappletHostService : Service() {
         // than build a WebView that no tab tracks (it would leak).
         val tab = tabs[sessionId] ?: error("No napplet tab for session $sessionId")
         // A session re-opened on this tab (the client's view detached and re-attached) before the old one's
-        // close landed: that session's WebView is still here. Destroy it now — its close will be ignored
-        // (see onSessionClosed), and overwriting it would leak it.
-        tab.webView?.let { stale ->
-            (stale.parent as? ViewGroup)?.removeView(stale)
-            stale.destroy()
-            tab.webView = null
-            tab.bridgeReplyProxy = null
-        }
+        // close landed, or a retry: the old launch goes first (its close will be ignored, see onSessionClosed).
+        tab.session?.let { closeSession(tab, it) }
+        tab.session = null
         tab.container = container
-        // A rebuild after a renderer crash: release the previous content server first.
-        tab.contentServer?.close()
-        tab.contentServer = null
-        // Fail closed: Tor is wanted but has no port yet. Nothing may be fetched — not the applet's blobs (the
-        // content server would fetch them directly) and not its own traffic — so leave a blank placeholder and
-        // tell the client, whose Retry sends the port once Tor is up.
-        // The same when WebRTC must be taken away and this WebView can't: its UDP would be a network the
-        // app must not have (a napplet, a webxdc app) or go around Tor.
-        if ((tab.useTor && tab.proxyPort <= 0) || (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor) && !NappletWebRtcGuard.isSupported())) {
-            val blank = WebView(nightThemedContext(context, tab.themeType)).apply { setBackgroundColor(tab.bgColor) }
-            tab.webView = blank
-            reportRouteBlocked(tab)
-            return blank
-        }
-        tab.routeBlocked = false
-        val wv = WebView(nightThemedContext(context, tab.themeType))
-        // FIRST touch after construction: setProfile throws once the WebView has loaded content (or its
-        // profile has otherwise been used), so the storage partition must be chosen before the
-        // hardening/bridge setup and the loadUrl below.
-        NappletWebViewProfile.apply(context, wv, tab.webViewProfile)
-        val appOrigin = NappletWebContract.appOrigin(NappletWebContract.appId(tab.author, tab.identifier, profile = tab.profile), tab.profile)
-        val effectiveProxy = if (tab.useTor) tab.proxyPort else -1
-        tab.contentServer =
-            NappletContentServer(
-                tab.paths,
-                tab.servers,
-                effectiveProxy,
-                cacheDir,
-                NappletBlobCache.partitionOf(tab.webViewProfile.orEmpty(), tab.author, tab.identifier),
-                shellHtml,
-                shimJs,
-                appOrigin,
-                tab.profile,
-                tab.declaredDomains,
+        tab.loadFailed = false
+        val session =
+            NappletSandboxSession(
+                context = this,
+                config = NappletSandboxLaunch(tab.config.launch, tab.config.launchToken, tab.config.useTor, tab.proxyPort, tab.config.themeType, tab.config.webViewProfile, tab.config.capabilityLabels),
+                themedContext = nightThemedContext(context, tab.config.themeType),
+                client = HostClient(tab),
+                chrome = HostChromeClient(tab),
+                toBroker = { if (brokerMessenger == null) pendingBrokerRequests.add(it) else sendToBroker(it) },
+                toBoundBroker = { if (brokerMessenger != null) sendToBroker(it) },
+                host = TabHost(tab),
                 imeProxy = true,
-                webxdc = tab.webxdc,
-                paper = tab.paper,
             )
-
-        hardenWebView(wv, tab)
+        tab.session = session
+        val wv = session.webView
         // Theme the pre-load background so the shell/app loading shows Amethyst's background, not white.
         wv.setBackgroundColor(tab.bgColor)
         wv.dropSystemBarInsets()
-        WebViewCompat.addWebMessageListener(wv, NappletWebContract.BRIDGE_NAME, setOf(NappletWebContract.ORIGIN), ::onShellMessage)
         wv.setFindListener { active, total, _ -> pushFindResult(tab, active, total) }
         if (tab.textZoom != BrowserChrome.DEFAULT_TEXT_ZOOM) BrowserWebTools.setTextZoom(wv, tab.textZoom)
-        tab.webView = wv
         if (tab.paused) wv.onPause()
-        if (tab.profile.exposesNetwork) {
-            // The site's own off-origin traffic follows the process-wide route; load once it's in place so
-            // a Tor nSite's first request can't leave over the open web — and not at all if it can't be.
-            WebViewProxyPolicy.observeRoute(tab) { usesTor ->
-                if (tabs[tab.sessionId] === tab) {
-                    tab.toClient(Message.obtain(null, NappletEmbedContract.MSG_ROUTE).apply { data = Bundle().apply { putBoolean(NappletEmbedContract.KEY_ROUTE_TOR, usesTor) } })
-                }
-            }
-            WebViewProxyPolicy.claim(
-                owner = tab,
-                torPort = effectiveProxy,
-                onFailed = { reportRouteBlocked(tab) },
-            ) { if (tab.webView === wv) wv.loadUrl(NappletWebContract.SHELL_URL) }
-        } else if (tab.webxdc != null) {
-            // A webxdc archive downloads on first use, inside the page's own request, where a failure
-            // is only a 404 in an empty frame. Fetch it first, as the activity does, so a miss shows
-            // the retry instead.
-            val server = tab.contentServer
-            pushLoadState(tab, isLoading = true)
-            thread(name = "webxdc-probe", isDaemon = true) {
-                val available =
-                    server?.isAvailable(NappletSiteServer.INDEX_PATH) { download ->
-                        // This probe's WebView only: a rebuilt tab's newer probe owns the bar now.
-                        probeResults.post { if (tabs[tab.sessionId] === tab && tab.webView === wv) pushDownload(tab, download) }
-                    } == true
-                probeResults.post {
-                    if (tabs[tab.sessionId] !== tab || tab.webView !== wv) return@post
-                    // The watch stops with the probe and may miss the download's end.
-                    pushDownload(tab, null)
-                    if (available) {
-                        wv.loadUrl(NappletWebContract.SHELL_URL)
-                    } else {
-                        // Dropped, so the client's retry builds the tab again, with a new download.
-                        (wv.parent as? ViewGroup)?.removeView(wv)
-                        wv.destroy()
-                        tab.webView = null
-                        tab.bridgeReplyProxy = null
-                        tab.loadFailed = true
-                        pushLoadState(tab, isLoading = false)
-                    }
-                }
-            }
-        } else {
-            wv.loadUrl(NappletWebContract.SHELL_URL)
-        }
+        session.setAttended(tab.mayAct)
+        session.start()
         return wv
+    }
+
+    /** What the tab's client draws, from the shared core's state. */
+    private inner class TabHost(
+        private val tab: NappletTab,
+    ) : NappletSandboxSession.Host {
+        private fun isCurrent(): Boolean = tabs[tab.sessionId] === tab
+
+        override fun onState(state: NappletSessionState) {
+            if (!isCurrent()) return
+            // The client words a run inside a note from it, as every host does.
+            tab.toClient(Message.obtain(null, NappletEmbedContract.MSG_SESSION_STATE).apply { data = Bundle().also { NappletEmbedContract.putSessionState(it, state) } })
+            when (state) {
+                // The files are being fetched (a webxdc archive can take a while): the client shows its spinner.
+                NappletSessionState.Loading, NappletSessionState.WaitingForTor -> pushLoadState(tab, isLoading = true)
+                NappletSessionState.Showing -> {}
+                is NappletSessionState.Failed ->
+                    when (state.reason) {
+                        // Fail closed: Tor wanted and not running, or a WebView that can't take WebRTC away.
+                        // The client's Retry sends the port once Tor is up.
+                        NappletFailure.ROUTE_BLOCKED, NappletFailure.ENGINE -> reportRouteBlocked(tab)
+                        // No server returned the files: the client's retry builds the tab again, with a new download.
+                        NappletFailure.UNREACHABLE -> {
+                            tab.loadFailed = true
+                            pushLoadState(tab, isLoading = false)
+                        }
+                        // The view is gone; the client's MSG_RELOAD rebuilds it in the same surface.
+                        NappletFailure.RENDERER_GONE -> {
+                            tab.loadFailed = true
+                            pushLoadState(tab, isLoading = false, rendererGone = true)
+                        }
+                    }
+            }
+        }
+
+        override fun onDownload(progress: NappletDownloadProgress?) {
+            if (isCurrent()) pushDownload(tab, progress)
+        }
+
+        override fun onPageMessage(
+            type: String?,
+            envelope: JsonObject,
+            raw: String,
+        ): Boolean {
+            // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
+            if (type?.startsWith("ime.") != true) return false
+            val reply =
+                Message.obtain(null, NappletEmbedContract.MSG_IME_EVENT).apply {
+                    data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, raw) }
+                }
+            tab.toClient(reply)
+            return true
+        }
+
+        override fun onReply(result: JsonObject) {
+            if (isCurrent()) notifyIfSensitive(tab, result)
+        }
+
+        override fun onRoute(usesTor: Boolean) {
+            if (isCurrent()) {
+                tab.toClient(Message.obtain(null, NappletEmbedContract.MSG_ROUTE).apply { data = Bundle().apply { putBoolean(NappletEmbedContract.KEY_ROUTE_TOR, usesTor) } })
+            }
+        }
     }
 
     /** A session closed: drop the tab, release its resources, and destroy its own WebView (never a sibling's). */
@@ -524,71 +430,42 @@ class NappletHostService : Service() {
         tabs[sessionId]?.takeIf { it.container === container }?.let(::closeTab)
     }
 
-    /** Drops [tab] and everything it holds (its WebView, content server, broker state, proxy claim). */
+    /** Drops [tab] and everything it holds (its session: WebView, files, broker state, proxy claim). */
     private fun closeTab(tab: NappletTab) {
         // By identity: a replaced tab closing late must not take its replacement (same id) with it.
         tabs.remove(tab.sessionId, tab)
-        tab.bridgeReplyProxy = null
-        WebViewProxyPolicy.release(tab)
-        releaseFromBroker(tab)
         // Release a picker still waiting on this surface before its WebView goes away.
         tab.fileChooser.cancel()
-        tab.contentServer?.close()
-        tab.contentServer = null
-        tab.webView?.destroy()
-        tab.webView = null
+        tab.session?.let { closeSession(tab, it) }
+        tab.session = null
         tab.container = null
     }
 
-    @Suppress("SetJavaScriptEnabled")
-    private fun hardenWebView(
-        wv: WebView,
+    /** Ends [session]: what it still had queued for the broker is dropped, and the broker forgets it. */
+    private fun closeSession(
         tab: NappletTab,
+        session: NappletSandboxSession,
     ) {
-        wv.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            @Suppress("DEPRECATION")
-            databaseEnabled = false
-            allowFileAccess = false
-            allowContentAccess = false
-            @Suppress("DEPRECATION")
-            allowFileAccessFromFileURLs = false
-            @Suppress("DEPRECATION")
-            allowUniversalAccessFromFileURLs = false
-            javaScriptCanOpenWindowsAutomatically = false
-            setSupportMultipleWindows(false)
-            setGeolocationEnabled(false)
-            mediaPlaybackRequiresUserGesture = true
-            cacheMode = WebSettings.LOAD_NO_CACHE
-            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-            if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
-                safeBrowsingEnabled = true
-            }
-        }
-        wv.overScrollMode = View.OVER_SCROLL_NEVER
-        WebView.setWebContentsDebuggingEnabled(false)
-        if (NappletWebRtcGuard.isNeeded(tab.profile, tab.useTor)) NappletWebRtcGuard.install(wv)
-        NappletWebRtcGuard.installCookieGuard(wv)
-        wv.webViewClient = HostClient(tab)
-        wv.webChromeClient = HostChromeClient(tab)
+        pendingBrokerRequests.removeAll { it.replyTo == session.replyMessenger }
+        (session.webView.parent as? ViewGroup)?.takeIf { it === tab.container }?.removeView(session.webView)
+        session.close()
     }
 
     /**
-     * The applet's file picker. This surface has no other need for a chrome client — console output and
-     * the loading bar are drawn by the main process from [NappletEmbedContract.MSG_LOAD_STATE] — but
-     * without one WebView silently ignores every `<input type="file">`.
+     * The applet's file picker. Console output and the loading bar are drawn by the main process from
+     * [NappletEmbedContract.MSG_LOAD_STATE]; without a chrome client WebView silently ignores every
+     * `<input type="file">`.
      */
     private inner class HostChromeClient(
         private val tab: NappletTab,
-    ) : WebChromeClient() {
+    ) : NappletWebChromeClient() {
         override fun onShowFileChooser(
             webView: WebView,
             filePathCallback: ValueCallback<Array<Uri>>,
             fileChooserParams: FileChooserParams,
         ): Boolean = requestFileChooser(tab, filePathCallback, fileChooserParams)
 
-        override fun onConsoleMessage(consoleMessage: ConsoleMessage): Boolean {
+        override fun onConsole(consoleMessage: ConsoleMessage): Boolean {
             pushConsoleLog(tab, consoleMessage.messageLevel().name, consoleMessage.message(), consoleMessage.sourceId(), consoleMessage.lineNumber())
             return true
         }
@@ -663,15 +540,10 @@ class NappletHostService : Service() {
         return true
     }
 
-    /** Serves only the trusted shell and the manifest's verified blobs; external links go to the system. */
+    /** Tells the client about loads, history and errors; the security answers are the session's. */
     private inner class HostClient(
         private val tab: NappletTab,
-    ) : WebViewClient() {
-        override fun shouldInterceptRequest(
-            view: WebView,
-            request: WebResourceRequest,
-        ): WebResourceResponse? = tab.contentServer?.serve(request)
-
+    ) : NappletWebViewClient() {
         override fun onPageStarted(
             view: WebView,
             url: String,
@@ -715,39 +587,6 @@ class NappletHostService : Service() {
             errorResponse: WebResourceResponse,
         ) {
             pushConsoleLog(tab, ConsoleMessage.MessageLevel.ERROR.name, getString(R.string.napplet_console_http_error, errorResponse.statusCode, errorResponse.reasonPhrase.orEmpty()), request.url?.toString().orEmpty(), 0)
-        }
-
-        /**
-         * The renderer died. It is shared by every WebView in `:napplet`, and an unhandled crash kills the
-         * whole process — every other tab included. Drop just this tab's WebView and report it gone
-         * ([NappletEmbedContract.KEY_RENDERER_GONE]); the client's MSG_RELOAD rebuilds it in the same surface.
-         */
-        override fun onRenderProcessGone(
-            view: WebView,
-            detail: RenderProcessGoneDetail,
-        ): Boolean {
-            Log.w(TAG) { "Renderer gone (crashed=${detail.didCrash()}) for an embedded napplet/nsite" }
-            (view.parent as? ViewGroup)?.removeView(view)
-            view.destroy()
-            if (tab.webView === view) {
-                tab.webView = null
-                tab.bridgeReplyProxy = null
-                tab.loadFailed = true
-                pushLoadState(tab, isLoading = false, rendererGone = true)
-            }
-            return true
-        }
-
-        override fun shouldOverrideUrlLoading(
-            view: WebView,
-            request: WebResourceRequest,
-        ): Boolean {
-            val uri = request.url
-            if (NappletWebContract.isInternalHost(uri.host)) return false
-            if (tab.profile.opensLinks && request.hasGesture() && (uri.scheme == "https" || uri.scheme == "http")) {
-                runCatching { startActivity(linkIntent(tab.profile, uri)) }
-            }
-            return true
         }
     }
 
@@ -839,107 +678,9 @@ class NappletHostService : Service() {
     /** The applet wasn't loaded because its route can't be honored: tell the client, which shows the error. */
     private fun reportRouteBlocked(tab: NappletTab) {
         if (tabs[tab.sessionId] !== tab) return
-        // Whatever WebView the tab has never loaded the applet: the retry must rebuild it, not reload it.
-        tab.routeBlocked = true
+        // Whatever WebView the tab has never loaded the applet: the retry builds a new session.
         tab.loadFailed = true
         pushLoadState(tab, isLoading = false, routeBlocked = true)
-    }
-
-    // ---- bridge: shell <-> native (mirror of NappletHostActivity.onShellMessage) ----
-
-    private fun onShellMessage(
-        view: WebView,
-        message: WebMessageCompat,
-        sourceOrigin: Uri,
-        isMainFrame: Boolean,
-        replyProxy: JavaScriptReplyProxy,
-    ) {
-        if (!isMainFrame) return
-        val tab = tabFor(view) ?: return
-        tab.bridgeReplyProxy = replyProxy
-
-        val raw = message.data ?: return
-        val envelope = parseJsonObjectOrNull(raw) ?: return
-
-        // IME events aren't brokered — the main app hosts the keyboard. Relay the envelope to the client.
-        if (envelope.stringOrNull("type").orEmpty().startsWith("ime.")) {
-            val reply =
-                Message.obtain(null, NappletEmbedContract.MSG_IME_EVENT).apply {
-                    data = Bundle().apply { putString(NappletEmbedContract.KEY_IME_PAYLOAD, raw) }
-                }
-            tab.toClient(reply)
-            return
-        }
-
-        val id = envelope.stringOrNull("id").orEmpty().ifEmpty { "fire-${tab.fireSeq++}" }
-        val msg =
-            Message.obtain(null, NappletIpc.MSG_REQUEST).apply {
-                replyTo = tab.replyMessenger
-                data =
-                    Bundle().apply {
-                        putString(NappletIpc.KEY_REQUEST_ID, id)
-                        putString(NappletIpc.KEY_PAYLOAD, raw)
-                        putString(NappletIpc.KEY_LAUNCH_TOKEN, tab.launchToken)
-                    }
-            }
-        // Nobody is looking (parked off-screen, or the app is in the background): an act on the user's behalf
-        // waits until they're looking at this napplet again.
-        if (!tab.mayAct && NappletActingRequests.actsForUser(runCatching { NappletProtocolJson.readType(raw) }.getOrNull())) {
-            val refused = tab.heldWhilePaused.hold(msg)
-            if (refused != null) {
-                tab.bridgeReplyProxy?.failRequest(refused, NappletHeldRequests.TOO_MANY)
-            } else {
-                // Settle it with an error if nobody comes back for it, so the applet isn't left waiting forever.
-                heldExpiry.postDelayed({ expireHeld(tab) }, NappletHeldRequests.MAX_AGE_MS)
-            }
-            return
-        }
-        if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
-    }
-
-    /** Sends [tab]'s held acting requests once it may act again (attended and not paused). */
-    private fun releaseHeld(tab: NappletTab) {
-        if (!tab.mayAct) return
-        val held = tab.heldWhilePaused.drain()
-        held.fail.forEach { tab.bridgeReplyProxy?.failRequest(it, NappletHeldRequests.EXPIRED) }
-        held.send.forEach { request -> if (brokerMessenger == null) pendingBrokerRequests.add(request) else sendToBroker(request) }
-    }
-
-    private val heldExpiry = Handler(Looper.getMainLooper())
-
-    // Where a webxdc tab's availability probe hands its answer back to the main thread.
-    private val probeResults = Handler(Looper.getMainLooper())
-
-    /** Tells the broker whether [tab] is being looked at, which gates decrypting its relay reads. */
-    private fun reportAttended(tab: NappletTab) {
-        val msg =
-            Message.obtain(null, NappletIpc.MSG_SET_ATTENDED).apply {
-                replyTo = tab.replyMessenger
-                data =
-                    Bundle().apply {
-                        putBoolean(NappletIpc.KEY_ATTENDED, tab.attended)
-                        putString(NappletIpc.KEY_LAUNCH_TOKEN, tab.launchToken)
-                    }
-            }
-        if (brokerMessenger == null) pendingBrokerRequests.add(msg) else sendToBroker(msg)
-    }
-
-    private fun expireHeld(tab: NappletTab) {
-        if (tabs[tab.sessionId] !== tab) return
-        tab.heldWhilePaused.expire().forEach { tab.bridgeReplyProxy?.failRequest(it, NappletHeldRequests.EXPIRED) }
-    }
-
-    /**
-     * [tab] is gone: have the broker close the live relay / inc subscriptions it opened and drop its reply
-     * Messenger (a binder the main process would otherwise hold, keeping the tab alive). The launch token is
-     * NOT given back: the main-process controller re-creates sessions with the same token, and gives it
-     * back itself when it is torn down.
-     */
-    private fun releaseFromBroker(tab: NappletTab) {
-        tab.heldWhilePaused.clear()
-        pendingBrokerRequests.removeAll { it.replyTo == tab.replyMessenger }
-        if (brokerMessenger == null) return
-        sendToBroker(Message.obtain(null, NappletIpc.MSG_RELEASE_CLIENT).apply { replyTo = tab.replyMessenger })
     }
 
     private fun sendToBroker(msg: Message) {
@@ -948,32 +689,6 @@ class NappletHostService : Service() {
         } catch (e: Exception) {
             Log.w(TAG, "Failed to deliver request to broker", e)
         }
-    }
-
-    /** Broker reply for [tab] — delivered to the tab's own reply Messenger, so it's already scoped. */
-    private fun onBrokerReply(
-        tab: NappletTab,
-        msg: Message,
-    ): Boolean {
-        // The reply may arrive after the tab closed (its WebView/page is gone) — drop it so we never
-        // postMessage to a dead JavaScriptReplyProxy.
-        if (tabs[tab.sessionId] !== tab) return true
-        val data = msg.data ?: return true
-        when (msg.what) {
-            NappletIpc.MSG_RESPONSE -> {
-                val id = data.getString(NappletIpc.KEY_REQUEST_ID) ?: return true
-                val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                val result = (parseJsonObjectOrNull(payload) ?: JsonObject(emptyMap())).withString("id", id)
-                notifyIfSensitive(tab, result)
-                runCatching { tab.bridgeReplyProxy?.postMessage(result.toString()) }
-            }
-            NappletIpc.MSG_PUSH -> {
-                val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
-                runCatching { tab.bridgeReplyProxy?.postMessage(payload) }
-            }
-            else -> return false
-        }
-        return true
     }
 
     /** Pushes a notice to the main process for a granted "allow always" sensitive op, so it can toast. */
@@ -995,8 +710,6 @@ class NappletHostService : Service() {
             }
         tab.toClient(message)
     }
-
-    private fun readContractAsset(path: String): ByteArray = assets.open(NappletWebResources.RESOURCE_ASSET_ROOT + path).use { it.readBytes() }
 
     private companion object {
         private const val TAG = "NappletHostService"

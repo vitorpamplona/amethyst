@@ -24,7 +24,6 @@ import android.webkit.WebView
 import androidx.webkit.ScriptHandler
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
-import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletWebContract
 import com.vitorpamplona.quartz.utils.Log
 import java.util.WeakHashMap
@@ -34,8 +33,9 @@ import java.util.WeakHashMap
  * HTTP, not WebRTC: its UDP goes straight out, so a napplet or webxdc app would have a network, and a site the user
  * put on Tor would show its real address. A site on the open web keeps WebRTC; its traffic is its own.
  *
- * The napplet's own frame loses it in the prelude too ([NappletWebContract.preludePrefix]); this also
- * reaches the frames a page makes, which no prelude does.
+ * Which launches need it is the shared rule (`NappletLaunchPlan.webRtcGuardNeeded`). The napplet's own
+ * frame loses it in the prelude too ([NappletWebContract.preludePrefix]); this also reaches the frames a
+ * page makes, which no prelude does.
  */
 object NappletWebRtcGuard {
     private const val TAG = "NappletWebRtcGuard"
@@ -43,11 +43,6 @@ object NappletWebRtcGuard {
     // The guard script of each browser WebView that has one, so it can be taken off again when the
     // user moves the site back to the open web. Touched on the main thread only.
     private val installed = WeakHashMap<WebView, ScriptHandler>()
-
-    fun isNeeded(
-        profile: HostProfile,
-        useTor: Boolean,
-    ): Boolean = profile.runsScripts && (profile != HostProfile.WEBSITE || useTor)
 
     /** Whether this WebView can run a script in every frame, which the guard needs. */
     fun isSupported(): Boolean = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
