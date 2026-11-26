@@ -82,6 +82,7 @@ fun RenderPodcastEpisode(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -224,8 +225,8 @@ fun RenderPodcastEpisode(
 
                 TranslatableRichTextViewer(
                     content = it,
-                    canPreview = canPreview,
-                    quotesLeft = 1,
+                    canPreview = canPreview && !makeItShort,
+                    quotesLeft = quotesLeft,
                     modifier = Modifier.fillMaxWidth(),
                     tags = descriptionTags,
                     backgroundColor = backgroundColor,
@@ -255,7 +256,7 @@ fun RenderPodcastEpisode(
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview,
-                    quotesLeft = 1,
+                    quotesLeft = quotesLeft,
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,

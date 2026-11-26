@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,28 +40,90 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.audio.playableAudio
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.navigation.routeFor
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.kc_audio_track_price
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.ClickableUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.experimental.audio.header.AudioHeaderEvent
 import com.vitorpamplona.quartz.experimental.audio.track.AudioTrackEvent
 import com.vitorpamplona.quartz.experimental.audio.track.tags.ParticipantTag
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip14Subject.subject
+
+/**
+ * True for a kind-31337 event that describes a track even though it names no file to play: Zapstr
+ * gives a track a `subject` (some publishers write `title`) and an empty `content`. Other apps'
+ * records on the kind (ad-skip data, game state) carry no title and a payload in `content`, and keep
+ * the unknown-kind card.
+ */
+fun AudioTrackEvent.isTitledTrack(): Boolean = displayTitle()?.isNotBlank() == true && (content.isBlank() || !looksLikeOpaquePayload(content))
+
+private const val MAX_TRACK_PARTICIPANTS = 6
+
+/**
+ * A Zapstr track (kind 31337) with no file the player can take: what the spec gives it, without
+ * the player. Its `subject` (or `title`), its type (`c`: music, podcast), its `cover` (or `image`),
+ * its participants with their roles, and its `price`.
+ */
+@Composable
+fun RenderAudioTrackHeader(
+    note: Note,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val event = note.event as? AudioTrackEvent ?: return
+    val title = remember(event) { event.displayTitle()?.trim() } ?: return
+    val type = remember(event) { event.type()?.let { readableToken(it) } }
+    val cover = remember(event) { event.coverUrl()?.takeIf { it.startsWith("https://") || it.startsWith("http://") } }
+    val participants = remember(event) { event.participants() }
+    val price = remember(event) { event.price()?.trim()?.ifBlank { null } }
+
+    KindCard(
+        icon = if (event.type().equals("podcast", ignoreCase = true)) MaterialSymbols.Podcasts else MaterialSymbols.MusicNote,
+        title = title,
+        subtitle = type,
+    ) {
+        if (cover != null && accountViewModel.settings.showImages()) {
+            AsyncImage(
+                model = cover,
+                contentDescription = title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.size(TrackCoverSize).clip(RoundedCornerShape(12.dp)),
+            )
+        }
+        participants.take(MAX_TRACK_PARTICIPANTS).forEach { participant ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                KindCardPerson(participant.pubKey, accountViewModel, nav)
+                participant.roles().ifEmpty { null }?.let {
+                    Text(text = it.joinToString(", "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+        }
+        KindCardMore(participants.size - MAX_TRACK_PARTICIPANTS)
+        KindCardField(stringRes(Res.string.kc_audio_track_price), price, maxLines = 1)
+    }
+}
+
+private val TrackCoverSize = 96.dp
 
 @Composable
 fun RenderAudioTrack(
@@ -154,19 +219,23 @@ fun AudioTrackHeader(
 @Composable
 fun RenderAudioHeader(
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
     val noteEvent = note.event as? AudioHeaderEvent ?: return
 
-    AudioHeader(noteEvent, note, contentScale, accountViewModel, nav)
+    AudioHeader(noteEvent, note, canPreview, quotesLeft, contentScale, accountViewModel, nav)
 }
 
 @Composable
 fun AudioHeader(
     noteEvent: AudioHeaderEvent,
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -210,8 +279,8 @@ fun AudioHeader(
                 ) {
                     TranslatableRichTextViewer(
                         content = it,
-                        canPreview = true,
-                        quotesLeft = 1,
+                        canPreview = canPreview,
+                        quotesLeft = quotesLeft,
                         tags = tags,
                         backgroundColor = background,
                         id = note.idHex,
