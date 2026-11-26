@@ -44,6 +44,12 @@ import kotlin.reflect.KClass
 val LocalNavStackEntry = staticCompositionLocalOf<NavStackEntry?> { null }
 
 /**
+ * The window's main navigation, for what opens a screen from where no screen's nav is passed down
+ * (a platform's app launcher, called from a card deep in a note). Null outside the logged-in shell.
+ */
+val LocalAppNav = staticCompositionLocalOf<INav?> { null }
+
+/**
  * The navigation every screen calls, for any layout: each verb becomes one [NavRequest] that the
  * window's [NavBackStacks] model reads its own way (a push, a tab, a window). Requests run after the
  * keyboard settles.

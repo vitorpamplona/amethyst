@@ -40,7 +40,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -78,7 +77,6 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
-import com.vitorpamplona.amethyst.commons.browser.ui.pill.OnionIcon
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
@@ -97,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletMessagePane
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletOnionSwitch
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletWaitingPane
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
 import com.vitorpamplona.amethyst.commons.napplet.ui.oldestQuestionOf
@@ -117,10 +116,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_stop
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_larger
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_smaller
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_value
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_forced
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_downloading
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_in_use
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_restart
@@ -148,7 +143,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import androidx.compose.material3.Icon as VectorIcon
 import java.awt.Window as AwtWindow
 
 /**
@@ -328,37 +322,7 @@ internal fun SandboxToolbar(
             // Only an nSite has a route of its own to choose, and only while Tor is on.
             val torEnabled by host.torEnabledState.collectAsState()
             if (isWebsite && torEnabled) {
-                val useTor = session.useTor
-                Row(
-                    Modifier.padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    VectorIcon(
-                        OnionIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (useTor || routedOverTor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Column {
-                        Text(stringRes(Res.string.browser_pill_tor_title), style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            stringRes(
-                                when {
-                                    useTor -> Res.string.browser_pill_tor_on
-                                    routedOverTor -> Res.string.browser_pill_tor_forced
-                                    else -> Res.string.browser_pill_tor_off
-                                },
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.widthIn(max = 220.dp),
-                        )
-                    }
-                    Switch(checked = useTor, onCheckedChange = onNetworkMode)
-                }
+                NappletOnionSwitch(useTor = session.useTor, routedOverTor = routedOverTor, onNetworkMode = onNetworkMode)
             }
         }
         if (finding) {
