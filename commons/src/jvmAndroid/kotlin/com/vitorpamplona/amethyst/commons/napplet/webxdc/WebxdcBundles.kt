@@ -20,32 +20,22 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.webxdc
 
-import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
-import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.GENERIC_CONTENT_TYPE
 import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.StaticSiteResolver
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.guessStaticContentType
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.normalizeStaticPath
-import com.vitorpamplona.quartz.nip5aStaticWebsites.resolver.sniffContentType
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okio.FileSystem
+import okio.Path
 import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Unpacked webxdc archives on disk, one directory each under [root]: `<sha256>/` for an archive the
@@ -205,8 +195,8 @@ class WebxdcBundles(
         const val DEFAULT_MAX_BYTES = 1024L * 1024 * 1024
 
         /** Written last into a finished unpack; a directory without it is never served. */
-        const val COMPLETE = ".amethyst-complete"
-        const val INDEX = "index.html"
+        const val COMPLETE = WebxdcArchiveRules.COMPLETE
+        const val INDEX = WebxdcArchiveRules.INDEX
         private const val TAG = "WebxdcBundles"
 
         // By archive directory, for every WebxdcBundles in the process.
@@ -222,130 +212,45 @@ class WebxdcBundles(
 }
 
 /**
- * What one webxdc launch serves on its origin: the files of its unpacked archive, and the
- * messenger's `webxdc.js`, which the spec says the app loads but never ships.
+ * [bundles] as a [WebxdcBundleSource] for one launch, downloading through [client] (on the launch's
+ * route).
  */
-class WebxdcFiles(
-    private val bundles: WebxdcBundles,
-    private val client: OkHttpClient,
-    private val url: String,
-    private val hash: HexKey?,
-    private val servers: List<String>,
+fun WebxdcBundles.source(client: OkHttpClient): WebxdcBundleSource =
+    object : WebxdcBundleSource {
+        override val fileSystem: FileSystem get() = FileSystem.SYSTEM
+
+        override suspend fun open(
+            url: String,
+            hash: HexKey?,
+            servers: List<String>,
+            cancelled: () -> Boolean,
+            onProgress: (bytes: Long, total: Long?) -> Unit,
+            retain: Boolean,
+        ): Path? = this@source.open(url, hash, servers, client, cancelled, onProgress, retain)?.toOkioPath()
+
+        override fun release(dir: Path) = this@source.release(dir.toFile())
+    }
+
+/**
+ * What one webxdc launch serves on its origin, from [bundles] on disk, downloading through [client]:
+ * the JVM hosts' [WebxdcFiles].
+ */
+fun WebxdcFiles(
+    bundles: WebxdcBundles,
+    client: OkHttpClient,
+    url: String,
+    hash: HexKey?,
+    servers: List<String>,
     runtimeJs: String,
-) : NappletFiles {
-    private val runtime = runtimeJs.encodeToByteArray()
+): WebxdcFiles = WebxdcFiles(bundles.source(client), url, hash, servers, runtimeJs)
 
-    // The unpacked archive (and its canonical path), once had: every request after the first is a
-    // file lookup.
-    @Volatile
-    private var dir: Pair<File, String>? = null
-    private val opening = Mutex()
-
-    // The directory [WebxdcBundles.open] retained for this launch, as it named it: released on [close].
-    private val retained = AtomicReference<File?>(null)
-
-    // A miss is remembered: a page's every request would otherwise download the whole archive again.
-    // Retry builds a new launch.
-    @Volatile
-    private var failed = false
-
-    @Volatile
-    private var closed = false
-
-    private val downloading = MutableStateFlow<NappletDownloadProgress?>(null)
-
-    override val download: StateFlow<NappletDownloadProgress?> = downloading.asStateFlow()
-
-    private suspend fun dir(): Pair<File, String>? {
-        dir?.let { return it }
-        if (failed || closed) return null
-        return opening.withLock {
-            dir ?: if (failed || closed) {
-                null
-            } else {
-                val opened =
-                    try {
-                        bundles.open(url, hash, servers, client, { closed }, ::onProgress, retain = true)
-                    } finally {
-                        downloading.value = null
-                    }
-                if (opened == null) {
-                    if (!closed) failed = true
-                    null
-                } else {
-                    retained.set(opened)
-                    // Closed while it opened: give it back (once, whichever of the two gets here).
-                    if (closed) {
-                        retained.getAndSet(null)?.let(bundles::release)
-                        return@withLock null
-                    }
-                    val canonical = opened.canonicalFile
-                    (canonical to canonical.path + File.separator).also { dir = it }
-                }
-            }
-        }
-    }
-
-    override fun close() {
-        closed = true
-        retained.getAndSet(null)?.let(bundles::release)
-    }
-
-    @Volatile
-    private var lastShownAt = 0L
-
-    // Every 64 KB read is a call, and on Android each update crosses processes: a bar needs about ten
-    // a second, whatever the archive's size or whether the server gave it.
-    private fun onProgress(
-        bytes: Long,
-        total: Long?,
-    ) {
-        val shown = downloading.value
-        val now = System.nanoTime()
-        if (shown == null || shown.total != total || bytes < shown.bytes || bytes == total || now - lastShownAt >= PROGRESS_INTERVAL_NANOS) {
-            lastShownAt = now
-            downloading.value = NappletDownloadProgress(bytes, total)
-        }
-    }
-
-    override suspend fun isAvailable(requestPath: String): Boolean = find(requestPath) != null
-
-    override suspend fun find(requestPath: String): NappletBlobStore.Blob? {
-        val path = normalizeStaticPath(NappletBlobStore.decodePath(requestPath.substringBefore('?').substringBefore('#')))
-        if (path == RUNTIME_PATH) return NappletBlobStore.Blob("/$RUNTIME_PATH", "", "text/javascript", null, runtime)
-        val (root, rootPrefix) = dir() ?: return null
-        val relative = WebxdcArchive.entryPath(path) ?: return null
-        val file = File(root, relative).canonicalFile
-        if (!file.path.startsWith(rootPrefix) || !file.isFile || relative == WebxdcBundles.COMPLETE) return null
-        val byExtension = guessStaticContentType(relative)
-        val type = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(head(file)) ?: byExtension else byExtension
-        return NappletBlobStore.Blob("/$relative", hash.orEmpty(), type, file.toOkioPath(), null, FileSystem.SYSTEM)
-    }
-
-    // Every file is in the archive or it isn't: a miss is a 404, never an error.
-    override fun isListed(requestPath: String): Boolean = false
-
-    private fun head(file: File): ByteArray =
-        file.inputStream().use { input ->
-            val buffer = ByteArray(64)
-            val read = input.read(buffer)
-            if (read <= 0) ByteArray(0) else buffer.copyOf(read)
-        }
-
-    companion object {
-        const val RUNTIME_PATH = "webxdc.js"
-
-        private const val PROGRESS_INTERVAL_NANOS = 100_000_000L
-
-        /**
-         * [client], given the time a large archive needs: the blob client gives a call 45 s, and a
-         * 178 MB Half-Life takes minutes over Tor. Shares [client]'s route, pool and threads.
-         */
-        fun downloadClient(client: OkHttpClient): OkHttpClient =
-            client
-                .newBuilder()
-                .callTimeout(15, TimeUnit.MINUTES)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build()
-    }
-}
+/**
+ * [client], given the time a large archive needs: the blob client gives a call 45 s, and a
+ * 178 MB Half-Life takes minutes over Tor. Shares [client]'s route, pool and threads.
+ */
+fun WebxdcFiles.Companion.downloadClient(client: OkHttpClient): OkHttpClient =
+    client
+        .newBuilder()
+        .callTimeout(15, TimeUnit.MINUTES)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .build()

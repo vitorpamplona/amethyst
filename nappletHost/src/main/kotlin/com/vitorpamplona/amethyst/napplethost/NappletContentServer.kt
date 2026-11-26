@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.napplet.openStream
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.downloadClient
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
