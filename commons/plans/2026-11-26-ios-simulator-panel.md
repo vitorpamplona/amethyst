@@ -44,8 +44,10 @@ type, swipe, keys, rotate, run the app, read the log, crashes in every result) w
 - **A platform never holds up or empties another.** `Devices.refresh` asks every backend at once,
   each under a timeout; one that fails or hangs keeps its last list, with the error on its setup
   (a `simctl` that stumbles doesn't make simulators vanish, nor delay the emulators). Each backend
-  has its own lock. Measured with stand-ins (adb answering in 120 ms, the fake `simctl`), a look
-  went from a median of 270 ms to the number in the commit that made this change.
+  has its own lock. Measured with stand-ins (adb answering in 120 ms, one emulator booting; 15
+  looks each, median): with `simctl list` taking 250 ms, as on a Mac with several runtimes, a look
+  went from 523 ms (one platform after the other) to 278 ms; with an instant `simctl`, from 270 ms
+  to 243 ms (booting emulators are now asked at once too).
 - **Copies are clones.** A chat's `start_device` on a simulator makes its workstream's own `simctl clone` of
   the simulator (named `… (Amethyst copy)`), deleted when it stops; reset deletes it and clones
   again. As with the emulator's read-only copies, the source must be shut down to be copied: the
