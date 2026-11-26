@@ -94,26 +94,28 @@ class IosNappletSession(
     @Volatile
     var onNostrLink: (String) -> Unit = {}
 
-    private val core: NappletSessionCore<IosNappletSession> =
-        NappletSessionCore(
-            owner = this,
-            launch = launch,
-            accountPubKey = accountPubKey,
-            plan = plan,
-            account = account,
-            broker = broker,
-            services = host.services,
-            route = IosNappletStoreRoute(host.stores, accountPubKey, plan.usesNetwork, host::torPort, host::awaitTorPort, host::torRunning, host::awaitTor),
-            files = ::filesFor,
-            shellHtml = { NappletWebResources.shellHtml() },
-            shimJs = { NappletWebResources.shimJs().decodeToString() },
-            links = Links(),
-            // NAP-FS through the system's document picker; a run inside a note picks nothing.
-            filePort = if (inline) null else IosNappletFilePort(),
-            // Attended only while its screen is on show and the app in front.
-            attendedWhenShown = false,
-            onClosed = host::trimBlobCache,
-        ).also { engine.core = it }.also { it.engine = engine }
+    private val core: NappletSessionCore =
+        NappletSessionCore
+            .inProcess(
+                owner = this,
+                launch = launch,
+                accountPubKey = accountPubKey,
+                plan = plan,
+                account = account,
+                broker = broker,
+                services = host.services,
+                route = IosNappletStoreRoute(host.stores, accountPubKey, plan.usesNetwork, host::torPort, host::awaitTorPort, host::torRunning, host::awaitTor),
+                files = ::filesFor,
+                shellHtml = { NappletWebResources.shellHtml() },
+                shimJs = { NappletWebResources.shimJs().decodeToString() },
+                links = Links(),
+                // NAP-FS through the system's document picker; a run inside a note picks nothing.
+                filePort = if (inline) null else IosNappletFilePort(),
+                // Attended only while its screen is on show and the app in front.
+                attendedWhenShown = false,
+                onClosed = host::trimBlobCache,
+            ).also { engine.core = it }
+            .also { it.engine = engine }
 
     val state: StateFlow<NappletSessionState> get() = core.state
 

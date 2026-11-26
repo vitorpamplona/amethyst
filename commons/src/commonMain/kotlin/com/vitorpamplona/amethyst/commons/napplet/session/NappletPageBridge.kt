@@ -47,9 +47,10 @@ import kotlin.time.TimeSource
  *   cap, is answered with a failure so the page's promise settles.
  * - **Out:** [deliver] queues a payload for the page; the queue goes to the shell in one script per
  *   burst ([deliveryScript]), in order: a subscription's stored events cost one trip to the renderer.
+ *   Android posts the burst to the shell's reply proxy instead ([toPage]).
  *
- * Desktop and iOS run it in-process next to the trusted side; Android's sandbox process can run it on
- * its side of the IPC.
+ * Desktop and iOS run it in-process next to the trusted side; Android's sandbox process runs it on its
+ * side of the IPC, with the broker service's routing on the other.
  */
 class NappletPageBridge(
     private val scope: CoroutineScope,
@@ -59,6 +60,12 @@ class NappletPageBridge(
     private val evaluateInShell: (String) -> Unit,
     private val clock: () -> Long = monotonicMillis(),
     private val maxHeldAgeMs: Long = NappletHeldRequests.MAX_AGE_MS,
+    /**
+     * Hands a batch to the shell's own document instead of [evaluateInShell], for a browser whose bridge
+     * answers the document that called it (Android's reply proxy), so a payload can never reach a
+     * document that replaced the shell.
+     */
+    private val toPage: ((List<String>) -> Unit)? = null,
 ) {
     private val lock = KmpLock()
     private val held = NappletHeldRequests<String>(clock, maxAgeMs = maxHeldAgeMs)
@@ -153,7 +160,7 @@ class NappletPageBridge(
             }
             val batch = ArrayList<String>(outbox.size)
             while (outbox.isNotEmpty()) batch += outbox.removeFirst()
-            evaluateInShell(deliveryScript(batch))
+            if (toPage != null) toPage(batch) else evaluateInShell(deliveryScript(batch))
         }
     }
 
