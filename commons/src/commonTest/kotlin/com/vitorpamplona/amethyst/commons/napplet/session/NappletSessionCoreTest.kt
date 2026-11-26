@@ -154,7 +154,7 @@ class NappletSessionCoreTest {
             assertEquals(setOf(NappletGuard.WEBRTC, NappletGuard.COOKIES), opened.engine.installed.toSet())
             val shell =
                 opened.core
-                    .serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true)!!
+                    .serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = true)!!
                     .readBody()
                     .decodeToString()
             assertContains(shell, "<head>" + NappletWebContract.WEBRTC_CHECK + FakeNappletWebEngine.BRIDGE_HEAD)
@@ -170,7 +170,7 @@ class NappletSessionCoreTest {
             assertEquals(true, tor.route.claimed)
             assertContains(
                 tor.core
-                    .serve("GET", NappletWebContract.SHELL_URL, true)!!
+                    .serve("GET", NappletWebContract.SHELL_URL, true, true)!!
                     .readBody()
                     .decodeToString(),
                 NappletWebContract.WEBRTC_CHECK,
@@ -182,7 +182,7 @@ class NappletSessionCoreTest {
             assertEquals(false, open.route.claimed)
             assertFalse(
                 open.core
-                    .serve("GET", NappletWebContract.SHELL_URL, true)!!
+                    .serve("GET", NappletWebContract.SHELL_URL, true, true)!!
                     .readBody()
                     .decodeToString()
                     .contains(NappletWebContract.WEBRTC_CHECK),

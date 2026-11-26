@@ -142,7 +142,7 @@ class NappletContentServer(
     fun serve(request: WebResourceRequest): WebResourceResponse? {
         // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
         val acceptsHtml = request.requestHeaders["Accept"]?.contains(NappletSiteServer.MIME_HTML, ignoreCase = true) == true
-        val response = runBlocking { server.serve(request.method, request.url.toString(), acceptsHtml) } ?: return null
+        val response = runBlocking { server.serve(request.method, request.url.toString(), acceptsHtml, mainFrameNavigation = request.isForMainFrame) } ?: return null
         // The file may be trimmed away before it opens; an exception here would crash the WebView.
         val body =
             try {

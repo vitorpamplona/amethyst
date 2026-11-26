@@ -482,7 +482,8 @@ class CefNappletSession(
                 // Read now: the request is CEF's only for the length of this call.
                 val method = request.method
                 val url = request.url
-                return AsyncResourceHandler(url) { core.serve(method, url, acceptsHtml) }
+                val mainFrame = request.resourceType == CefRequest.ResourceType.RT_MAIN_FRAME
+                return AsyncResourceHandler(url) { core.serve(method, url, acceptsHtml, mainFrame) }
             }
         }
 

@@ -132,7 +132,7 @@ interface NappletJsDialogs {
  * - **Serving.** The shell and the app's files come from a `WKURLSchemeHandler` on
  *   [NappletWebContract.NAPPLET_SCHEME] (WebKit won't hand `https` to one), streamed from the core's
  *   server. The shell is served only to the top-frame navigation this engine let through, so a no-cors
- *   fetch of it from a frame reads a 404. Every response says `nosniff` and turns DNS prefetching off.
+ *   fetch of it from a frame reads a 404 (the shared server's rule). Every response turns DNS prefetching off.
  * - **Second layer behind the CSP.** WebKit never shows a scheme handler an `http(s)` request, so the
  *   shared request policy is compiled into a `WKContentRuleList` ([NappletRequestPolicy.contentRules]):
  *   a napplet's frames can reach nothing but our own hosts. A list that doesn't compile fails the launch.
@@ -334,11 +334,11 @@ class IosNappletWebEngine(
         // A document navigation asks for HTML; a script, an image or a fetch doesn't.
         val acceptsHtml = request.valueForHTTPHeaderField("Accept")?.contains(NappletSiteServer.MIME_HTML, ignoreCase = true) == true
         val isShell = url == plan.origins.shellUrl
-        // The shell is the top frame's document once, when this engine loaded it: any other request for
-        // it (a frame's no-cors fetch) reads nothing.
+        // The shell is the top frame's document once, when this engine loaded it: the server answers any
+        // other request for it (a frame's no-cors fetch) with a 404.
         val serveShell = isShell && shellNavigationPending && request.mainDocumentURL?.absoluteString == url
         if (serveShell) shellNavigationPending = false
-        val refused = (isShell && !serveShell) || core.classifyRequest(url, isImage = false) != NappletRequestKind.SERVE
+        val refused = core.classifyRequest(url, isImage = false) != NappletRequestKind.SERVE
         tasks[task] =
             scope.launch {
                 val response =
@@ -346,7 +346,7 @@ class IosNappletWebEngine(
                         NappletSiteServer.notFound()
                     } else {
                         try {
-                            core.serve(method, url, acceptsHtml) ?: NappletSiteServer.notFound()
+                            core.serve(method, url, acceptsHtml, mainFrameNavigation = serveShell) ?: NappletSiteServer.notFound()
                         } catch (e: Throwable) {
                             if (e is CancellationException) throw e
                             Log.w(TAG, "Could not serve $url", e)
@@ -367,7 +367,6 @@ class IosNappletWebEngine(
             headers["Content-Type"] = response.contentType
             headers["Content-Length"] = response.length.toString()
             response.headers.forEach { (name, value) -> headers[name] = value }
-            headers["X-Content-Type-Options"] = "nosniff"
             headers["X-DNS-Prefetch-Control"] = "off"
             val http = NSHTTPURLResponse(NSURL(string = url), response.status.toLong(), "HTTP/1.1", headers)
             Log.d(TAG) { "served ${response.status} ${url.take(80)}" }

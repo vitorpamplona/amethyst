@@ -359,15 +359,17 @@ class NappletSessionCore<K : Any>(
     /**
      * The answer to a [NappletRequestKind.SERVE] request, or null when there is none (the engine
      * answers 404: from an internal origin a request can't go anywhere else). [acceptsHtml] is whether
-     * it is a document navigation.
+     * it is a document navigation, [mainFrameNavigation] whether it loads the top frame's document
+     * (the only request the shell is served to).
      */
     suspend fun serve(
         method: String,
         url: String,
         acceptsHtml: Boolean,
+        mainFrameNavigation: Boolean,
     ): NappletSiteServer.Response? =
         try {
-            server?.serve(method, url, acceptsHtml)
+            server?.serve(method, url, acceptsHtml, mainFrameNavigation)
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             Log.w(TAG, "Could not serve $url", e)

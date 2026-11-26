@@ -123,12 +123,15 @@ class NappletSiteServer(
     /**
      * The response for a request to [url], or null when the browser should handle it itself (a
      * site's request to another host). [acceptsHtml] is whether the
-     * request is a document navigation.
+     * request is a document navigation. [mainFrameNavigation] is whether it loads the top frame's
+     * document: the shell is served only then, so a frame's no-cors fetch of it reads a 404, not the
+     * shell with the launch's artifact inside.
      */
     suspend fun serve(
         method: String,
         url: String,
         acceptsHtml: Boolean,
+        mainFrameNavigation: Boolean = true,
     ): Response? {
         if (!method.equals("GET", ignoreCase = true)) {
             // Nothing here answers anything but a GET. Left to the browser, a POST to the app's own
@@ -138,7 +141,7 @@ class NappletSiteServer(
         }
         return try {
             when {
-                url == origins.shellUrl -> shell()
+                url == origins.shellUrl -> if (mainFrameNavigation) shell() else notFound()
                 url == appOrigin || url.startsWith("$appOrigin/") -> appResource(url, acceptsHtml)
                 // A napplet or webxdc app has no network; a site is a normal web app.
                 profile.allowsOffOrigin -> null
@@ -220,17 +223,21 @@ class NappletSiteServer(
         const val MIME_HTML = "text/html"
 
         // Every response is built from verified bytes on each request; nothing is for the browser
-        // to keep.
-        private val NO_STORE = mapOf("Cache-Control" to "no-store")
+        // to keep. And each is the type it says it is: a browser never sniffs one into another (a
+        // text file run as a script, an image read as a page).
+        private val NO_STORE = mapOf("Cache-Control" to "no-store", NOSNIFF_HEADER to "nosniff")
+
+        const val NOSNIFF_HEADER = "X-Content-Type-Options"
+        private val NOSNIFF = mapOf(NOSNIFF_HEADER to "nosniff")
 
         private const val TAG = "NappletSiteServer"
 
-        fun notFound(): Response = Response(404, "Not Found", "text/plain", "utf-8", emptyMap(), ByteArray(0))
+        fun notFound(): Response = Response(404, "Not Found", "text/plain", "utf-8", NOSNIFF, ByteArray(0))
 
-        private fun methodNotAllowed(): Response = Response(405, "Method Not Allowed", "text/plain", "utf-8", mapOf("Allow" to "GET"), ByteArray(0))
+        private fun methodNotAllowed(): Response = Response(405, "Method Not Allowed", "text/plain", "utf-8", mapOf("Allow" to "GET") + NOSNIFF, ByteArray(0))
 
         /** A file the event lists that couldn't be fetched or read. */
-        fun unavailable(): Response = Response(502, "Bad Gateway", "text/plain", "utf-8", emptyMap(), ByteArray(0))
+        fun unavailable(): Response = Response(502, "Bad Gateway", "text/plain", "utf-8", NOSNIFF, ByteArray(0))
 
         /** Splits a content type into its MIME type and charset (UTF-8 for text-like types). */
         fun splitContentType(contentType: String): Pair<String, String?> {
