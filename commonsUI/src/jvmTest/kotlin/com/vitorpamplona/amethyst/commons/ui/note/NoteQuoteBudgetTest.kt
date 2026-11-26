@@ -31,7 +31,6 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
@@ -281,7 +280,9 @@ class NoteQuoteBudgetTest {
 
     /**
      * The front ends' segment renderer, which turns a `nostr:` mention into a quote (the default
-     * platform prints it as text). Markdown and secret messages are not exercised here.
+     * platform prints it as text). A kind whose NIP says Markdown (NIP-82's releases) goes to the
+     * shared document renderer, the platform's default [RichTextPlatform.Markdown], so its quotes
+     * are counted there too. Secret messages are not exercised.
      */
     private object QuotingPlatform : RichTextPlatform {
         override fun segmentRenderer(
@@ -291,18 +292,6 @@ class NoteQuoteBudgetTest {
             callbackUri: String?,
             canPreview: Boolean,
         ): RichTextSegmentRenderer = DefaultRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
-
-        @Composable
-        override fun Markdown(
-            content: String,
-            tags: ImmutableListOfLists<String>,
-            canPreview: Boolean,
-            quotesLeft: Int,
-            backgroundColor: MutableState<Color>,
-            callbackUri: String?,
-            accountViewModel: AccountViewModel,
-            nav: INav,
-        ) = Text(content)
 
         @Composable
         override fun SecretMessage(

@@ -64,7 +64,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_input
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_lines
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_output
 import com.vitorpamplona.amethyst.commons.resources.claude_code_tool_search_in
-import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.note.GitDiffView
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -244,7 +243,6 @@ private fun SubagentBody(
     // No navigation down here: a PR number still opens on GitHub, a word hashtag does nothing.
     val onLink = rememberChatLinks(nav = null)
     val style = rememberChatMarkdownStyle()
-    val codeChips = rememberChatCodeChips()
     call.subagent.forEach { item ->
         when (item) {
             is ChatItem.ToolCall -> {
@@ -256,7 +254,7 @@ private fun SubagentBody(
                     ToolCallRow(item, cwd, running)
                 }
             }
-            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall, blockComposer = codeChips)
+            is ChatItem.AssistantText -> ChatMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall)
             else -> {}
         }
     }

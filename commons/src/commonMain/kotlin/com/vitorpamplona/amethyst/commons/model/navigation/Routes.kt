@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.search.SearchQuery
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip17Dm.base.ChatroomKey
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
@@ -787,10 +788,13 @@ sealed class Route {
     ) : Route()
 
     /**
-     * The Android emulators and phones on this computer, full size: the screen of the one [chatKey]'s
-     * coding chat works on, or of the one picked here.
+     * The devices on this computer (Android emulators and phones, iOS simulators), full size: the
+     * screen of the one [chatKey]'s coding chat works on, or of the one picked here. Its serial name
+     * is the one it had as `AndroidDevices`, so saved dock layouts still open it.
      */
-    @Serializable data class AndroidDevices(
+    @Serializable
+    @SerialName("com.vitorpamplona.amethyst.commons.model.navigation.Route.AndroidDevices")
+    data class Devices(
         val chatKey: String? = null,
     ) : Route()
 
@@ -961,6 +965,24 @@ sealed class Route {
 
     @Serializable data class Hashtag(
         val hashtag: String,
+    ) : Route()
+
+    /**
+     * A NIP-54 wiki topic: every author's article under [slug] (normalized), to pick one to read.
+     * [from] is the author whose article linked here; their version comes first.
+     */
+    @Serializable data class WikiTopic(
+        val slug: String,
+        val from: String? = null,
+    ) : Route()
+
+    /**
+     * The wiki editor. [topic] fixes a new article's slug; [base] is the address of the version to
+     * start from: the account's own to edit it, anyone else's to fork it.
+     */
+    @Serializable data class WikiPost(
+        val topic: String? = null,
+        val base: String? = null,
     ) : Route()
 
     @Serializable data class Geohash(

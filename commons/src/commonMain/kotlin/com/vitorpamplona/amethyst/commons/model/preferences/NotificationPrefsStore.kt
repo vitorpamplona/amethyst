@@ -49,6 +49,7 @@ data class NotificationPrefs(
     val alwaysOnService: Boolean = false,
     val showMessagesInNotifications: Boolean = true,
     val splitNotificationsEnabled: Boolean = false,
+    val everyoneNotificationsUseTrust: Boolean = true,
 )
 
 /** Reads and writes [NotificationPrefs] in the account's DataStore. */
@@ -59,6 +60,7 @@ class NotificationPrefsStore(
         val alwaysOnService = booleanPreferencesKey("always_on_notification_service")
         val showMessagesInNotifications = booleanPreferencesKey("show_messages_in_notifications")
         val splitNotificationsEnabled = booleanPreferencesKey("split_notifications_enabled")
+        val everyoneNotificationsUseTrust = booleanPreferencesKey("everyone_notifications_use_trust")
 
         /** What the `secret_keeper_<npub>` file called these, for the one-shot copy. */
         val legacyTable =
@@ -84,6 +86,7 @@ class NotificationPrefsStore(
             alwaysOnService = prefs[alwaysOnService] ?: false,
             showMessagesInNotifications = prefs[showMessagesInNotifications] ?: true,
             splitNotificationsEnabled = prefs[splitNotificationsEnabled] ?: false,
+            everyoneNotificationsUseTrust = prefs[everyoneNotificationsUseTrust] ?: true,
         )
     }
 
@@ -93,6 +96,7 @@ class NotificationPrefsStore(
             prefs[alwaysOnService] = value.alwaysOnService
             prefs[showMessagesInNotifications] = value.showMessagesInNotifications
             prefs[splitNotificationsEnabled] = value.splitNotificationsEnabled
+            prefs[everyoneNotificationsUseTrust] = value.everyoneNotificationsUseTrust
         }
     }
 }

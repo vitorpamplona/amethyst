@@ -70,6 +70,25 @@ dependencyResolutionManagement {
         mavenCentral { content { jitpackOnly.forEach { excludeGroup(it) } } }
         maven { url = uri("https://jitpack.io") }
     }
+    // JitPack rewrites the file names in the Gradle module metadata it serves and drops their
+    // classifiers, so the iOS targets' metadata variant names `<module>-<version>.jar`, which does
+    // not exist, instead of the `<module>-<version>-metadata.jar` it stored. The iOS metadata compiles
+    // need that variant: point it at the real file. Only for the compose-richtext fork's iOS modules.
+    components {
+        listOf("richtext-ui", "richtext-ui-material3").forEach { library ->
+            listOf("iosarm64" to "iosArm64", "iossimulatorarm64" to "iosSimulatorArm64").forEach { (suffix, target) ->
+                withModule("com.github.vitorpamplona.compose-richtext:$library-$suffix") {
+                    val version = id.version
+                    withVariant("${target}MetadataElements-published") {
+                        withFiles {
+                            removeAllFiles()
+                            addFile("$library-$suffix-$version-metadata.jar")
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 rootProject.name = "Amethyst"
@@ -88,7 +107,9 @@ include(":relayBench")
 include(":agentCore")
 include(":claudeCodeClient")
 include(":codexClient")
+include(":deviceClientCore")
 include(":androidDeviceClient")
+include(":iosSimulatorClient")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Nostr + Blossom through Magpie
 // (above), like every library below. To change it alongside the app, point Gradle at a local

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.agents
 
+import com.vitorpamplona.amethyst.commons.model.navigation.uri.percentDecodeQueryValue
 import com.vitorpamplona.crypto.random.RandomInstance
 import com.vitorpamplona.crypto.sha2.sha256
 import kotlinx.serialization.SerializationException
@@ -130,38 +131,8 @@ object OpenRouterOAuth {
             }
         }
 
-    /**
-     * `%XX` escapes and `+` as space. Grows as it goes: a non-ASCII character is several bytes, so
-     * a buffer of `value.length` bytes overflowed on one. Only two hex digits make an escape
-     * (`toIntOrNull(16)` also took `%+5` and `%-1`).
-     */
-    fun percentDecode(value: String): String {
-        val out = ArrayList<Byte>(value.length)
-        var i = 0
-        while (i < value.length) {
-            val c = value[i]
-            if (c == '%' && i + 2 <= value.lastIndex) {
-                val high = hexDigit(value[i + 1])
-                val low = hexDigit(value[i + 2])
-                if (high >= 0 && low >= 0) {
-                    out.add(((high shl 4) or low).toByte())
-                    i += 3
-                    continue
-                }
-            }
-            (if (c == '+') " " else c.toString()).encodeToByteArray().forEach { out.add(it) }
-            i++
-        }
-        return out.toByteArray().decodeToString()
-    }
-
-    private fun hexDigit(c: Char): Int =
-        when (c) {
-            in '0'..'9' -> c - '0'
-            in 'a'..'f' -> c - 'a' + 10
-            in 'A'..'F' -> c - 'A' + 10
-            else -> -1
-        }
+    /** `%XX` escapes and `+` as space ([percentDecodeQueryValue]). */
+    fun percentDecode(value: String): String = percentDecodeQueryValue(value)
 
     private const val HEX = "0123456789ABCDEF"
 }

@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.content.PlainText
+import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownToDocument
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -40,11 +42,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
-import com.vitorpamplona.amethyst.commons.resources.android_devices_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
+import com.vitorpamplona.amethyst.commons.resources.devices_title
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
@@ -63,6 +65,9 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val MAX_TITLE = 40
+
+/** The most of a note's first line that is parsed for its title: a title shows [MAX_TITLE]. */
+private const val MAX_LINE = 400
 
 private val CamelCaseBoundary = Regex("(?<=[a-z0-9])(?=[A-Z])")
 
@@ -100,17 +105,26 @@ fun routeTitle(
                     ?.tags
                     ?.firstOrNull { it.size > 1 && it[0] == "title" && it[1].isNotBlank() }
                     ?.let { return it[1].trim().take(MAX_TITLE) }
+                // Its words, not its markup: "**bold**" reads "bold", "# Title" reads "Title".
                 event
                     ?.content
                     ?.lineSequence()
                     ?.firstOrNull { it.isNotBlank() }
-                    ?.let { return it.trim().take(MAX_TITLE) }
+                    ?.let { line ->
+                        val words = remember(line) { PlainText.of(MarkdownToDocument(null).parse(line.take(MAX_LINE))).ifBlank { line.trim() } }
+                        return words.take(MAX_TITLE)
+                    }
             }
         }
         // The community's name, so two communities open side by side are told apart: their tabs
         // both read "Concord server" before.
         is Route.ConcordServer -> concordCommunityName(route.communityId, accountViewModel)?.let { return it.take(MAX_TITLE) }
         is Route.Hashtag -> return "#${route.hashtag}"
+        is Route.WikiTopic ->
+            return route.slug
+                .replace('-', ' ')
+                .replaceFirstChar { it.uppercaseChar() }
+                .take(MAX_TITLE)
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
         is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
         is Route.EventKind -> {
@@ -145,7 +159,7 @@ fun routeTitle(
         // Short enough for a tab: "Agentic Coding changes" was cut to "Agentic Coding chan…".
         is Route.ClaudeCodeChanges -> return stringRes(Res.string.claude_code_changes)
         is Route.ClaudeCodePullRequests -> return stringRes(Res.string.claude_code_pull_requests)
-        is Route.AndroidDevices -> return stringRes(Res.string.android_devices_title)
+        is Route.Devices -> return stringRes(Res.string.devices_title)
         // The screen's own title; spelled out, its name read "Nip46 connected apps".
         is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
         // The screens' own titles; spelled out, they read "Marmot devices settings".

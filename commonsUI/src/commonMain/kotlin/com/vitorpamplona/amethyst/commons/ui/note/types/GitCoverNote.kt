@@ -31,6 +31,7 @@ import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitActivityTarget
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCoverNoteHeader
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -73,6 +74,7 @@ fun RenderGitCoverNoteEvent(
         authorPubKey = event.pubKey,
         accountViewModel = accountViewModel,
         nav = nav,
+        rendering = TextRendering.of(event),
     )
 
     if (!makeItShort && note.replyTo?.lastOrNull() != null) {

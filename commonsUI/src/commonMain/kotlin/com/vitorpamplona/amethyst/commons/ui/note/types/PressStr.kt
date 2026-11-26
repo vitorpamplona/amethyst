@@ -91,6 +91,7 @@ import com.vitorpamplona.amethyst.commons.resources.magazine_show_fewer_issues
 import com.vitorpamplona.amethyst.commons.richtext.MediaContentKind
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlPdf
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -378,6 +379,7 @@ fun RenderMagazine(
                     callbackUri = note.toNostrUri(),
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    rendering = TextRendering.of(noteEvent),
                 )
             }
 
@@ -658,6 +660,7 @@ private fun BookCard(
                 callbackUri = note.toNostrUri(),
                 accountViewModel = accountViewModel,
                 nav = nav,
+                rendering = TextRendering.of(noteEvent),
             )
         }
 

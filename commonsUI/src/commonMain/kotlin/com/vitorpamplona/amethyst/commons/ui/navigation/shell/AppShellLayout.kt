@@ -589,7 +589,7 @@ val FullWidthRoutes: Set<KClass<out Route>> =
         Route.ClaudeCodeChanges::class,
         Route.ClaudeCodePropose::class,
         Route.ClaudeCodePullRequests::class,
-        Route.AndroidDevices::class,
+        Route.Devices::class,
     )
 
 /**

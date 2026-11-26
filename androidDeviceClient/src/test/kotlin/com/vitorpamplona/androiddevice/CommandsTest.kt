@@ -23,6 +23,7 @@ package com.vitorpamplona.androiddevice
 import com.vitorpamplona.androiddevice.adb.Adb
 import com.vitorpamplona.androiddevice.device.AdbScreen
 import com.vitorpamplona.androiddevice.emulator.EmulatorLauncher
+import com.vitorpamplona.devicecore.ProcessCommandRunner
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout

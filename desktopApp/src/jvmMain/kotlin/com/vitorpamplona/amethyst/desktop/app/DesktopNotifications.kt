@@ -34,6 +34,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.marmot.isReadMarmotMessage
+import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.moderation.notifications.AwtTrayNotifier
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotifKind
 import com.vitorpamplona.amethyst.commons.moderation.notifications.NotificationDispatcher
@@ -189,14 +190,19 @@ class DesktopNotifications(
 
         /**
          * Whether a note may raise a toast for [account]: the Notifications tab would list it under
-         * the top-nav filter picked right now (Curated, All Follows, a list...), and its author is not
-         * muted, blocked or reported.
+         * the top-nav filter picked right now (Curated, All Follows, a list...), or with split
+         * notifications under the Everyone tab (which holds the Following tab's people too, with
+         * its own Web of Trust switch), and its author is not muted, blocked or reported.
          */
         internal fun notifiesAbout(account: Account): (Note) -> Boolean {
-            val feedFilter = NotificationFeedFilter(account)
+            val singleFeed = NotificationFeedFilter(account)
+            val everyoneTab = NotificationFeedFilter(account, TopFilter.Global)
             // A Marmot message its chat already read (history a linked device delivered is read on
             // import) stays in Notifications but raises no toast.
-            return { note -> account.isAcceptable(note) && !account.isReadMarmotMessage(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account)) }
+            return { note ->
+                val feedFilter = if (account.settings.splitNotificationsEnabled.value) everyoneTab else singleFeed
+                account.isAcceptable(note) && !account.isReadMarmotMessage(note) && feedFilter.acceptableEvent(note, feedFilter.buildFilterParams(account))
+            }
         }
     }
 }

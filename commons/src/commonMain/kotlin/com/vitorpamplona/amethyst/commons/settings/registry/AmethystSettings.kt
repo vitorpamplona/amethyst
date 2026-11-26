@@ -370,6 +370,15 @@ object AmethystSettings {
                 listOf("notifications", "follows", "spam", "noise"),
             ),
             accountOnOff(
+                "account.notifications_everyone_trust",
+                "Web of Trust on Everyone",
+                "With split notifications, the Everyone tab hides people outside the user's Web of Trust network (their follows and the people their trust provider ranks). Zaps still show. Has no effect until a trust provider is set up.",
+                { account.everyoneNotificationsUseTrust.value },
+                account::changeEveryoneNotificationsUseTrust,
+                Route.NotificationSettings,
+                listOf("notifications", "web of trust", "wot", "spam", "strangers"),
+            ),
+            accountOnOff(
                 "account.calls",
                 "Calls",
                 "Lets people call the user over audio and video. Off rejects calls.",

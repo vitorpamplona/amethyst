@@ -20,11 +20,9 @@
  */
 package com.vitorpamplona.amethyst.ios
 
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
@@ -35,8 +33,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
  * iOS rich text: the shared segment renderer (media, quoted notes, links, payment cards, secret
- * emoji) and the shared secret-message reveal, as on the desktop. Markdown stays as its source
- * until the markdown renderer gains an iOS target (A4).
+ * emoji) and the shared secret-message reveal, as on the desktop. Markdown, Djot and AsciiDoc go
+ * through the shared document renderer, [RichTextPlatform]'s default `Markdown`, as on Android
+ * and the desktop (commons/plans/2026-11-25-content-parsing.md).
  */
 object IosRichTextPlatform : RichTextPlatform {
     override fun segmentRenderer(
@@ -46,18 +45,6 @@ object IosRichTextPlatform : RichTextPlatform {
         callbackUri: String?,
         canPreview: Boolean,
     ): RichTextSegmentRenderer = DefaultRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
-
-    @Composable
-    override fun Markdown(
-        content: String,
-        tags: ImmutableListOfLists<String>,
-        canPreview: Boolean,
-        quotesLeft: Int,
-        backgroundColor: MutableState<Color>,
-        callbackUri: String?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = Text(content)
 
     @Composable
     override fun SecretMessage(

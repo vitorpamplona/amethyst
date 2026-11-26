@@ -80,6 +80,8 @@ kotlin {
                 api(libs.kiko.player)
                 // Parses NIP-54 wiki pages, which are Djot (MIT, our own library; stdlib only).
                 implementation(libs.djot)
+                // Markdown into the document model (commons/content), on every target.
+                implementation(libs.jetbrains.markdown)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)
@@ -182,6 +184,8 @@ kotlin {
                 // The Android devices beside a coding chat (androiddevices/): adb, the emulator's
                 // gRPC screen and input. Desktop only, like the agents that use them.
                 api(project(":androidDeviceClient"))
+                // The iOS simulators beside it, on a Mac: simctl, and idb's companion over gRPC.
+                api(project(":iosSimulatorClient"))
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

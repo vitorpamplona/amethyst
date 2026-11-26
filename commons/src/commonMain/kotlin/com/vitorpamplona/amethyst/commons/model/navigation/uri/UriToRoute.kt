@@ -30,6 +30,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeForPointe
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.findQueryParameterValue
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipLinks
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.wiki.WikiTopics
 import com.vitorpamplona.cordn.client.CordnLinkInspection
 import com.vitorpamplona.quartz.buzz.invite.BuzzInviteLink
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
@@ -224,6 +225,9 @@ fun uriToRoute(
         return Route.QRDisplay(account.signer.pubKey, startScanning = true)
     }
     frontPageRoute(uri)?.let { return it }
+    if (WikiTopics.isTopicUri(uri)) {
+        return WikiTopics.route(uri)
+    }
     if (isHashtagRoute(uri)) {
         return Route.Hashtag(uri.removePrefix(NOSTR_URI_PREFIX).removePrefix("hashtag?id=").lowercase())
     }

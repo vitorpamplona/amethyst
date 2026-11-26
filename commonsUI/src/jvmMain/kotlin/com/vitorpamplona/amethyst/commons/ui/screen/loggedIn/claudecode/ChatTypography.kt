@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -40,8 +41,10 @@ import com.halilibo.richtext.ui.ListStyle
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.TableStyle
 import com.halilibo.richtext.ui.string.RichTextStringStyle
-import com.vitorpamplona.amethyst.commons.ui.markdown.InlineCodeChips
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
+import com.vitorpamplona.amethyst.commons.content.CodeBlock
+import com.vitorpamplona.amethyst.commons.ui.content.LocalDocumentChipColor
+import com.vitorpamplona.amethyst.commons.ui.content.LocalDocumentCodeBlock
+import com.vitorpamplona.amethyst.commons.ui.content.RenderPlainMarkdown
 
 /**
  * The chat's reading text, a Claude reply read like a document: lines close enough (1.4) that a
@@ -52,26 +55,35 @@ internal val ChatTextStyle: TextStyle
     @Composable @ReadOnlyComposable
     get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp, letterSpacing = 0.sp)
 
-/** Paragraphs that draw their inline code as rounded chips; pairs with [rememberChatMarkdownStyle]. */
+/**
+ * Markdown in the chat: the shared document renderer with the chat's look. Inline code sits on
+ * the documents' rounded chips ([chips]); with [codeBlocks], code blocks go across the column with a copy button.
+ */
 @Composable
-internal fun rememberChatCodeChips(): InlineCodeChips {
-    // Translucent, so the chip reads on the page and on the gray of the user's bubble alike; a
-    // stronger tint on a dark page, where 6% of a light ink barely shows against black.
-    val colors = MaterialTheme.colorScheme
-    val color = colors.onSurface.copy(alpha = if (colors.isLight) 0.06f else 0.12f)
-    return remember(color) { InlineCodeChips(color) }
+internal fun ChatMarkdown(
+    text: String,
+    onLink: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    style: RichTextStyle? = null,
+    textStyle: TextStyle? = null,
+    chips: Boolean = true,
+    codeBlocks: Boolean = false,
+) {
+    // The documents' own chip (null) or none at all.
+    val chipColor = if (chips) null else Color.Transparent
+    CompositionLocalProvider(
+        LocalDocumentChipColor provides chipColor,
+        LocalDocumentCodeBlock provides if (codeBlocks) ChatCodeBlocks else null,
+    ) {
+        RenderPlainMarkdown(text, onLink, modifier, style = style, textStyle = textStyle)
+    }
 }
 
-/** The chat's blocks: inline code on chips, code blocks across the column with a copy button. */
-@Composable
-internal fun rememberChatBlocks(): ChatBlockComposer {
-    val chips = rememberChatCodeChips()
-    return remember(chips) { ChatBlockComposer(chips) }
-}
+private val ChatCodeBlocks: @Composable (CodeBlock) -> Unit = { ChatCodeBlock(it.code, it.language ?: "") }
 
 /**
  * Markdown for replies: paragraphs spaced like prose, modest headings (a reply's `##` is a
- * section, not a page title), inline code in a monospace face (its chip comes from [rememberChatCodeChips]), and code
+ * section, not a page title), inline code in a monospace face (its chip comes from [ChatMarkdown]), and code
  * blocks on a quiet rounded surface.
  */
 @Composable
@@ -105,7 +117,7 @@ internal fun rememberChatMarkdownStyle(codeBackground: Color = MaterialTheme.col
                 ),
             stringStyle =
                 RichTextStringStyle(
-                    // No span background: [rememberChatCodeChips] draws a rounded chip instead,
+                    // No span background: [ChatMarkdown] draws a rounded chip instead,
                     // where a span background would fill the whole line as a square slab.
                     codeStyle =
                         SpanStyle(
