@@ -64,7 +64,11 @@ import org.intellij.markdown.parser.MarkdownParser
  * `<br>` is a line break.
  */
 class MarkdownToDocument(
-    private val nostr: NostrInlinePass = NostrInlinePass.NONE,
+    /**
+     * What finds Nostr text in the plain text. Null for text that is not Nostr's (an agent's reply,
+     * a README): it stays text, and only its bare URLs become links.
+     */
+    private val nostr: NostrInlinePass? = NostrInlinePass.NONE,
 ) {
     fun parse(markdown: String): Document {
         // CommonMark ends a line at \r\n and \r too; this parser only at \n, so a document written
@@ -235,7 +239,7 @@ class MarkdownToDocument(
             // Not interpreted (NIP-23): its text, without the tags, as a paragraph.
             val withoutTags = HtmlText.strip(text(node)).trim()
             if (withoutTags.isEmpty()) return null
-            return Paragraph(nostr.inlines(withoutTags))
+            return Paragraph(nostr?.inlines(withoutTags) ?: listOf(Text(withoutTags)))
         }
 
         // ---- Inlines ----------------------------------------------------------------------------
@@ -253,7 +257,7 @@ class MarkdownToDocument(
 
             fun flush() {
                 if (pending.isNotEmpty()) {
-                    if (inLink) {
+                    if (inLink || nostr == null) {
                         out.add(Text(WHITESPACE.replace(pending.toString(), " ")))
                     } else {
                         out.addAll(nostr.inlines(pending.toString()))
@@ -291,7 +295,13 @@ class MarkdownToDocument(
                     // `>` markers of the lines a quote's paragraph continues on.
                     MarkdownTokenTypes.BLOCK_QUOTE -> {}
                     // A bare URL: the Nostr pass decides whether it is media, a preview or a link.
-                    GFMTokenTypes.GFM_AUTOLINK -> pending.append(text(node))
+                    GFMTokenTypes.GFM_AUTOLINK ->
+                        if (nostr == null && !inLink) {
+                            flush()
+                            out.add(Link(text(node), listOf(Text(text(node)))))
+                        } else {
+                            pending.append(text(node))
+                        }
                     // Math goes back to the text as written, for the same rules a note's math uses.
                     GFMElementTypes.INLINE_MATH, GFMElementTypes.BLOCK_MATH -> pending.append(text(node))
                     MarkdownTokenTypes.HTML_TAG -> {

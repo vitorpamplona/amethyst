@@ -24,11 +24,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
-import com.vitorpamplona.amethyst.commons.ui.markdown.CachedMarkdownAst
-import com.vitorpamplona.amethyst.commons.ui.markdown.RenderContentAsMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.RichTextPlatform
@@ -56,10 +53,6 @@ class AmethystRichTextSegmentRenderer(
  * markdown renderer. Installed in the app theme, so every screen's rich text gets them.
  */
 object AndroidRichTextPlatform : RichTextPlatform {
-    override fun warmMarkdown(content: String) {
-        CachedMarkdownAst.warm(content)
-    }
-
     override fun segmentRenderer(
         accountViewModel: AccountViewModel,
         nav: INav,
@@ -67,18 +60,6 @@ object AndroidRichTextPlatform : RichTextPlatform {
         callbackUri: String?,
         canPreview: Boolean,
     ): RichTextSegmentRenderer = AmethystRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
-
-    @Composable
-    override fun Markdown(
-        content: String,
-        tags: ImmutableListOfLists<String>,
-        canPreview: Boolean,
-        quotesLeft: Int,
-        backgroundColor: MutableState<Color>,
-        callbackUri: String?,
-        accountViewModel: AccountViewModel,
-        nav: INav,
-    ) = RenderContentAsMarkdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
 
     @Composable
     override fun SecretMessage(

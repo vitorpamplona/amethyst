@@ -28,7 +28,6 @@ import com.vitorpamplona.quartz.experimental.publications.PublicationContentEven
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotEquals
 
 /**
  * A section translates the markdown its AsciiDoc converts to, so the copy menus must look its
@@ -58,11 +57,9 @@ class PublicationSectionTextTest {
     }
 
     @Test
-    fun copyTextIsTheMarkdownTheSectionRendersAndTranslates() {
-        val note = note()
-        val rendered = publicationSectionMarkdown(note.event as PublicationContentEvent)
-
-        assertNotEquals(content, rendered, "the heading converts, so the two strings differ")
-        assertEquals(rendered, displayedNoteText(note, content))
+    fun copyTextIsTheAsciiDocTheSectionTranslates() {
+        // The section is translated as its own AsciiDoc and parsed into a document after, so the
+        // copy-text menus find the translation under the same string: the body as published.
+        assertEquals(content, displayedNoteText(note(), content))
     }
 }

@@ -96,6 +96,12 @@ kotlin {
                 implementation(libs.jetbrains.compose.material3)
                 implementation(libs.jetbrains.compose.ui.tooling.preview)
 
+                // The layout primitives the document renderer draws with (headings, lists, tables,
+                // quotes, code blocks, styled text with inline content): compose-richtext's
+                // richtext-ui, from our fork, which adds iOS targets (Apache-2.0).
+                implementation(libs.markdown.ui)
+                implementation(libs.markdown.ui.material3)
+
                 // Lifecycle (KMP since 2.8.0). lifecycle-runtime-compose ships
                 // iOS variants; lifecycle-viewmodel-compose (the viewModel()
                 // Composable helper) is Android-only and lives in jvmAndroid.
@@ -178,17 +184,6 @@ kotlin {
                     // executeAsync for PdfFetcher; already on every module that ships OkHttp.
                     implementation(libs.okhttpCoroutines)
 
-                    // Markdown rendering (richtext-commonmark). The single
-                    // consumer (RenderMarkdown.kt) lives in jvmAndroid.
-                    // iOS support pending Phase 3 markdown decision.
-                    implementation(libs.markdown.commonmark)
-                    implementation(libs.markdown.ui)
-                    implementation(libs.markdown.ui.material3)
-                    // commonmark (BSD-2-Clause) and the URL finder its autolink extension
-                    // uses (MIT), for BareUrlExtension. Both already ship as runtime
-                    // dependencies of richtext-commonmark; declared to compile against them.
-                    implementation(libs.markdown.commonmark.core)
-                    implementation(libs.markdown.autolink)
 
                     // viewModel() Compose helper. AndroidX publishes this
                     // artifact for android/jvmStubs/linuxx64Stubs but not iOS,

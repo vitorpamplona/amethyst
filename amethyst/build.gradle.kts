@@ -697,15 +697,10 @@ dependencies {
     // OpenStreetMap tiles for road event location maps (kind 1315/1316)
     implementation(libs.osmdroid.android)
 
-    // Markdown
-    // implementation "com.halilibo.compose-richtext:richtext-ui:0.16.0"
-    // implementation "com.halilibo.compose-richtext:richtext-ui-material:0.16.0"
-    // implementation "com.halilibo.compose-richtext:richtext-commonmark:0.16.0"
-
-    // Markdown (With fix for full-image bleeds)
+    // Markdown draws with compose-richtext's primitives (our fork, with iOS targets), through the
+    // shared document renderer in commonsUI.
     implementation(libs.markdown.ui)
     implementation(libs.markdown.ui.material3)
-    implementation(libs.markdown.commonmark)
 
     // Syntax highlighting for the git repository code browser (Apache-2.0)
     implementation(libs.highlights)

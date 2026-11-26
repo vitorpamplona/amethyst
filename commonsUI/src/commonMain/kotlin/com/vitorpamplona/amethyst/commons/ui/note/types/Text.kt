@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -37,8 +36,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownTitle
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
@@ -51,7 +50,6 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.richtext.TextRendering
-import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -62,7 +60,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
-import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -70,12 +67,12 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
@@ -96,18 +93,14 @@ enum class ReplyRenderType {
  * the same function — keying on the raw body instead would miss the entry for every
  * subject-carrying note and silently copy the untranslated text.
  *
- * A kind-30041 publication section is the other text whose screen string differs from its
- * content: it renders (and translates) the markdown its AsciiDoc body converts to, so that is
- * what this returns for one. A kind-30818 wiki article does the same with its Djot body. A kind-30817 NIP is the third: its header already shows the
+ * Articles in another format (a wiki article's Djot, a publication section's AsciiDoc) translate
+ * and copy as their own source. A kind-30817 NIP is the exception: its header already shows the
  * title and status the content opens with, so this returns the body without them.
  */
 fun displayedNoteText(
     note: Note,
     body: String,
 ): String {
-    (note.event as? PublicationContentEvent)?.let { return publicationSectionMarkdown(it) }
-    // A NIP-54 wiki article is Djot: what shows (and translates) is the markdown it converts to.
-    (note.event as? WikiArticleEvent)?.let { return wikiArticleMarkdown(it, body) }
     // A NIP's header shows its title and status, so the body drops the headings that repeat them.
     (note.event as? NipTextEvent)?.let { if (it.content == body) return NipTextView.of(it).body }
 
@@ -240,11 +233,11 @@ fun RenderTextEvent(
                     remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
                 if (noteEvent is WikiArticleEvent) {
-                    // Djot converted to markdown: drawn by the markdown renderer directly, as a
-                    // publication section is, since the rich-text viewer would guess the format
-                    // again and read an article whose first lines carry no markdown as plain text.
-                    RenderMarkdownBody(
-                        markdown = eventContent,
+                    // Djot (NIP-54), drawn from its own document: the rich-text viewer would guess a
+                    // format, and Djot is not markdown.
+                    RenderWikiArticleBody(
+                        event = noteEvent,
+                        body = eventContent,
                         id = note.idHex,
                         tags = tags,
                         canPreview = canPreview && !makeItShort,
@@ -255,8 +248,15 @@ fun RenderTextEvent(
                         nav = nav,
                     )
                 } else {
+                    // An article's header shows its title: a first `# Title` line would repeat it.
+                    val shownContent =
+                        if (noteEvent is LongFormContentEvent) {
+                            remember(eventContent) { MarkdownTitle.withoutLeadingTitle(eventContent, noteEvent.title()) }
+                        } else {
+                            eventContent
+                        }
                     TranslatableRichTextViewer(
-                        content = eventContent,
+                        content = shownContent,
                         canPreview = canPreview && !makeItShort,
                         quotesLeft = quotesLeft,
                         modifier = Modifier.fillMaxWidth(),
@@ -306,47 +306,3 @@ fun observeChatMessageEdit(note: Note): Note? {
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()
-
-/**
- * Markdown the app converted from another format (a wiki article's Djot), translated and cropped
- * the way a note is, and drawn by the markdown renderer without guessing the format again.
- */
-@Composable
-private fun RenderMarkdownBody(
-    markdown: String,
-    id: String,
-    tags: ImmutableListOfLists<String>,
-    canPreview: Boolean,
-    quotesLeft: Int,
-    backgroundColor: MutableState<Color>,
-    callbackUri: String,
-    accountViewModel: AccountViewModel,
-    nav: INav,
-) {
-    val platform = LocalRichTextPlatform.current
-    TranslatableRichTextViewer(
-        content = markdown,
-        id = id,
-        accountViewModel = accountViewModel,
-    ) { text ->
-        ExpandableTextViewer(
-            content = text,
-            modifier = Modifier.fillMaxWidth(),
-            backgroundColor = backgroundColor,
-            id = id,
-        ) { shown, modifier ->
-            Column(modifier) {
-                platform.Markdown(
-                    content = shown,
-                    tags = tags,
-                    canPreview = canPreview,
-                    quotesLeft = quotesLeft,
-                    backgroundColor = backgroundColor,
-                    callbackUri = callbackUri,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
-            }
-        }
-    }
-}

@@ -279,7 +279,6 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
-import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
@@ -917,7 +916,6 @@ private fun Messages(
     val onLink = rememberChatLinks(nav)
     val markdownStyle = rememberChatMarkdownStyle()
     val textStyle = ChatTextStyle
-    val replyBlocks = rememberChatBlocks()
     // A sent image open full size: the message's images, and the one clicked.
     var viewing by remember { mutableStateOf<Pair<ImmutableList<BaseMediaContent>, BaseMediaContent>?>(null) }
     val onOpenImage = remember { { images: List<SentImage>, index: Int -> viewing = sentImagesToView(images, index) } }
@@ -962,7 +960,7 @@ private fun Messages(
                                 Box(Modifier.padding(top = GroupGap - PartGap)) {
                                     UserBubble(item.text, item.images, textStyle, onLink, onEditFrom?.let { edit -> { edit(item) } }, onOpenImage)
                                 }
-                            is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, blockComposer = replyBlocks)
+                            is ChatItem.AssistantText -> ChatMarkdown(item.text, onLink, Modifier.fillMaxWidth(), style = markdownStyle, textStyle = textStyle, codeBlocks = true)
                             is ChatItem.ToolCall ->
                                 when (ToolKind.of(item.name)) {
                                     ToolKind.EDIT -> FileChangeRow(item, state.cwd, turnRunning)
@@ -1354,7 +1352,7 @@ private fun UserTextBubble(
             // prompts carry fences, which read better as code blocks.
             if (text.contains("```")) {
                 val style = rememberChatMarkdownStyle(codeBackground = MaterialTheme.colorScheme.surfaceContainerHighest)
-                RenderMarkdown(text, onLink, padding, style = style, textStyle = textStyle, blockComposer = rememberChatCodeChips())
+                ChatMarkdown(text, onLink, padding, style = style, textStyle = textStyle)
             } else {
                 // Selectable through the chat's SelectionContainer.
                 Text(text, padding, style = textStyle)

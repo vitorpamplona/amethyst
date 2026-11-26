@@ -179,10 +179,11 @@ data object SoftBreak : Inline
 @Immutable
 data object HardBreak : Inline
 
-/** An inline equation, in LaTeX. */
+/** An equation in the text, in LaTeX. [display] sets it on a line of its own. */
 @Immutable
 data class Math(
     val latex: String,
+    val display: Boolean = false,
 ) : Inline
 
 /**
