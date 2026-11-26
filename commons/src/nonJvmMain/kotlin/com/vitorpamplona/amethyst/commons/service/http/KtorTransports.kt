@@ -42,31 +42,34 @@ import io.ktor.http.isSuccess
  * The plain HTTP transports on a Ktor [HttpClient], for the targets without OkHttp. Each mirrors
  * its OkHttp counterpart (`OkHttpNip05Fetcher`, `OkHttpLnurlTransport`, `OkHttpMintTransport`,
  * `OkHttpEsploraTransport`).
+ *
+ * Each asks [client] for the client of every request's URL, as the OkHttp ones ask their role
+ * builder, so the URL can decide whether the request goes through Tor.
  */
 class KtorNip05Fetcher(
-    private val client: () -> HttpClient,
+    private val client: (url: String) -> HttpClient,
 ) : Nip05Fetcher {
     override suspend fun fetch(url: String): String {
-        val response = client().get(url)
+        val response = client(url).get(url)
         if (!response.status.isSuccess()) throw IllegalStateException("NIP-05 fetch of $url failed: ${response.status}")
         return response.bodyAsText()
     }
 }
 
 class KtorLnurlTransport(
-    private val client: () -> HttpClient,
+    private val client: (url: String) -> HttpClient,
 ) : LnurlHttpTransport {
     override suspend fun get(url: String): LnurlHttpResponse {
-        val response = client().get(url)
+        val response = client(url).get(url)
         return LnurlHttpResponse(response.status.value, response.status.description, response.bodyAsText())
     }
 }
 
 class KtorMintTransport(
-    private val client: () -> HttpClient,
+    private val client: (url: String) -> HttpClient,
 ) : MintHttpTransport {
     override suspend fun get(url: String): MintHttpResponse {
-        val response = client().get(url)
+        val response = client(url).get(url)
         return MintHttpResponse(response.status.value, response.bodyAsText())
     }
 
@@ -75,7 +78,7 @@ class KtorMintTransport(
         json: String,
     ): MintHttpResponse {
         val response =
-            client().post(url) {
+            client(url).post(url) {
                 contentType(ContentType.Application.Json)
                 setBody(json)
             }
@@ -84,17 +87,17 @@ class KtorMintTransport(
 }
 
 class KtorEsploraTransport(
-    private val client: () -> HttpClient,
+    private val client: (url: String) -> HttpClient,
 ) : EsploraHttpTransport {
-    override suspend fun getJson(url: String): EsploraHttpResponse = client().get(url) { header("Accept", "application/json") }.toEsplora()
+    override suspend fun getJson(url: String): EsploraHttpResponse = client(url).get(url) { header("Accept", "application/json") }.toEsplora()
 
-    override suspend fun get(url: String): EsploraHttpResponse = client().get(url).toEsplora()
+    override suspend fun get(url: String): EsploraHttpResponse = client(url).get(url).toEsplora()
 
     override suspend fun postText(
         url: String,
         body: String,
     ): EsploraHttpResponse =
-        client()
+        client(url)
             .post(url) {
                 contentType(ContentType.Text.Plain)
                 setBody(body)

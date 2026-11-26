@@ -254,7 +254,14 @@ kotlin {
                     implementation(libs.ktor.client.mock)
                 }
             }
-        getByName("iosSimulatorArm64Test").dependsOn(nonJvmTest)
+        getByName("iosSimulatorArm64Test") {
+            dependsOn(nonJvmTest)
+            dependencies {
+                // The fake SOCKS5 server the Tor routing test dials through (Apache-2.0, checked in
+                // the 3.6.1 POM on 2026-11-25). Tests only: nothing ships with it.
+                implementation(libs.ktor.network)
+            }
+        }
         getByName("iosArm64Test").dependsOn(nonJvmTest)
 
         getByName("androidHostTest") {

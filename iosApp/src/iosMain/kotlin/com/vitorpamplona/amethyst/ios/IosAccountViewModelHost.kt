@@ -26,7 +26,6 @@ import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
-import com.vitorpamplona.amethyst.commons.tor.TorRelaySettings
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -38,7 +37,6 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
@@ -64,10 +62,10 @@ class IosAccountViewModelHost(
 
     override val lnurlTransport: LnurlHttpTransport get() = modules.lnurlTransport
 
-    // No Tor until B12, so no money operation is routed differently.
-    override val moneyOpRelays: MoneyOpRelayRouting get() = MoneyOpRelayRouting.None
+    // A zap or payment's ad hoc relays follow the money-operations Tor setting, as on Android.
+    override val moneyOpRelays: MoneyOpRelayRouting get() = modules.torRelayState
 
-    override val torRelayEvaluation: StateFlow<TorRelayEvaluation> = MutableStateFlow(TorRelayEvaluation(TorRelaySettings()))
+    override val torRelayEvaluation: StateFlow<TorRelayEvaluation> get() = modules.torRelayState.flow
 
     override val relayAuthState: StateFlow<PersistentMap<NormalizedRelayUrl, RelayAuthSnapshot>>
         get() = modules.authCoordinator.receiver.authStateFlow

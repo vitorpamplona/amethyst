@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.ios
 
+import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
+import com.vitorpamplona.amethyst.commons.ui.app.RedialRelaysOnReturn
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
+import com.vitorpamplona.amethyst.commons.ui.tor.TorConnectionFailureDialog
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -41,10 +45,24 @@ class IosAppRoot(
             settings = modules.uiState,
             torSettings = modules.torPrefs.value,
             dataSources = modules.sources,
-            httpClientBuilder = IosHttpClientBuilder,
+            httpClientBuilder = modules.roleBasedHttpClientBuilder,
             nip05ClientBuilder = { modules.nip05Client },
             host = host,
         )
+
+    /**
+     * While the app is on screen: the relay pool stays connected and re-dials the relays whose
+     * route changed, and the Tor route stays collected, which is what runs Tor (TorManager starts
+     * it for as long as its status is watched). As on Android, Tor's stuck dialog sits here too.
+     */
+    @Composable
+    override fun AppEffects() {
+        modules.relayProxyClientConnector.relayServices.collectAsStateWithLifecycle()
+        RedialRelaysOnReturn(modules.relayProxyClientConnector.foreground)
+        modules.httpClients.torRoute.collectAsStateWithLifecycle()
+
+        TorConnectionFailureDialog(modules.torManager)
+    }
 
     override fun registerDestinations(
         destinations: NavDestinations,

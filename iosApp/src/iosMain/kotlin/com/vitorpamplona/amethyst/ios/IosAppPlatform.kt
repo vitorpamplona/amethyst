@@ -25,6 +25,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.tor.IosArti
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
@@ -37,8 +38,9 @@ object IosAppPlatform : AppPlatform {
 
     override val appFlavor: String get() = "ios"
 
-    // No Tor on iOS until B12d (commons/plans/2026-11-25-ios-tor.md): say so rather than offer it.
-    override val supportsTor: Boolean get() = false
+    // The built-in Tor runs on Arti (plans/2026-11-25-ios-tor.md, B12d). Only a build without the
+    // engine (Kotlin compiled off a Mac, never an app) says Tor is unavailable.
+    override val supportsTor: Boolean get() = IosArti.AVAILABLE
 
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable

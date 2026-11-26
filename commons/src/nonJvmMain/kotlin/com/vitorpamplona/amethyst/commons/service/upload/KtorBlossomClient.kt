@@ -44,7 +44,8 @@ import kotlin.coroutines.cancellation.CancellationException
  * [blossomDescriptorOf] the OkHttp `BlossomClient` uses.
  */
 class KtorBlossomClient(
-    private val client: () -> HttpClient,
+    /** The client for a request to this URL: the upload role's, so a Tor-routed server gets Tor. */
+    private val client: (url: String) -> HttpClient,
 ) {
     /** [onProgress] follows the bytes sent. */
     suspend fun upload(
@@ -54,8 +55,9 @@ class KtorBlossomClient(
         authHeader: String?,
         onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
     ): BlossomUploadResult {
+        val uploadUrl = BlossomServerUrl.upload(serverBaseUrl)
         val response =
-            client().put(BlossomServerUrl.upload(serverBaseUrl)) {
+            client(uploadUrl).put(uploadUrl) {
                 authHeader?.let { header("Authorization", it) }
                 contentType(ContentType.parse(contentType))
                 setBody(bytes)
@@ -92,7 +94,8 @@ class KtorBlossomClient(
         serverBaseUrl: String,
     ): Boolean =
         try {
-            client().head(BlossomServerUrl.blob(serverBaseUrl, hash)).status.isSuccess()
+            val blobUrl = BlossomServerUrl.blob(serverBaseUrl, hash)
+            client(blobUrl).head(blobUrl).status.isSuccess()
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -103,7 +106,7 @@ class KtorBlossomClient(
     /** The bytes at [url], or null when it can't be fetched. */
     suspend fun download(url: String): ByteArray? =
         try {
-            val response = client().get(url)
+            val response = client(url).get(url)
             if (response.status.isSuccess()) response.bodyAsBytes() else null
         } catch (e: CancellationException) {
             throw e

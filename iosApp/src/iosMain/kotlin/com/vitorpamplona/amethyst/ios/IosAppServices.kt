@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.cordn.client.CordnBlobStore
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
@@ -45,7 +46,7 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.IElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NameShowResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /** The app-wide services the shared screens read, from [IosAppModules]. */
 class IosAppServices(
@@ -63,8 +64,13 @@ class IosAppServices(
 
     override val torSettings: TorSettingsFlow get() = modules.torPrefs.value
 
-    // No Tor until B12.
-    override val torBootstrapped: Flow<Boolean> get() = flowOf(false)
+    override val torBootstrapped: Flow<Boolean> get() = modules.torManager.status.map { it.isFullyBootstrapped }
+
+    // The manager's status as is: Bootstrapping (a bound port still downloading its directory) reads
+    // as connecting in the shared UI, as on Android.
+    override val torStatus: Flow<TorServiceStatus> get() = modules.torManager.status
+
+    override val torStuck: Flow<Boolean> get() = modules.torManager.connectionFailure
 
     override val drawerSectionCollapsePrefs: DrawerSectionCollapsePreferences get() = modules.drawerSectionCollapsePrefs
 

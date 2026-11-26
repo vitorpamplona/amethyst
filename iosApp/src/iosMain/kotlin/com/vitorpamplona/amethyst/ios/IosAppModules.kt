@@ -53,31 +53,43 @@ import com.vitorpamplona.amethyst.commons.napplet.permissions.DataStoreNappletPe
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.BlockedRelayFilteringClient
 import com.vitorpamplona.amethyst.commons.relayClient.CacheClientConnector
+import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
 import com.vitorpamplona.amethyst.commons.relayClient.diagnostics.relayFrameDecoder
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.RelaySubscriptionsCoordinator
+import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
+import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.http.DualKtorClients
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.http.KtorEsploraTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorLnurlTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorMintTransport
 import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
 import com.vitorpamplona.amethyst.commons.service.http.KtorWebSocket
+import com.vitorpamplona.amethyst.commons.service.http.RoleBasedKtorClients
+import com.vitorpamplona.amethyst.commons.service.http.darwinHttpClient
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
 import com.vitorpamplona.amethyst.commons.service.upload.KtorBlossomClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
+import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
+import com.vitorpamplona.amethyst.commons.tor.TorManager
+import com.vitorpamplona.amethyst.commons.tor.TorRelayState
+import com.vitorpamplona.amethyst.commons.tor.TorService
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
+import com.vitorpamplona.amethyst.ios.tor.IosArti
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
 import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
 import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
@@ -88,9 +100,7 @@ import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
 import com.vitorpamplona.quartz.utils.Log
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.engine.darwin.DarwinHttpRequestException
-import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
 import io.ktor.http.isSuccess
@@ -100,7 +110,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
+import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
@@ -145,10 +157,29 @@ class IosAppModules(
     val uiPrefs: UiSettingsFlow =
         UiSettingsFlow.build(runBlocking { UiSettingsStore(sharedSettingsStore).load() } ?: UiSettingsFlow().toSettings())
 
-    // No Tor on iOS until B12d (commons/plans/2026-11-25-ios-tor.md): every connection goes direct,
-    // so the settings start with Tor off. TorSettings()'s default is INTERNAL, which made the
-    // Privacy screen claim that DM and new relays went through Tor.
-    val torPrefs: TorSettingsStore = TorSettingsStore(TorSettings(torType = TorType.OFF), sharedSettingsStore, applicationIOScope)
+    // Tor settings, read before anything connects (as Android's blocking load does), so nothing
+    // dials before the routing is known. A fresh install gets TorSettings()'s defaults: the built-in
+    // Tor, with onion, DM and new relays through it. A build without Arti (Kotlin compiled off a
+    // Mac, never an app) keeps Tor off: there is no engine to route through.
+    val torPrefs: TorSettingsStore =
+        TorSettingsStore(
+            (runBlocking { TorSettingsStore.torPreferences(sharedSettingsStore) } ?: TorSettings()).let {
+                if (IosArti.AVAILABLE) it else it.copy(torType = TorType.OFF)
+            },
+            sharedSettingsStore,
+            applicationIOScope,
+        )
+
+    // The built-in Tor: the shared lifecycle (TorService, TorManager) over Arti's C ABI, the same
+    // engine and watchdogs Android runs (plans/2026-11-25-ios-tor.md, B12d). Arti keeps its state in
+    // Application Support/amethyst/arti. TorManager starts it while its status is collected: the
+    // relay pool's Tor route and the drawer's Tor icon do (IosAppRoot.AppEffects).
+    private val torService = TorService(IosArti.bridge, filesPath / "arti", FileSystem.SYSTEM, applicationIOScope)
+    val torManager = TorManager(torPrefs, torService, applicationIOScope)
+
+    // Which relays go through Tor: the user's settings plus each account's relay lists
+    // (accountsTorStateConnector below), as on Android.
+    val torRelayState = TorRelayState(torPrefs.value, applicationIOScope)
 
     val namecoinPrefs by lazy { NamecoinSettingsStore(sharedSettingsStore, applicationIOScope) }
     val otsPrefs by lazy { OtsSettingsStore(sharedSettingsStore, runBlocking { OtsSettingsStore.load(sharedSettingsStore) }) }
@@ -160,34 +191,49 @@ class IosAppModules(
 
     val keyCache = EncryptionKeyCache()
 
-    /** One NSURLSession-backed client for relays and HTTP alike; per-role clients come with A2. */
-    val httpClient: HttpClient =
-        HttpClient(Darwin) {
-            install(WebSockets)
-        }
+    /**
+     * Every HTTP and WebSocket connection the app makes, on NSURLSession: a direct client, and a
+     * client through Tor's SOCKS port that is rebuilt when the port moves. A Tor-routed request
+     * while Tor has no port fails instead of going direct (DualKtorClients). Nothing gets a client
+     * except through a role below or the relay builder, so no path can skip the Tor decision.
+     */
+    val httpClients = DualKtorClients(torManager.activePortOrNull, torManager.sessionBypass, applicationIOScope, ::darwinHttpClient)
+
+    /** Each role's client (images, video, previews, money, NIP-05, uploads), by the shared Tor table. */
+    val roleBasedHttpClientBuilder = RoleBasedKtorClients(httpClients, torPrefs.value)
 
     // Apple's socket offers permessage-deflate and drops the connection with EPROTO when a relay
     // breaks the extension's rules (nostr.mom sets RSV1 on continuation frames). Such a relay is
     // dialed again without compression.
     val websocketBuilder =
         KtorWebSocket.Builder(
-            httpClient = { httpClient },
+            httpClient = { url -> httpClients.get(torRelayState.shouldUseTorForRelay(url)) },
             scope = applicationIOScope,
             compression = KtorWebSocket.Compression(isFailure = ::isDarwinProtocolError),
+            // Don't dial Tor-routed relays until Tor can carry them, as Android's builder does:
+            // a bootstrap would otherwise meet the whole Tor-routed set with doomed dials.
+            // RelayProxyClientConnector dials them the moment Tor is up. A session bypass ("use a
+            // regular connection") sends them direct, so they may dial then.
+            canDial = { url ->
+                !torRelayState.shouldUseTorForRelay(url) || torManager.isTorReady() || torManager.sessionBypass.value
+            },
         )
 
-    /** Blossom uploads over [httpClient]; re-encoded pictures wait in the temp folder until they go up. */
+    /** Blossom uploads over the upload role; re-encoded pictures wait in the temp folder until they go up. */
     val mediaUploader by lazy {
         IosMediaUploader(
-            blossom = KtorBlossomClient { httpClient },
+            blossom = KtorBlossomClient(roleBasedHttpClientBuilder::ktorClientForUploads),
             tempDir = (NSTemporaryDirectory().toPath() / "uploads"),
         )
     }
 
-    /** A file's bytes over [httpClient], or null when it can't be fetched: captions, saved videos, covers. */
-    suspend fun downloadBytes(url: String): ByteArray? =
+    /** A file's bytes over [client], or null when it can't be fetched. */
+    private suspend fun downloadBytes(
+        url: String,
+        client: HttpClient,
+    ): ByteArray? =
         try {
-            val response = httpClient.get(url)
+            val response = client.get(url)
             if (response.status.isSuccess()) response.bodyAsBytes() else null
         } catch (e: CancellationException) {
             throw e
@@ -196,40 +242,55 @@ class IosAppModules(
             null
         }
 
+    /** An image's bytes over the image role: encrypted pictures, animated images, artwork. */
+    suspend fun downloadImageBytes(url: String): ByteArray? = downloadBytes(url, roleBasedHttpClientBuilder.ktorClientForImage(url))
+
+    /** A video's or its captions' bytes over the video role: encrypted and saved videos, captions. */
+    suspend fun downloadVideoBytes(url: String): ByteArray? = downloadBytes(url, roleBasedHttpClientBuilder.ktorClientForVideo(url))
+
     /** The shared player's iOS half. */
     val playbackPlatform by lazy {
-        NowPlaying.artworkLoader = ::downloadBytes
-        IosVideoCache.install { httpClient }
-        IosPlaybackPlatform(download = ::downloadBytes, keyCache = keyCache)
+        NowPlaying.artworkLoader = ::downloadImageBytes
+        IosVideoCache.install(
+            httpClient = roleBasedHttpClientBuilder::ktorClientForVideo,
+            requiresTor = roleBasedHttpClientBuilder::shouldUseTorForVideo,
+        )
+        IosPlaybackPlatform(download = ::downloadVideoBytes, keyCache = keyCache)
     }
 
-    val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher { httpClient }) }
+    val nip05Client by lazy { Nip05Client(fetcher = KtorNip05Fetcher(roleBasedHttpClientBuilder::ktorClientForNip05)) }
 
-    val lnurlTransport = KtorLnurlTransport { httpClient }
+    val lnurlTransport = KtorLnurlTransport(roleBasedHttpClientBuilder::ktorClientForMoney)
 
-    // Images load through the same client. The Caches folder is the one iOS may purge.
+    // Images load over the image role, each URL's client picked per request. The Caches folder is
+    // the one iOS may purge.
     init {
         IosImageLoaderSetup.setup(
-            httpClient = httpClient,
+            httpClient = roleBasedHttpClientBuilder::ktorClientForImage,
             keyCache = keyCache,
-            download = ::downloadBytes,
+            download = ::downloadImageBytes,
             cacheDir = (NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, true).first() as String).toPath() / "images",
         )
         // GIFs and animated WebPs play through the shared Skia player, which fetches them itself.
-        AnimatedImageFetcher.installed = IosAnimatedImageFetcher(keyCache, ::downloadBytes)
+        AnimatedImageFetcher.installed = IosAnimatedImageFetcher(keyCache, ::downloadImageBytes)
     }
 
     val cache: LocalCache = LocalCache
 
     // The on-chain wallet and on-chain zaps read the chain through the explorer OpenTimestamps uses
-    // (OTS settings), as on Android and the desktop. No Tor on iOS until B12, so the default is
-    // blockstream.info.
+    // (OTS settings), as on Android and the desktop: mempool.space when money goes through Tor,
+    // blockstream.info when it does not, over the money role.
     init {
         cache.onchainBackend =
             CachingOnchainBackend(
                 EsploraClient(
-                    baseUrl = { BitcoinExplorerEndpoint.resolveNormalized(customExplorerUrl = otsPrefs.current.normalizedUrl(), usingTor = false) },
-                    transport = KtorEsploraTransport { httpClient },
+                    baseUrl = {
+                        BitcoinExplorerEndpoint.resolveNormalized(
+                            customExplorerUrl = otsPrefs.current.normalizedUrl(),
+                            usingTor = roleBasedHttpClientBuilder.shouldUseTorForMoneyOperations(BitcoinExplorerUrls.MEMPOOL),
+                        )
+                    },
+                    transport = KtorEsploraTransport(roleBasedHttpClientBuilder::ktorClientForMoney),
                 ),
             )
     }
@@ -249,6 +310,35 @@ class IosAppModules(
 
     // Feeds every event the relays send into the cache, as on Android and the desktop.
     val cacheClientConnector = CacheClientConnector(client, cache)
+
+    // No connectivity monitor on iOS yet (NWPathMonitor is B12f): the network counts as up, so only
+    // Tor and routing changes re-dial relays.
+    private val connectivity = MutableStateFlow<ConnectivityStatus>(ConnectivityStatus.Active(networkId = 0L, isMobile = false))
+
+    // Self-heals the "Tor up but every circuit dead" state the lifecycle watchdogs can't see, as
+    // on Android: enough Tor-routed relay failures with no success restart Arti.
+    val torCircuitHealthTracker =
+        TorCircuitHealthTracker(
+            client = client,
+            isTorRouted = { torRelayState.shouldUseTorForRelay(it) },
+            isTorActive = { torManager.isTorReady() },
+            isConnectivityActive = { true },
+            onCircuitsDead = { torManager.onTorCircuitsDead() },
+        ).also { it.register() }
+
+    // Re-dials the relays whose route changed (Tor's port, a Tor setting, a relay moving between
+    // classifications) and connects the pool while the app is on screen. Collected by
+    // IosAppRoot.AppEffects, which is also what keeps Tor running.
+    val relayProxyClientConnector =
+        RelayProxyClientConnector(
+            torEvaluator = torRelayState.flow,
+            torConnection = httpClients.torRoute,
+            clearConnection = httpClients.directRoute,
+            connectivityStatus = connectivity,
+            torBootstrapped = torManager.status.map { it.isFullyBootstrapped },
+            client = client,
+            scope = applicationIOScope,
+        )
 
     val relayStats by lazy { RelayStats(client) }
 
@@ -312,7 +402,7 @@ class IosAppModules(
             geolocationFlow = { noLocation },
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
-            cashuMintTransport = KtorMintTransport { httpClient },
+            cashuMintTransport = KtorMintTransport(roleBasedHttpClientBuilder::ktorClientForMoney),
             // NIP-55 signer apps are Android's.
             externalSignerFactory = { _, _ -> null },
             cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
@@ -347,8 +437,14 @@ class IosAppModules(
             clientBuilder = { client },
             localPreferences = sessionStore,
             scope = applicationIOScope,
+            // A NIP-46 login's relays follow the signer-relay Tor setting, as on Android.
+            signerRelayRouting = torRelayState,
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
         )
+
+    // As accounts load, feeds their DM, trusted, money and signer relays into torRelayState, which
+    // re-evaluates which relays go through Tor and re-dials those that moved.
+    val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torRelayState, applicationIOScope)
 }
 
 /** OpenTimestamps over Ktor comes with A2; verifying a timestamp fails with this message. */

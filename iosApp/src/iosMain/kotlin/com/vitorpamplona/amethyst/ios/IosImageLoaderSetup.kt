@@ -26,7 +26,11 @@ import coil3.SingletonImageLoader
 import coil3.annotation.DelicateCoilApi
 import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
-import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.network.NetworkClient
+import coil3.network.NetworkFetcher
+import coil3.network.NetworkRequest
+import coil3.network.NetworkResponse
+import coil3.network.ktor3.asNetworkClient
 import coil3.size.Precision
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
 import com.vitorpamplona.amethyst.commons.service.image.Base64Fetcher
@@ -38,15 +42,16 @@ import io.ktor.client.HttpClient
 import okio.Path
 
 /**
- * iOS's image loader: Coil over the app's Ktor client (the Darwin engine), with Skia's decoders and
+ * iOS's image loader: Coil over the app's Ktor clients (the Darwin engine), with Skia's decoders and
  * the shared placeholder fetchers. The JVM and Android build theirs on OkHttp
- * (`buildAmethystImageLoader`), which iOS cannot link. `blossom:` URIs and the per-URL Tor choice
- * come with Blossom and Tor on iOS (A2, B12).
+ * (`buildAmethystImageLoader`), which iOS cannot link. Each image's request goes out on the client
+ * [setup]'s `httpClient` picks for its URL (the image role), so the Tor settings decide per image.
+ * `blossom:` URIs come with Blossom on iOS (A2).
  */
 object IosImageLoaderSetup {
     @OptIn(DelicateCoilApi::class)
     fun setup(
-        httpClient: HttpClient,
+        httpClient: (url: String) -> HttpClient,
         cacheDir: Path,
         keyCache: EncryptionKeyCache,
         download: suspend (String) -> ByteArray?,
@@ -75,9 +80,23 @@ object IosImageLoaderSetup {
                     add(ThumbHashFetcher.TKeyer)
                     // Before the network fetcher: an encrypted picture's URL must not reach Coil raw.
                     add(EncryptedBlobFetcher.Factory(keyCache, download))
-                    add(KtorNetworkFetcherFactory(httpClient = { httpClient }))
+                    add(NetworkFetcher.Factory(networkClient = { PerUrlNetworkClient(httpClient) }))
                 }.build()
         SingletonImageLoader.setUnsafe(loader)
+    }
+
+    /**
+     * Coil's network client, over the Ktor client [clientFor] picks for each request's URL. Coil's
+     * own `KtorNetworkFetcherFactory` takes one client for every image, which would put every
+     * image on one route.
+     */
+    private class PerUrlNetworkClient(
+        private val clientFor: (url: String) -> HttpClient,
+    ) : NetworkClient {
+        override suspend fun <T> executeRequest(
+            request: NetworkRequest,
+            block: suspend (response: NetworkResponse) -> T,
+        ): T = clientFor(request.url).asNetworkClient().executeRequest(request, block)
     }
 
     private const val MEMORY_CACHE_PERCENT = 0.15

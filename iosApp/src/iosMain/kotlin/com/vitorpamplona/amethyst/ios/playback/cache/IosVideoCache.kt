@@ -43,8 +43,10 @@ import okio.Path.Companion.toPath
 import platform.AVFoundation.AVURLAsset
 import platform.AVFoundation.resourceLoader
 import platform.Foundation.NSCachesDirectory
+import platform.Foundation.NSError
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSFileSystemFreeSize
+import platform.Foundation.NSLocalizedDescriptionKey
 import platform.Foundation.NSNumber
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
@@ -64,6 +66,11 @@ import platform.darwin.dispatch_queue_create
  * live streams, and anything not http(s). A URL whose server turns out to send a playlist, or no
  * length, is redirected to its plain URL and stays off the cache from then on.
  *
+ * Tor: the cache fetches every byte through the video role's client, so a cached video follows
+ * the Tor settings. AVFoundation fetching a plain URL itself does not (AVURLAsset takes no proxy),
+ * so a video that must go through Tor and would play off the cache is refused instead
+ * ([wouldBypassTor]) until HLS gets its own route (plans/2026-11-25-ios-tor.md, B12e).
+ *
  * The files live in `Caches/videos` (iOS may purge them when the disk fills), sized by Android's
  * rule ([VideoCacheBudget]): a fifth of the free space, 256 MB to 4 GB. Nothing here touches the
  * disk until a background thread needs it: [assetFor] runs on the main thread.
@@ -81,7 +88,8 @@ object IosVideoCache {
 
     // Guarded by [lock].
     private val lock = KmpLock()
-    private var client: (() -> HttpClient)? = null
+    private var client: ((url: String) -> HttpClient)? = null
+    private var requiresTor: (url: String) -> Boolean = { false }
     private val declaredTypes = LinkedHashMap<String, String>()
     private val refused = LinkedHashMap<String, Unit>()
 
@@ -94,7 +102,7 @@ object IosVideoCache {
     }
 
     internal val reader: CachedRangeReader by lazy {
-        CachedRangeReader(cache, KtorRangeSource { (lock.withLock { client } ?: error("IosVideoCache is not installed"))() })
+        CachedRangeReader(cache, KtorRangeSource { url -> (lock.withLock { client } ?: error("IosVideoCache is not installed"))(url) })
     }
 
     // The resource loader keeps its delegate weakly: this holds it for every asset.
@@ -103,12 +111,49 @@ object IosVideoCache {
 
     private val prefetcher = VideoHeadPrefetcher(scope) { url -> fetchHead(url) }
 
-    /** Starts caching, over [httpClient]. Until then every video plays from its plain URL. */
-    fun install(httpClient: () -> HttpClient) {
-        lock.withLock { client = httpClient }
+    /**
+     * Starts caching, each URL's bytes over the client [httpClient] picks for it. Until then every
+     * video plays from its plain URL. [requiresTor] says which URLs must go through Tor.
+     */
+    fun install(
+        httpClient: (url: String) -> HttpClient,
+        requiresTor: (url: String) -> Boolean,
+    ) {
+        lock.withLock {
+            client = httpClient
+            this.requiresTor = requiresTor
+        }
     }
 
     private fun isInstalled() = lock.withLock { client != null }
+
+    /**
+     * Whether playing [url] would have AVFoundation fetch it directly although it must go through
+     * Tor: an http(s) URL that is off the cache (HLS, a live stream, a server the cache refused).
+     * The player refuses those rather than let them leave outside Tor. A local file never leaves.
+     */
+    fun wouldBypassTor(
+        url: String,
+        cacheable: Boolean,
+    ): Boolean {
+        if (!url.startsWith("https://", ignoreCase = true) && !url.startsWith("http://", ignoreCase = true)) return false
+        val (mustUseTor, viaCache) = lock.withLock { requiresTor(url) to (cacheable && client != null && url !in refused) }
+        return mustUseTor && !viaCache
+    }
+
+    /** Whether [url] must go through Tor under the current settings. */
+    internal fun mustUseTor(url: String): Boolean = lock.withLock { requiresTor }(url)
+
+    /** The NSError domain of a video refused because it would have left outside Tor. */
+    const val TOR_REFUSAL_DOMAIN = "com.vitorpamplona.amethyst.TorRefusal"
+
+    /** What a loading request for a Tor-routed video AVFoundation would fetch itself ends with. */
+    internal fun torRefusalError(url: String): NSError =
+        NSError.errorWithDomain(
+            TOR_REFUSAL_DOMAIN,
+            1,
+            mapOf<Any?, Any?>(NSLocalizedDescriptionKey to "$url must go through Tor, which this player cannot route"),
+        )
 
     /**
      * Whether a video may go through the cache: an http(s) file, not HLS by its URL or the type its

@@ -129,7 +129,11 @@ class VideoResourceLoader(
             throw e
         } catch (e: NotCacheableException) {
             IosVideoCache.refuse(url)
-            if (!request.isCancelled()) redirect(request, url)
+            // The plain URL is AVFoundation's own fetch, which no proxy covers: a video that must
+            // go through Tor stops here instead (plans/2026-11-25-ios-tor.md, B12e).
+            if (!request.isCancelled()) {
+                if (IosVideoCache.mustUseTor(url)) request.finishLoadingWithError(IosVideoCache.torRefusalError(url)) else redirect(request, url)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Could not load $url", e)
             if (!request.isCancelled()) request.finishLoadingWithError(errorOf(e, url))

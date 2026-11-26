@@ -32,7 +32,8 @@ import io.ktor.utils.io.readAvailable
  * `Range` header, its body streamed as it arrives. Leaving [fetch]'s block early cancels the call.
  */
 class KtorRangeSource(
-    private val client: () -> HttpClient,
+    /** The client for a range of this URL: the video role's, so a Tor-routed video gets Tor. */
+    private val client: (url: String) -> HttpClient,
 ) : RangeSource {
     override suspend fun <T> fetch(
         url: String,
@@ -40,7 +41,7 @@ class KtorRangeSource(
         endExclusive: Long?,
         block: suspend (RangeResponseHead, RangeBody) -> T,
     ): T =
-        client()
+        client(url)
             .prepareGet(url) {
                 header(HttpHeaders.Range, if (endExclusive != null) "bytes=$start-${endExclusive - 1}" else "bytes=$start-")
                 // A compressed body's offsets are not the file's.

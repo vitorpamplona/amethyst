@@ -31,7 +31,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.vitorpamplona.amethyst.commons.model.ThemeType
-import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
@@ -42,17 +41,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
-import io.ktor.client.HttpClient
 import platform.UIKit.UIApplication
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
-
-/** The per-role HTTP clients arrive with A2; until then every role shares the app's one client. */
-internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder {
-    override fun ktorClientForPreview(url: String): HttpClient = modules.httpClient
-
-    override fun ktorClientForImage(url: String): HttpClient = modules.httpClient
-}
 
 /** Built once per process: the graph outlives every view controller the system asks for. */
 private val modules by lazy { IosAppModules(appVersion = IosBuildInfo.VERSION_NAME) }

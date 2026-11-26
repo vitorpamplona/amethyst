@@ -91,6 +91,7 @@ import platform.Foundation.NSNotificationCenter
 import platform.Foundation.NSOperationQueue
 import platform.Foundation.NSURL
 import platform.Foundation.NSURLErrorDomain
+import platform.Foundation.NSUnderlyingErrorKey
 import platform.Foundation.NSValue
 import platform.darwin.NSObjectProtocol
 import platform.darwin.dispatch_async
@@ -257,6 +258,13 @@ class AvAmethystPlayer(
         clearNotifications()
         failure = null
         ended = false
+        // AVFoundation would fetch this one itself, outside Tor, although the settings route it
+        // through Tor (HLS, a live stream): refuse it rather than leak (plans/2026-11-25-ios-tor.md, B12e).
+        if (IosVideoCache.wouldBypassTor(url, cacheable)) {
+            item = null
+            avPlayer.replaceCurrentItemWithPlayerItem(null)
+            return fail(PlayerFailure.torRefusal(url))
+        }
         val asset = IosVideoCache.assetFor(nsUrl, cacheable)
         val newItem = AVPlayerItem(asset = asset)
         item = newItem
@@ -569,6 +577,12 @@ class AvAmethystPlayer(
 
         fun failureOf(nsError: NSError?): PlayerFailure {
             if (nsError == null) return PlayerFailure("Unknown playback error", "UNKNOWN")
+            // The cache's refusal of a Tor-routed URL it would have had to hand to AVFoundation,
+            // as is or wrapped by AVFoundation in its own error.
+            val underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+            if (nsError.domain == IosVideoCache.TOR_REFUSAL_DOMAIN || underlying?.domain == IosVideoCache.TOR_REFUSAL_DOMAIN) {
+                return PlayerFailure.torRefusal(nsError.localizedDescription)
+            }
             val code = nsError.code
             val domain = nsError.domain ?: "?"
             return PlayerFailure(

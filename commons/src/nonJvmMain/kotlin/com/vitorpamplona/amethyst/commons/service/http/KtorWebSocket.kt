@@ -189,16 +189,25 @@ class KtorWebSocket(
         return current.outgoing.trySend(msg).isSuccess
     }
 
-    /** Builds [KtorWebSocket]s that dial with the client [httpClient] picks for each relay. */
+    /**
+     * Builds [KtorWebSocket]s that dial with the client [httpClient] picks for each relay.
+     *
+     * [canDial] gates each dial, as `BasicOkHttpWebSocket.Builder`'s does: false skips it. The
+     * apps hold a Tor-routed relay back until Tor can carry it, so a bootstrap is not met by a
+     * burst of doomed dials; the relay client dials again when the transport changes.
+     */
     class Builder(
         private val httpClient: (NormalizedRelayUrl) -> HttpClient,
         private val scope: CoroutineScope,
         private val compression: Compression = Compression(),
+        private val canDial: (NormalizedRelayUrl) -> Boolean = { true },
     ) : WebsocketBuilder {
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
         ): WebSocket = KtorWebSocket(url, httpClient, out, scope, compression)
+
+        override fun canConnect(url: NormalizedRelayUrl) = canDial(url)
     }
 
     companion object {
