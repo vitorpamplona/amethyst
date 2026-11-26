@@ -76,7 +76,7 @@ mockk = "1.14.11"
 kotlinx-coroutines-test = "1.11.0"
 # The Nostr protocol library, split out of this repo into vitorpamplona/quartz. Released on Nostr +
 # Blossom through Magpie since 2.19.0 (settings.gradle.kts), like every library below.
-quartzKmp = "2.29.0"
+quartzKmp = "2.30.0"
 # The two MLS bindings, split out of quartz into their own libraries: Marmot (vitorpamplona/marmot-kmp)
 # and cordn (vitorpamplona/cordn-kmp), both built against the quartz and mls-kmp versions here. Released
 # on Nostr + Blossom only since marmot 2.3.0 and cordn 1.3.0.
