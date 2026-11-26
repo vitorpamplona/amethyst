@@ -120,6 +120,11 @@ fun routeTitle(
         // both read "Concord server" before.
         is Route.ConcordServer -> concordCommunityName(route.communityId, accountViewModel)?.let { return it.take(MAX_TITLE) }
         is Route.Hashtag -> return "#${route.hashtag}"
+        is Route.WikiTopic ->
+            return route.slug
+                .replace('-', ' ')
+                .replaceFirstChar { it.uppercaseChar() }
+                .take(MAX_TITLE)
         is Route.Nip -> return stringRes(Res.string.nip_number, route.number)
         is Route.Nips -> return stringRes(Res.string.nip_catalog_title)
         is Route.EventKind -> {

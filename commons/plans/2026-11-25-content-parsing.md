@@ -200,6 +200,10 @@ Finishing touches found by running the app (2026-11-26):
     in the chat with chips off.
   `HostileInputTest` runs every format against deep quotes, lists and emphasis, unclosed marks
   and long blank runs.
+- **Wikilinks open the topic** (`Route.WikiTopic`, `nostr:wiki?d=<slug>&p=<author>`): every
+  author's version of the slug, the linking author's first, then follows, trust rank and newest,
+  with the topic's redirects below. `WikiTopics`, `WikiTopicFeedFilter` and `WikiFilterAssembler`
+  (kinds 30818 and 30819, `#d`, on the discovery relays and the known authors' outboxes).
 - **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
   dropped.
 - **Markdown footnotes** (GitHub's `[^label]` and `[^label]: text`), which both the old renderer
