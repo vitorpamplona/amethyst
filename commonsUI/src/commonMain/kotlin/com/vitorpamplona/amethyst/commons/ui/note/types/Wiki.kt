@@ -63,7 +63,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
+import com.vitorpamplona.amethyst.commons.wiki.WikiTopics
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 
@@ -207,16 +207,16 @@ fun RenderWikiArticleBody(
 }
 
 /**
- * NIP-54 wikilinks: a reference-style link the article doesn't define points to the wiki article
- * whose `d` tag is the link's text, normalized. Which version to read is the reader's choice; with
- * no screen yet that lists every author's version of a topic, the link opens this author's own.
+ * NIP-54 wikilinks: a reference-style link the article doesn't define points to the topic its text
+ * names, normalized. Which version to read is the reader's choice, so the link opens the topic's
+ * screen, every author's version of it, with this author's first.
  */
 private fun wikilinkResolver(event: WikiArticleEvent): (String) -> String? =
     { label ->
         WikiRedirectEvent
             .normalizeSlug(label)
             .ifEmpty { null }
-            ?.let { slug -> NAddress.createNostrUriOrNull(WikiArticleEvent.KIND, event.pubKey, slug, null) }
+            ?.let { slug -> WikiTopics.uri(slug, event.pubKey) }
     }
 
 // The body's first words as plain text, for a card without a summary tag. Only the start is parsed:

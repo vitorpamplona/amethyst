@@ -963,6 +963,15 @@ sealed class Route {
         val hashtag: String,
     ) : Route()
 
+    /**
+     * A NIP-54 wiki topic: every author's article under [slug] (normalized), to pick one to read.
+     * [from] is the author whose article linked here; their version comes first.
+     */
+    @Serializable data class WikiTopic(
+        val slug: String,
+        val from: String? = null,
+    ) : Route()
+
     @Serializable data class Geohash(
         val geohash: String,
     ) : Route()

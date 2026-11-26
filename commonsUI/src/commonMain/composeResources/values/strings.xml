@@ -10862,4 +10862,10 @@
     <string name="callout_important">Important</string>
     <string name="callout_warning">Warning</string>
     <string name="callout_caution">Caution</string>
+    <plurals name="wiki_topic_versions">
+        <item quantity="one">%1$d version</item>
+        <item quantity="other">%1$d versions</item>
+    </plurals>
+    <string name="wiki_topic_redirects">Redirects</string>
+    <string name="wiki_topic_empty">Nobody has written this article yet.</string>
 </resources>
