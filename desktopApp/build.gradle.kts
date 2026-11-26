@@ -212,9 +212,6 @@ tasks.withType<JavaExec>().matching { it.name == "run" }.configureEach {
             "amethyst.login",
             "amethyst.signup",
             "amethyst.videoTimeline",
-            // `-Damethyst.documentNotes=true|false`: lays notes' plain paragraphs out with the
-            // document renderer (one text per paragraph) or the word flow, to compare the two.
-            "amethyst.documentNotes",
             // ScrollBenchmark: `-Damethyst.scrollBench=<dir>` scrolls the feed, writes frame
             // timings to <dir> and exits (tools/desktop-run/scroll-bench.sh).
             "amethyst.scrollBench",
