@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.napplet.webxdc
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletHttpRequest
 import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -62,7 +63,7 @@ class OkioWebxdcBundles(
     private val root: Path,
     private val http: NappletHttp,
     private val viaTor: Boolean,
-    override val fileSystem: FileSystem = FileSystem.SYSTEM,
+    override val fileSystem: FileSystem = platformFileSystem,
 ) : WebxdcBundleSource {
     override suspend fun open(
         url: String,
