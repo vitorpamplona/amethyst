@@ -91,7 +91,7 @@ fun WebxdcCard(
         }
     val stageKey = remember(app, postId, poster) { if (postId != null && poster != null) app.stageKey(poster, postId) else null }
     val start =
-        if (launcher.opensNapplets && postId != null && poster != null && stageKey != null) {
+        if (launcher.opensWebxdc && postId != null && poster != null && stageKey != null) {
             {
                 // One run of an app at a time: the note's would write over the window's state.
                 InlineNappletRuns.stopApp(stageKey)

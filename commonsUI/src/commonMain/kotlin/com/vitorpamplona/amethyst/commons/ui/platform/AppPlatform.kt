@@ -576,8 +576,17 @@ interface AppLauncher {
         nav: INav? = null,
     )
 
-    /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
+    /** Whether [openNapplet] runs anything here; cards offer Open only where it does. */
     val opensNapplets: Boolean get() = false
+
+    /**
+     * Whether [openSite] runs anything here: where napplets run, unless the platform runs napplets
+     * before it can run sites (iOS, until its sites have their own network route).
+     */
+    val opensSites: Boolean get() = opensNapplets
+
+    /** Whether [openWebxdc] runs anything here: where napplets run, unless the platform says otherwise. */
+    val opensWebxdc: Boolean get() = opensNapplets
 
     /**
      * Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. [nav] is the
@@ -599,7 +608,7 @@ interface AppLauncher {
 
     /**
      * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
-     * [opensNapplets]), or tells the user why it can't.
+     * [opensWebxdc]), or tells the user why it can't.
      */
     fun openWebxdc(
         app: WebxdcApp,

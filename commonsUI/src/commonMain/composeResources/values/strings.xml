@@ -1055,6 +1055,9 @@
     <string name="nsite_open_failed">This site can’t be opened here.</string>
     <string name="napplet_desktop_failed_route">Tor isn’t running, so %1$s didn’t open. Nothing left this computer.</string>
     <string name="napplet_desktop_retry">Try again</string>
+    <string name="napplet_failed_route_device">Tor isn’t running, so %1$s didn’t open. Nothing left this device.</string>
+    <string name="napplet_failed_page_gone">%1$s stopped unexpectedly.</string>
+    <string name="napplet_js_dialog_ok">OK</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_session">Allow for this session</string>
     <string name="napplet_signer_allow_24h">Allow for 24 hours</string>

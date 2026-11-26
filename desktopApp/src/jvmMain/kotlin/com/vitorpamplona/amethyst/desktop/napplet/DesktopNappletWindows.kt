@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -97,7 +96,10 @@ import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletMessagePane
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletWaitingPane
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
+import com.vitorpamplona.amethyst.commons.napplet.ui.oldestQuestionOf
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_napplet
@@ -128,7 +130,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_fetch
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_route
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_fetching
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_permission_title
-import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_retry
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.BatchedConsentCard
@@ -582,12 +583,7 @@ internal fun ConsentWindows(
 internal fun oldestQuestion(
     apps: (app: String?) -> Boolean,
     vararg queues: List<ConsentQueue.Request<*, *>>,
-): ConsentQueue.Request<*, *>? =
-    queues
-        .asSequence()
-        .flatten()
-        .filter { apps(it.app) }
-        .minByOrNull { it.order }
+): ConsentQueue.Request<*, *>? = oldestQuestionOf(apps, *queues)
 
 /** The name a NIP-46 or site question gives the app that asks, when it carries one. */
 internal fun consentTitle(info: Any?): String? =
@@ -706,27 +702,13 @@ internal fun LoadingPane(
 }
 
 @Composable
-internal fun WaitingPane(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            CircularProgressIndicator()
-            Text(message, textAlign = TextAlign.Center)
-        }
-    }
-}
+internal fun WaitingPane(message: String) = NappletWaitingPane(message)
 
 @Composable
 internal fun MessagePane(
     message: String,
     onRetry: (() -> Unit)?,
-) {
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(message, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error, modifier = Modifier.widthIn(max = 480.dp))
-            if (onRetry != null) Button(onClick = onRetry) { Text(stringRes(Res.string.napplet_desktop_retry)) }
-        }
-    }
-}
+) = NappletMessagePane(message, onRetry)
 
 /**
  * A page that could not run in Chromium. When Chromium itself did not start, says why, and offers
