@@ -45,12 +45,14 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.model.navigation.uri.uriToRoute
+import com.vitorpamplona.amethyst.commons.napplet.HostProfile
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentDialogs
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletFetchingPane
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletMessagePane
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletOnionSwitch
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletWaitingPane
 import com.vitorpamplona.amethyst.commons.relayClient.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -109,9 +111,25 @@ internal class IosNostrAppViewModel(
             .onFailure { mutableRefused.value = true }
     }
 
+    /** Starts the webxdc app the launcher readied for this screen. */
+    fun startWebxdc() {
+        if (mutableSession.value != null || mutableRefused.value) return
+        host
+            .openWebxdcScreen(route.coordinate)
+            .onSuccess { mutableSession.value = it }
+            .onFailure { mutableRefused.value = true }
+    }
+
     fun retry() {
         val current = mutableSession.value ?: return
         host.reopenScreen(current)?.let { mutableSession.value = it }
+    }
+
+    /** Moves the site to Tor or the open web: it starts again there. */
+    fun setNetworkMode(useTor: Boolean) {
+        val current = mutableSession.value ?: return
+        if (current.useTor == useTor) return
+        host.setScreenNetworkMode(current, useTor)?.let { mutableSession.value = it }
     }
 
     override fun onCleared() {
@@ -120,9 +138,10 @@ internal class IosNostrAppViewModel(
 }
 
 /**
- * A napplet as a screen: the shared top bar above the app's WKWebView, with the shared panes while
- * it loads, waits for Tor or fails, and its consent questions in the shared cards over it. Back steps
- * through the page's history first, then leaves, as Android's host does.
+ * A napplet, nSite or webxdc app as a screen: the shared top bar above the app's WKWebView (with the
+ * shared onion switch for a site while Tor is on), the shared panes while it loads, waits for Tor or
+ * fails, and its consent questions in the shared cards over it. Back steps through the page's history
+ * first, then leaves, as Android's host does.
  */
 @Composable
 fun IosNostrAppScreen(
@@ -135,8 +154,12 @@ fun IosNostrAppScreen(
     val session by viewModel.session.collectAsState()
     val refused by viewModel.refused.collectAsState()
 
+    // A webxdc app has no event: the launcher readied it for this screen.
+    val webxdc = remember(route.coordinate) { host.isWebxdcRoute(route.coordinate) }
+    if (webxdc) LaunchedEffect(Unit) { viewModel.startWebxdc() }
+
     // The app's event, from the cache, or fetched from relays while the screen waits for it.
-    val note = remember(route.coordinate) { LocalCache.checkGetOrCreateAddressableNote(route.coordinate) }
+    val note = remember(route.coordinate) { if (webxdc) null else LocalCache.checkGetOrCreateAddressableNote(route.coordinate) }
     if (note != null && session == null && !refused) {
         if (note.event == null) EventFinderFilterAssemblerSubscription(note)
         val state by note
@@ -154,17 +177,33 @@ fun IosNostrAppScreen(
     val title = session?.launch?.title ?: route.coordinate.substringAfter(':').substringAfter(':')
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize()) {
-            TopBarWithBackButton(title, nav)
+            val current = session
+            TopBarWithBackButton(title, nav, actions = { if (current != null) SiteRoute(current, host, viewModel::setNetworkMode) })
             Box(Modifier.fillMaxWidth().weight(1f)) {
-                val current = session
                 when {
                     current != null -> NostrApp(current, viewModel, nav, host, accountViewModel)
-                    note == null || refused -> NappletMessagePane(stringRes(Res.string.napplet_desktop_open_failed), onRetry = null)
+                    (note == null && !webxdc) || refused -> NappletMessagePane(stringRes(Res.string.napplet_desktop_open_failed), onRetry = null)
                     else -> NappletFetchingPane(null, title)
                 }
             }
         }
     }
+}
+
+/** An nSite's onion switch, while Tor is on for the app: only a site has a route of its own to choose. */
+@Composable
+private fun SiteRoute(
+    session: IosNappletSession,
+    host: IosNappletHost,
+    onNetworkMode: (Boolean) -> Unit,
+) {
+    if (session.launch.profile != HostProfile.WEBSITE) return
+    val torEnabled by host.torEnabledState.collectAsState()
+    if (!torEnabled) return
+    // Recomputed as the account's store changes route (another of its sites opening on Tor).
+    val changes by host.stores.changes.collectAsState()
+    val routedOverTor = remember(session, changes) { session.routedOverTor() }
+    NappletOnionSwitch(useTor = session.useTor, routedOverTor = routedOverTor, onNetworkMode = onNetworkMode, showDetail = false)
 }
 
 @OptIn(ExperimentalForeignApi::class)

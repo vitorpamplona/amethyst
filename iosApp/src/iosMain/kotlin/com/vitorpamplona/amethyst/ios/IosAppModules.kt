@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.ios
 
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
+import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.EncryptedFileAccountStores
 import com.vitorpamplona.amethyst.commons.account.StoreAccountSessionStore
@@ -93,10 +94,12 @@ import com.vitorpamplona.amethyst.commons.tor.socksReplyMessage
 import com.vitorpamplona.amethyst.commons.tor.supportedOn
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
+import com.vitorpamplona.amethyst.ios.napplet.IosNappletStores
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.amethyst.ios.tor.IosArti
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
@@ -127,6 +130,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
@@ -472,7 +476,8 @@ class IosAppModules(
     }
 
     /** Napplets' and nSites' brokers, consent, network choices and blob cache. Built when one first opens. */
-    val nappletHost by lazy { IosNappletHost(this) }
+    private val nappletHostLazy = lazy { IosNappletHost(this) }
+    val nappletHost by nappletHostLazy
 
     // Scheduled posts are hidden on iOS (B13): the store exists, empty, and nothing publishes from it.
     val scheduledPostStore = ScheduledPostStore(filesPath / "scheduled_posts.json")
@@ -550,7 +555,22 @@ class IosAppModules(
             // A NIP-46 login's relays follow the signer-relay Tor setting, as on Android.
             signerRelayRouting = torRelayState,
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
+            hooks = SessionHooks(),
         )
+
+    /**
+     * A removed account's napplet and nSite storage goes with it: its screens close, then its data
+     * store is deleted (also when no app opened this run, since the store is on disk).
+     */
+    private inner class SessionHooks : AccountSessionHooks {
+        override suspend fun onAccountRemoved(pubkey: HexKey) {
+            if (nappletHostLazy.isInitialized()) {
+                nappletHost.removeAccount(pubkey)
+            } else {
+                withContext(Dispatchers.Main) { IosNappletStores.removeStore(pubkey) }
+            }
+        }
+    }
 
     // As accounts load, feeds their DM, trusted, money and signer relays into torRelayState, which
     // re-evaluates which relays go through Tor and re-dials those that moved.

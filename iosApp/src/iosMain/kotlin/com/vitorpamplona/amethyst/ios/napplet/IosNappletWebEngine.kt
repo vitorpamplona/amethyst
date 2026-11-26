@@ -196,6 +196,9 @@ class IosNappletWebEngine(
     private val tasks = HashMap<WKURLSchemeTaskProtocol, Job>()
     private var shellNavigationPending = false
 
+    // The compiled request filter this launch holds in WebKit's rule store, given back on close.
+    private var ruleId: String? = null
+
     // ---- NappletWebEngine ----
 
     // A user script runs in every frame of every document from its start, before the page's own: WebKit
@@ -219,7 +222,13 @@ class IosNappletWebEngine(
     override suspend fun loadShell(shellUrl: String): Boolean {
         // Compiled before the browser exists, so not one request goes out unfiltered. Fails closed: a
         // launch whose list didn't compile doesn't run (the core shows the engine failure).
-        val rules = compileContentRules(NappletRequestPolicy.contentRuleListJson(NappletRequestPolicy.contentRules(plan.profile, plan.appOrigin, plan.origins)))
+        val json = NappletRequestPolicy.contentRuleListJson(NappletRequestPolicy.contentRules(plan.profile, plan.appOrigin, plan.origins))
+        val id = ruleListId(json)
+        withContext(Dispatchers.Main) {
+            acquireRules(id)
+            ruleId = id
+        }
+        val rules = compileContentRules(json, id)
         checkNotNull(rules) { "The request filter did not compile" }
         return withContext(Dispatchers.Main) {
             val installed =
@@ -275,6 +284,8 @@ class IosNappletWebEngine(
         lock.withLock { closed = true }
         scope.cancel()
         onMain {
+            ruleId?.let(::releaseRules)
+            ruleId = null
             val view = mutableWebView.value
             mutableWebView.value = null
             tasks.clear()
@@ -617,6 +628,7 @@ class IosNappletWebEngine(
         private const val ERROR_DOMAIN = "NappletScheme"
         private const val CHUNK = 64 * 1024
         private const val CANCELLED = -999L
+        private const val RULE_LIST_PREFIX = "amethyst-napplet-"
 
         /** The content world the bridge lives in: no page script, in any frame, sees its handler. */
         const val WORLD_NAME = "amethyst-napplet"
@@ -650,14 +662,61 @@ class IosNappletWebEngine(
             return if (port > 0) "$scheme://$host:$port" else "$scheme://$host"
         }
 
+        /** The rule store's name for [json]'s list: by its own hash, so a launch with the same rules shares it. */
+        fun ruleListId(json: String): String = RULE_LIST_PREFIX + sha256(json.encodeToByteArray()).toHexKey().take(24)
+
+        // Main thread: how many open launches use each compiled list. A napplet's list names its own
+        // origin, so every napplet the user opens adds one; the last launch on a list removes it.
+        private val ruleUses = HashMap<String, Int>()
+
+        private fun acquireRules(id: String) {
+            ruleUses[id] = (ruleUses[id] ?: 0) + 1
+        }
+
+        private fun releaseRules(id: String) {
+            val left = (ruleUses[id] ?: 1) - 1
+            if (left > 0) {
+                ruleUses[id] = left
+                return
+            }
+            ruleUses.remove(id)
+            WKContentRuleListStore.defaultStore()?.removeContentRuleListForIdentifier(id) { error ->
+                if (error != null) Log.d(TAG) { "Could not remove the request filter $id: ${error.localizedDescription}" }
+            }
+        }
+
         /**
-         * [json] as a compiled `WKContentRuleList`, or null when WebKit refused it. Named by its own hash,
-         * so a launch with the same rules reuses the compiled list.
+         * Removes the compiled lists no open launch uses: what launches that ended in a crash or a kill
+         * left in WebKit's store. Main thread.
          */
-        suspend fun compileContentRules(json: String): WKContentRuleList? =
+        fun sweepContentRules() {
+            val store = WKContentRuleListStore.defaultStore() ?: return
+            store.getAvailableContentRuleListIdentifiers { ids ->
+                ids
+                    ?.filterIsInstance<String>()
+                    ?.filter { it.startsWith(RULE_LIST_PREFIX) && it !in ruleUses }
+                    ?.forEach { id -> store.removeContentRuleListForIdentifier(id) { _ -> } }
+            }
+        }
+
+        /** The identifiers of this app's lists in WebKit's rule store, for a test. Main thread. */
+        suspend fun storedContentRuleIds(): List<String> =
+            suspendCancellableCoroutine { cont ->
+                val store = WKContentRuleListStore.defaultStore()
+                if (store == null) {
+                    cont.resume(emptyList())
+                } else {
+                    store.getAvailableContentRuleListIdentifiers { ids -> cont.resume(ids?.filterIsInstance<String>()?.filter { it.startsWith(RULE_LIST_PREFIX) }.orEmpty()) }
+                }
+            }
+
+        /** [json] as a compiled `WKContentRuleList` stored as [id], or null when WebKit refused it. */
+        suspend fun compileContentRules(
+            json: String,
+            id: String = ruleListId(json),
+        ): WKContentRuleList? =
             withContext(Dispatchers.Main) {
                 val store = WKContentRuleListStore.defaultStore() ?: return@withContext null
-                val id = "amethyst-napplet-" + sha256(json.encodeToByteArray()).toHexKey().take(24)
                 suspendCancellableCoroutine { cont ->
                     store.compileContentRuleListForIdentifier(id, json) { list, error ->
                         if (error != null) Log.w(TAG) { "The request filter did not compile: ${error.localizedDescription}" }
