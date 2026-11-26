@@ -42,8 +42,8 @@ import kotlin.test.assertTrue
 class UrlPreviewSizeTest {
     private val contentType = "text/html; charset=utf-8"
 
-    private fun serving(html: String): (String) -> OkHttpClient =
-        { _ ->
+    private fun serving(html: String): UrlPreviewTransport =
+        OkHttpUrlPreviewTransport { _ ->
             OkHttpClient
                 .Builder()
                 .addInterceptor { chain ->
@@ -91,7 +91,7 @@ class UrlPreviewSizeTest {
     private fun servingCounted(
         html: String,
         pulled: LongArray,
-    ): (String) -> OkHttpClient {
+    ): UrlPreviewTransport {
         val counting: Source =
             object : ForwardingSource(Buffer().writeUtf8(html)) {
                 override fun read(
@@ -100,7 +100,7 @@ class UrlPreviewSizeTest {
                 ): Long = super.read(sink, minOf(byteCount, 8192L)).also { if (it > 0) pulled[0] += it }
             }
         val body: ResponseBody = counting.buffer().asResponseBody(contentType.toMediaType())
-        return { _ ->
+        return OkHttpUrlPreviewTransport { _ ->
             OkHttpClient
                 .Builder()
                 .addInterceptor { chain ->

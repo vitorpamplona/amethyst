@@ -24,15 +24,18 @@ import androidx.collection.LruCache
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.preview.UrlPreview
+import com.vitorpamplona.amethyst.commons.preview.UrlPreviewTransport
+import com.vitorpamplona.amethyst.commons.preview.urlPreviewTransport
+import com.vitorpamplona.amethyst.commons.util.KmpLock
+import com.vitorpamplona.amethyst.commons.util.withLock
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import java.util.concurrent.ConcurrentHashMap
 
 @Stable
 object UrlCachedPreviewer {
@@ -41,11 +44,12 @@ object UrlCachedPreviewer {
 
     // Fetches under way: callers asking for the same link at once (a card and the composer's
     // imeta pass, or one link in several notes) share a single request.
-    private val inFlight = ConcurrentHashMap<String, CompletableDeferred<UrlPreviewState>>()
+    private val inFlight = HashMap<String, CompletableDeferred<UrlPreviewState>>()
+    private val inFlightLock = KmpLock()
 
     suspend fun previewInfo(
         url: String,
-        okHttpClient: (String) -> OkHttpClient,
+        transport: UrlPreviewTransport,
         onReady: suspend (UrlPreviewState) -> Unit,
     ) {
         cache[url]?.let {
@@ -54,7 +58,7 @@ object UrlCachedPreviewer {
         }
 
         val mine = CompletableDeferred<UrlPreviewState>()
-        val running = inFlight.putIfAbsent(url, mine)
+        val running = inFlightLock.withLock { inFlight.getOrPut(url) { mine }.takeIf { it !== mine } }
         if (running != null) {
             val state =
                 try {
@@ -62,7 +66,7 @@ object UrlCachedPreviewer {
                 } catch (e: CancellationException) {
                     // The caller that started the fetch was cancelled first: fetch it here instead.
                     currentCoroutineContext().ensureActive()
-                    return previewInfo(url, okHttpClient, onReady)
+                    return previewInfo(url, transport, onReady)
                 }
             onReady(state)
             return
@@ -70,23 +74,23 @@ object UrlCachedPreviewer {
 
         try {
             // A fetch may have finished between the cache check and the claim.
-            val state = cache[url] ?: load(url, okHttpClient)
+            val state = cache[url] ?: load(url, transport)
             mine.complete(state)
             onReady(state)
         } finally {
             mine.cancel()
-            inFlight.remove(url, mine)
+            inFlightLock.withLock { if (inFlight[url] === mine) inFlight.remove(url) }
         }
     }
 
     private suspend fun load(
         url: String,
-        okHttpClient: (String) -> OkHttpClient,
+        transport: UrlPreviewTransport,
     ): UrlPreviewState {
         var result: UrlPreviewState = UrlPreviewState.Empty
         UrlPreview().fetch(
             url,
-            okHttpClient,
+            transport,
             onComplete = { urlInfo ->
                 val cached = cache[url]
                 result =
@@ -112,12 +116,12 @@ object UrlCachedPreviewer {
     }
 }
 
-/** Loads the OpenGraph preview of [url] through [UrlCachedPreviewer], on the account's preview HTTP client. */
+/** Loads the OpenGraph preview of [url] through [UrlCachedPreviewer], on the account's preview HTTP transport. */
 fun AccountViewModel.urlPreview(
     url: String,
     onResult: suspend (UrlPreviewState) -> Unit,
 ) {
     viewModelScope.launch(Dispatchers.IO) {
-        UrlCachedPreviewer.previewInfo(url, httpClientBuilder::okHttpClientForPreview, onResult)
+        UrlCachedPreviewer.previewInfo(url, httpClientBuilder.urlPreviewTransport(), onResult)
     }
 }

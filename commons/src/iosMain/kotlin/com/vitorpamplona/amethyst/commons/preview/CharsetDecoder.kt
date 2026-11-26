@@ -49,7 +49,7 @@ actual fun decodeBytes(
 ): String {
     if (bytes.isEmpty()) return ""
 
-    val encoding = encodingFor(charsetName)
+    val encoding = charsetName?.let { encodingFor(it) } ?: NSUTF8StringEncoding
 
     val data =
         bytes.usePinned { pinned ->
@@ -60,8 +60,11 @@ actual fun decodeBytes(
         ?: bytes.decodeToString()
 }
 
-private fun encodingFor(charsetName: String?): NSStringEncoding =
-    when (charsetName?.trim()?.uppercase()) {
+actual fun isSupportedCharset(charsetName: String): Boolean = encodingFor(charsetName) != null
+
+private fun encodingFor(charsetName: String): NSStringEncoding? =
+    when (charsetName.trim().uppercase()) {
+        "UTF-8", "UTF8" -> NSUTF8StringEncoding
         "UTF-16", "UTF-16BE", "UTF16" -> NSUTF16BigEndianStringEncoding
         "UTF-16LE" -> NSUTF16LittleEndianStringEncoding
         "UTF-32", "UTF-32BE", "UTF32" -> NSUTF32BigEndianStringEncoding
@@ -69,5 +72,5 @@ private fun encodingFor(charsetName: String?): NSStringEncoding =
         "ISO-8859-1", "ISO8859-1", "ISO_8859-1", "LATIN1", "L1", "CP819" -> NSISOLatin1StringEncoding
         "WINDOWS-1252", "CP1252" -> NSWindowsCP1252StringEncoding
         "US-ASCII", "ASCII", "ANSI_X3.4-1968" -> NSASCIIStringEncoding
-        else -> NSUTF8StringEncoding
+        else -> null
     }

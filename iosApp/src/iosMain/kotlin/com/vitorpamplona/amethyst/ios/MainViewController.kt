@@ -42,12 +42,15 @@ import com.vitorpamplona.amethyst.commons.ui.screen.collectDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.theme.AmethystMaterialTheme
 import com.vitorpamplona.amethyst.commons.ui.theme.collectAccentColor
 import com.vitorpamplona.amethyst.commons.ui.theme.isDarkTheme
+import io.ktor.client.HttpClient
 import platform.UIKit.UIApplication
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
 
-/** The per-role HTTP clients arrive with A2; the iOS interface has no members yet. */
-internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder
+/** The per-role HTTP clients arrive with A2; until then every role shares the app's one client. */
+internal object IosHttpClientBuilder : IRoleBasedHttpClientBuilder {
+    override fun ktorClientForPreview(url: String): HttpClient = modules.httpClient
+}
 
 /** Built once per process: the graph outlives every view controller the system asks for. */
 private val modules by lazy { IosAppModules(appVersion = IosBuildInfo.VERSION_NAME) }

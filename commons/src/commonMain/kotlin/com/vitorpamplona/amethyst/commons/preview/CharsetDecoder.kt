@@ -36,3 +36,10 @@ expect fun decodeBytes(
     bytes: ByteArray,
     charsetName: String?,
 ): String
+
+/**
+ * Whether [decodeBytes] can decode [charsetName] here, rather than falling back to UTF-8. A
+ * `Content-Type` charset this platform cannot decode is ignored, so the BOM and the page's own
+ * `<meta>` get their say instead.
+ */
+expect fun isSupportedCharset(charsetName: String): Boolean

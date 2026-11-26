@@ -20,4 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-actual interface IRoleBasedHttpClientBuilder
+import io.ktor.client.HttpClient
+
+actual interface IRoleBasedHttpClientBuilder {
+    /** The Ktor client a link preview of [url] goes out on. */
+    fun ktorClientForPreview(url: String): HttpClient
+}

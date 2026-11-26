@@ -42,8 +42,11 @@ import com.vitorpamplona.amethyst.commons.richtext.MediaUrlVideo
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableUrl
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ImageViewerDialog
+import com.vitorpamplona.amethyst.commons.ui.components.UrlCachedPreviewer
+import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
@@ -59,6 +62,8 @@ import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
+import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as SharedLoadUrlPreview
+import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as sharedRememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as SharedRenderGitIssueEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as SharedRenderGitPatchEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as SharedRenderGitPullRequestEvent
@@ -304,6 +309,8 @@ object IosNotePlatform : NotePlatform {
         accountViewModel: AccountViewModel,
     ) = ImageViewerDialog(imageUrl, allImages, source, 0.dp, onDismiss)
 
+    // Link previews: the shared OpenGraph card, cache and fetch, on the app's Ktor client.
+
     @Composable
     override fun UrlPreview(
         url: String,
@@ -311,7 +318,26 @@ object IosNotePlatform : NotePlatform {
         callbackUri: String?,
         accountViewModel: AccountViewModel,
         nav: INav?,
-    ) = ClickableUrl(url, urlText)
+    ) = SharedLoadUrlPreview(url, urlText, callbackUri, accountViewModel, nav)
+
+    override fun loadUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+        onResult: suspend (UrlPreviewState) -> Unit,
+    ) = accountViewModel.urlPreview(url, onResult)
+
+    @Composable
+    override fun rememberUrlPreviewState(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ): UrlPreviewState = sharedRememberUrlPreviewState(url, accountViewModel)
+
+    override fun warmUrlPreview(
+        url: String,
+        accountViewModel: AccountViewModel,
+    ) {
+        if (UrlCachedPreviewer.cache[url] == null) accountViewModel.urlPreview(url) {}
+    }
 
     // Git: the shared NIP-34 cards with GitCardSlots.Portable, since there is no git client here to
     // fetch a repository's snapshot, a pull request's diff or merge it.
