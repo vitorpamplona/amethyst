@@ -112,14 +112,9 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
-import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.ChatFocus
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
-import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
@@ -146,6 +141,10 @@ import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
 import com.vitorpamplona.amethyst.commons.claudecode.firstPromptLine
 import com.vitorpamplona.amethyst.commons.claudecode.hasOpenWork
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
+import com.vitorpamplona.amethyst.commons.devices.Devices
+import com.vitorpamplona.amethyst.commons.devices.ui.ChatFocus
+import com.vitorpamplona.amethyst.commons.devices.ui.DeviceChatFocus
+import com.vitorpamplona.amethyst.commons.devices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -160,8 +159,6 @@ import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
-import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle
-import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -266,6 +263,8 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_working
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_clone_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workspace_subtitle
 import com.vitorpamplona.amethyst.commons.resources.claude_code_workstream_cloning
+import com.vitorpamplona.amethyst.commons.resources.device_panel_toggle
+import com.vitorpamplona.amethyst.commons.resources.device_panel_toggle_desc
 import com.vitorpamplona.amethyst.commons.resources.rename
 import com.vitorpamplona.amethyst.commons.resources.try_again
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -471,9 +470,9 @@ fun ClaudeCodeChatScreen(
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
     // From the service's own list, not the disk; a new workstream is in it once its clones are.
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
-    // The dock's Android device panel follows the coding chat in front: its workstream's device, its
-    // folder for Run, and its composer for a screenshot. Where an Android SDK is installed.
-    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
+    // The dock's device panel follows the coding chat in front: its workstream's device, its folder
+    // for Run, and its composer for a screenshot. Where an Android SDK or Xcode is installed.
+    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && Devices.supported }
     val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
     val dock = LocalDockController.current
     val chatScope = rememberCoroutineScope()
@@ -496,8 +495,8 @@ fun ClaudeCodeChatScreen(
         // once per run of work, so a user who folds it while the agent goes on keeps it folded.
         LaunchedEffect(key, deviceOwner, dock) {
             var lastAt = 0L
-            AndroidDevices.shared.activity.collect { a ->
-                if (AndroidDevices.shared.selection.value[deviceOwner] != a.serial) return@collect
+            Devices.shared.activity.collect { a ->
+                if (Devices.shared.selection.value[deviceOwner] != a.serial) return@collect
                 val now = System.currentTimeMillis()
                 if (now - lastAt > DEVICE_RUN_GAP_MS) dock?.show(PanelId.DEVICES)
                 lastAt = now
@@ -507,7 +506,7 @@ fun ClaudeCodeChatScreen(
         // with the panel (which polls it closely) folded.
         LaunchedEffect(Unit) {
             while (true) {
-                AndroidDevices.shared.refreshIfStale(DEVICE_DOT_REFRESH_MS)
+                Devices.shared.refreshIfStale(DEVICE_DOT_REFRESH_MS)
                 delay(DEVICE_DOT_REFRESH_MS)
             }
         }
@@ -558,17 +557,17 @@ fun ClaudeCodeChatScreen(
                             }
                         }
                         if (canDevice) {
-                            HoverTooltip(stringRes(Res.string.android_device_panel_toggle_desc)) {
+                            HoverTooltip(stringRes(Res.string.device_panel_toggle_desc)) {
                                 // The dock's device panel; a window without a dock opens the devices screen.
-                                IconButton(onClick = { dock?.toggle(PanelId.DEVICES) ?: nav.nav(Route.AndroidDevices(key)) }) {
+                                IconButton(onClick = { dock?.toggle(PanelId.DEVICES) ?: nav.nav(Route.Devices(key)) }) {
                                     // A green dot while this chat's device is up, panel open or not.
-                                    val devices by AndroidDevices.shared.state.collectAsStateWithLifecycle()
-                                    val picks by AndroidDevices.shared.selection.collectAsStateWithLifecycle()
-                                    val up = remember(devices, picks, deviceOwner) { AndroidDevices.shared.selected(deviceOwner)?.isOnline == true }
+                                    val devices by Devices.shared.state.collectAsStateWithLifecycle()
+                                    val picks by Devices.shared.selection.collectAsStateWithLifecycle()
+                                    val up = remember(devices, picks, deviceOwner) { Devices.shared.selected(deviceOwner)?.isOnline == true }
                                     Box {
                                         Icon(
                                             MaterialSymbols.PhoneAndroid,
-                                            contentDescription = stringRes(Res.string.android_device_panel_toggle),
+                                            contentDescription = stringRes(Res.string.device_panel_toggle),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(20.dp),
                                         )

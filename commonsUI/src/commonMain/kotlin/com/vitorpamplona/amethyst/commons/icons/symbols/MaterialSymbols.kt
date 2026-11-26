@@ -59,6 +59,7 @@ object MaterialSymbols {
     val Forward10 = MaterialSymbol("\uE056")
     val Keyboard = MaterialSymbol("\uE312")
     val PhoneAndroid = MaterialSymbol("\uF2DB")
+    val PhoneIphone = MaterialSymbol("\uF2DA")
     val PowerSettingsNew = MaterialSymbol("\uF8C7")
     val Replay10 = MaterialSymbol("\uE059")
     val CalendarMonth = MaterialSymbol("\uEBCC")
