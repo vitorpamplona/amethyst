@@ -228,7 +228,7 @@ private fun SiteCard(
         identifier = info.identifier,
         isNapplet = false,
         icon = info.icon,
-        onOpen = if (info.paths.isNotEmpty() && launcher.opensNapplets) ({ launcher.openSite(event, nav) }) else null,
+        onOpen = if (info.paths.isNotEmpty() && launcher.opensSites) ({ launcher.openSite(event, nav) }) else null,
         headerActions = { FavoriteToggleButton(coordinate, info.title ?: info.identifier ?: NSITE_LABEL, info.icon) },
     )
 }

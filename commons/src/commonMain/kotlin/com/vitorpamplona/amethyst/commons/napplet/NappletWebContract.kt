@@ -26,6 +26,30 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
+ * The internal origins of one host's browser: the shell's [origin] and each app's [appOrigin], on
+ * [scheme]. Android's WebView and the desktop's Chromium serve them over `https`
+ * ([NappletWebContract.HTTPS]). WKWebView can't intercept `https` (a scheme handler may not claim a
+ * scheme WebKit handles itself), so iOS serves the same hosts on its own scheme
+ * ([NappletWebContract.NAPPLET_SCHEME]). Each subdomain of either is still its own origin and a
+ * secure context, so the sandbox doesn't change with the scheme.
+ */
+class NappletOrigins(
+    val scheme: String,
+) {
+    /** Where the trusted shell lives. */
+    val origin: String = "$scheme://${NappletWebContract.HOST}"
+
+    /** The trusted shell document (top frame, on [origin], where the native bridge lives). */
+    val shellUrl: String = "$origin/__shell__"
+
+    /** An app's own origin: one subdomain each, webxdc apps under their own parent host. */
+    fun appOrigin(
+        appId: String,
+        profile: HostProfile = HostProfile.WEBSITE,
+    ): String = if (profile == HostProfile.WEBXDC) "$scheme://$appId.${NappletWebContract.WEBXDC_HOST}" else "$scheme://$appId.${NappletWebContract.HOST}"
+}
+
+/**
  * The single source of truth for the napplet **web contract** — the trusted shell page, the injected
  * `window.napplet.*` shim, the internal origin/URLs, and the two Content-Security-Policies that keep
  * the applet boxed in. Every host (the Android `:napplet` WebView today, a desktop CEF host
@@ -39,6 +63,12 @@ object NappletWebContract {
     const val HOST = "napplet.local"
     const val ORIGIN = "https://napplet.local"
 
+    /** The origins Android and Desktop serve: [ORIGIN], [SHELL_URL] and [appOrigin] are these. */
+    val HTTPS = NappletOrigins("https")
+
+    /** The origins a browser that can't intercept `https` serves instead (iOS's WKWebView). */
+    val NAPPLET_SCHEME = NappletOrigins("napplet")
+
     /** The trusted shell document (top frame, on the shell [ORIGIN], where the native bridge lives). */
     const val SHELL_URL = "$ORIGIN/__shell__"
 
@@ -50,7 +80,7 @@ object NappletWebContract {
     fun appOrigin(
         appId: String,
         profile: HostProfile = HostProfile.WEBSITE,
-    ): String = if (profile == HostProfile.WEBXDC) "https://$appId.$WEBXDC_HOST" else "https://$appId.$HOST"
+    ): String = HTTPS.appOrigin(appId, profile)
 
     /**
      * Where webxdc apps live, one subdomain each: a name of their own, so a host can take WebRTC from
@@ -283,6 +313,21 @@ object NappletWebContract {
             "'RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
             "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:true,configurable:true});}catch(e){}}})();"
 
+    /** What [WEBRTC_CHECK] logs when it refuses to start an app: the host then fails the launch. */
+    const val WEBRTC_PRESENT = "napplet-guard: WebRTC is present"
+
+    /**
+     * The shell's own refusal to run without the WebRTC guard: put first in the shell's head, it
+     * stops the shell before it starts the app when the host's [WEBRTC_GUARD_JS] did not reach the
+     * shell (a guard that is missing in the shell is missing in the app's frames too).
+     */
+    const val WEBRTC_CHECK: String =
+        "<script>if(typeof RTCPeerConnection!=='undefined'||typeof webkitRTCPeerConnection!=='undefined'){" +
+            "window.stop();console.error('$WEBRTC_PRESENT');throw new Error('$WEBRTC_PRESENT');}</script>"
+
+    /** Run in the shell: removes the app's frame, ending everything the app had running. */
+    const val DROP_APP_FRAME_JS = "var f=document.getElementById('app');if(f)f.remove();"
+
     /**
      * Takes cookies away from the frame it runs in, before any page script. Every app here lives under
      * one site, `napplet.local` (`.local` is not a public suffix), so a cookie an app sets on that
@@ -296,6 +341,25 @@ object NappletWebContract {
         "(function(){try{Object.defineProperty(Document.prototype,'cookie',{get:function(){return '';},set:function(){},configurable:false});}catch(e){}" +
             "try{Object.defineProperty(window,'cookieStore',{value:undefined,writable:false,configurable:false});}catch(e){}" +
             "try{if(window.CookieStore){Object.defineProperty(window,'CookieStore',{value:undefined,writable:false,configurable:false});}}catch(e){}})();"
+
+    /**
+     * Keeps `<input type=file>` from opening the system's picker in the frame it runs in, before any
+     * page script, for a host whose browser has no file-chooser callback to refuse (WebKit on iOS): an
+     * app running inside a note picks nothing, as Android refuses its inline runs' chooser.
+     *
+     * Every way a pick starts is a click on the input (a tap, a label, a key, `input.click()`), and a
+     * click the window's first capture listener cancels never opens the picker: the page's listeners
+     * come later, and none can undo `preventDefault`. The input is found through `composedPath()`, and
+     * shadow roots are made open so none can hide one; `showPicker()` refuses file inputs.
+     */
+    const val FILE_PICKER_REFUSAL_JS: String =
+        "(function(){function f(n){return n&&n.tagName==='INPUT'&&String(n.type).toLowerCase()==='file';}" +
+            "window.addEventListener('click',function(e){var p=e.composedPath?e.composedPath():[e.target];" +
+            "for(var i=0;i<p.length;i++){if(f(p[i])){e.preventDefault();return;}}},true);" +
+            "try{var a=Element.prototype.attachShadow;if(a)Object.defineProperty(Element.prototype,'attachShadow',{value:function(o){" +
+            "var c={};for(var k in o)c[k]=o[k];c.mode='open';return a.call(this,c);},writable:false,configurable:false});}catch(e){}" +
+            "try{var s=HTMLInputElement.prototype.showPicker;if(s)Object.defineProperty(HTMLInputElement.prototype,'showPicker',{value:function(){" +
+            "if(f(this))throw new DOMException('The file picker is off here','NotAllowedError');return s.apply(this,arguments);},writable:false,configurable:false});}catch(e){}})();"
 
     /**
      * What a paper gets before its page: markup only, no script. It names the charset the server's

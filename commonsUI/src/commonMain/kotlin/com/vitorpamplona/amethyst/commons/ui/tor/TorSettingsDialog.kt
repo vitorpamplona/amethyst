@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.connect_through_your_orbot_s
 import com.vitorpamplona.amethyst.commons.resources.invalid_port_number
 import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
+import com.vitorpamplona.amethyst.commons.resources.tor_not_available_on_this_device
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
@@ -85,7 +86,6 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.tor.explainerId
 import com.vitorpamplona.amethyst.commons.tor.parseTorPresetType
-import com.vitorpamplona.amethyst.commons.tor.parseTorType
 import com.vitorpamplona.amethyst.commons.tor.resourceId
 import com.vitorpamplona.amethyst.commons.ui.components.SetDialogToEdgeToEdge
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import org.jetbrains.compose.resources.StringResource
 
@@ -200,17 +201,18 @@ fun PrivacySettingsBody(dialogViewModel: TorDialogViewModel) {
         modifier = Modifier.padding(horizontal = 5.dp),
         verticalArrangement = Arrangement.spacedBy(Size10dp),
     ) {
+        if (!LocalAppPlatform.current.supportsTor) {
+            Text(stringRes(Res.string.tor_not_available_on_this_device))
+            return@Column
+        }
+        val engines = torEngineChoices(LocalAppPlatform.current.supportsExternalTor)
         SettingsRow(
             Res.string.use_internal_tor,
             Res.string.use_internal_tor_explainer,
-            persistentListOf(
-                TitleExplainer(stringRes(TorType.OFF.resourceId)),
-                TitleExplainer(stringRes(TorType.INTERNAL.resourceId)),
-                TitleExplainer(stringRes(TorType.EXTERNAL.resourceId)),
-            ),
-            dialogViewModel.torType.value.screenCode,
+            engines.map { TitleExplainer(stringRes(it.resourceId)) }.toImmutableList(),
+            engines.indexOf(dialogViewModel.torType.value).coerceAtLeast(0),
         ) {
-            dialogViewModel.torType.value = parseTorType(it)
+            dialogViewModel.torType.value = engines[it]
         }
 
         AnimatedVisibility(
@@ -370,3 +372,6 @@ fun SwitchSettingsRow(
         Switch(checked.value, onCheckedChange = { checked.value = it })
     }
 }
+
+/** The Tor engines to offer: every [TorType], less EXTERNAL where no app can lend a SOCKS port. */
+fun torEngineChoices(supportsExternalTor: Boolean): List<TorType> = if (supportsExternalTor) TorType.entries else TorType.entries.filter { it != TorType.EXTERNAL }

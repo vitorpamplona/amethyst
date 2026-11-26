@@ -42,12 +42,13 @@ import androidx.media3.ui.compose.state.rememberMuteButtonState
 import androidx.media3.ui.compose.state.rememberPlayPauseButtonState
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
+import com.vitorpamplona.amethyst.commons.ui.playback.controls.constrainVideoQualityToViewport
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.commons.ui.playback.wavefront.Waveform
 import com.vitorpamplona.amethyst.commons.ui.theme.VoiceHeightModifier
-import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.controls.PIP_PRESHRINK_MAX_SHORT_SIDE_PX
-import com.vitorpamplona.amethyst.service.playback.composable.controls.constrainVideoQualityToViewport
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
-import com.vitorpamplona.amethyst.service.playback.composable.wavefront.Waveform
+import com.vitorpamplona.amethyst.service.playback.player.media3
 import com.vitorpamplona.amethyst.ui.components.getActivity
 
 @OptIn(UnstableApi::class)
@@ -89,7 +90,7 @@ fun RenderPipVideo(
         contentAlignment = Alignment.Center,
     ) {
         ContentFrame(
-            player = controller.controller,
+            player = controller.media3,
             keepContentOnReset = true,
             contentScale = ContentScale.Crop,
         )
@@ -105,6 +106,7 @@ fun KeepScreenOnWhilePlaying(controller: MediaControllerState) {
     val view = LocalView.current
 
     DisposableEffect(controller.controller, view) {
+        val player = controller.media3
         val listener =
             object : Player.Listener {
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -115,11 +117,11 @@ fun KeepScreenOnWhilePlaying(controller: MediaControllerState) {
             }
 
         // Set initial state
-        view.keepScreenOn = controller.controller.isPlaying
+        view.keepScreenOn = player.isPlaying
 
-        controller.controller.addListener(listener)
+        player.addListener(listener)
         onDispose {
-            controller.controller.removeListener(listener)
+            player.removeListener(listener)
             view.keepScreenOn = false
         }
     }
@@ -155,8 +157,8 @@ fun WatchControllerForActions(
     mediaItemData: MediaItemData,
     controllerState: MediaControllerState,
 ) {
-    val playPauseState = rememberPlayPauseButtonState(controllerState.controller)
-    val muteState = rememberMuteButtonState(controllerState.controller)
+    val playPauseState = rememberPlayPauseButtonState(controllerState.media3)
+    val muteState = rememberMuteButtonState(controllerState.media3)
 
     val activity = LocalContext.current.getActivity()
     LaunchedEffect(activity, playPauseState.showPlay, muteState.showMuted) {

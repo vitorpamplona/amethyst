@@ -63,8 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.desktop_tray_quit
 import com.vitorpamplona.amethyst.commons.resources.desktop_tray_tooltip
 import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
-import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
-import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerBadges
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
@@ -107,6 +106,7 @@ import com.vitorpamplona.amethyst.desktop.platform.titleBarWindowDrag
 import com.vitorpamplona.amethyst.desktop.platform.trackWheelScrolling
 import com.vitorpamplona.amethyst.desktop.service.bench.ScrollBenchmark
 import com.vitorpamplona.amethyst.desktop.service.images.DesktopImageLoaderSetup
+import com.vitorpamplona.amethyst.desktop.service.media.DesktopAnimatedImageFetcher
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.MediaHttp
 import com.vitorpamplona.amethyst.desktop.service.scheduledposts.runHeadlessPublish
@@ -277,6 +277,8 @@ fun main(args: Array<String>) {
         viaTor = { url -> modules.roleBasedHttpClientBuilder.proxyPortForVideo(url) != null },
         imageClientFor = modules.roleBasedHttpClientBuilder::okHttpClientForImage,
     )
+    // The shared GIF player fetches through the same image clients.
+    AnimatedImageFetcher.installed = DesktopAnimatedImageFetcher
 
     modules.initiate()
 
@@ -604,7 +606,6 @@ fun main(args: Array<String>) {
                                 LocalAppPlatform provides platform,
                                 LocalNotePlatform provides DesktopNotePlatform,
                                 LocalRichTextPlatform provides DesktopRichTextPlatform,
-                                LocalInlineQuoteRenderer provides DefaultInlineQuoteRenderer,
                                 // The lightbox and the video player go full screen through the AWT window.
                                 LocalAwtWindow provides window,
                                 LocalChromiumVideoEngine provides nappletHost.engine,

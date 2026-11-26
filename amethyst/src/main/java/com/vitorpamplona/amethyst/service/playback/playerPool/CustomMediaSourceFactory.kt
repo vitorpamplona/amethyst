@@ -105,7 +105,7 @@ internal fun isHlsMediaItem(mediaItem: MediaItem?): Boolean {
  * never cached even once; only a proven on-demand URL is cached, from its second view onward.
  *
  * The `isLiveStream` flag is carried on [MediaItem.mediaMetadata] extras and set by
- * [MediaItemCache] from [com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData].
+ * [MediaItemCache] from [com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData].
  */
 @UnstableApi
 class CustomMediaSourceFactory(

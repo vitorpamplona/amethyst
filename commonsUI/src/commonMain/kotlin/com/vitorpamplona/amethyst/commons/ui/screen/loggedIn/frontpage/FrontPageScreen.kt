@@ -817,7 +817,7 @@ private fun AboutEditionSheet(
             sitePinned = sitePinned,
             onPinSite = togglePin,
             onOpenSite =
-                if (launcher.opensNapplets) {
+                if (launcher.opensSites) {
                     { event ->
                         onDismiss()
                         launcher.openSite(event, nav)

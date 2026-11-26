@@ -4685,11 +4685,19 @@ class Account(
                 // bundle exists in memory after restore. Launched, not awaited: it
                 // waits on relay confirmations, and the group history below must
                 // not wait on the network.
-                scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
+                //
+                // Without a KeyPackage store (iOS until its stores persist) the private keys would
+                // be gone at the next launch, leaving a KeyPackage whose invites nobody can open, and
+                // each launch would publish another. Such an account advertises none.
+                if (marmotKeyPackageStore != null) {
+                    scope.launch(Dispatchers.IO) { marmot.ensureMarmotKeyPackagePublished() }
 
-                // A first login publishes before the account's relay lists have loaded; once they
-                // do (and whenever they change), the KeyPackages follow them to the chosen relays.
-                scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+                    // A first login publishes before the account's relay lists have loaded; once they
+                    // do (and whenever they change), the KeyPackages follow them to the chosen relays.
+                    scope.launch(Dispatchers.IO) { marmot.runMarmotKeyPackageRelayWatcher() }
+                } else {
+                    Log.i("Account") { "No KeyPackage store: not publishing Marmot KeyPackages" }
+                }
 
                 // The device group follows the account's relay list the same way.
                 if (marmotDevices != null) scope.launch(Dispatchers.IO) { marmot.runMarmotDeviceGroupRelayWatcher() }

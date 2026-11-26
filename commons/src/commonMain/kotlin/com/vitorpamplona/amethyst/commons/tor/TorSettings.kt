@@ -63,6 +63,42 @@ fun parseTorType(code: Int?): TorType =
         else -> TorType.INTERNAL
     }
 
+/**
+ * This choice as a platform can carry it out. A platform without the built-in Tor runs none:
+ * INTERNAL becomes OFF. A platform where no other app can lend a SOCKS port (iOS: Orbot there is a
+ * VPN, not a proxy) turns EXTERNAL into the built-in Tor, or OFF without one.
+ *
+ * EXTERNAL falls to INTERNAL rather than OFF because the user who picked it asked for their traffic
+ * to go through Tor: OFF would quietly send everything they routed through Tor in the clear, while
+ * INTERNAL keeps every one of their per-role choices going through Tor (through Orbot's VPN too, if
+ * it is on, which only costs speed).
+ */
+fun TorType.supportedOn(
+    hasInternalTor: Boolean,
+    hasExternalTor: Boolean,
+): TorType =
+    when (this) {
+        TorType.OFF -> TorType.OFF
+        TorType.INTERNAL -> if (hasInternalTor) TorType.INTERNAL else TorType.OFF
+        TorType.EXTERNAL ->
+            if (hasExternalTor) {
+                TorType.EXTERNAL
+            } else if (hasInternalTor) {
+                TorType.INTERNAL
+            } else {
+                TorType.OFF
+            }
+    }
+
+/** These settings with [TorType.supportedOn] applied to the engine choice; the rest is kept. */
+fun TorSettings.supportedOn(
+    hasInternalTor: Boolean,
+    hasExternalTor: Boolean,
+): TorSettings {
+    val supported = torType.supportedOn(hasInternalTor, hasExternalTor)
+    return if (supported == torType) this else copy(torType = supported)
+}
+
 enum class TorPresetType(
     val screenCode: Int,
 ) {

@@ -43,6 +43,33 @@ class TorSettingsTest {
     fun parseTorType_unknownCode_defaultsToInternal() = assertEquals(TorType.INTERNAL, parseTorType(99))
 
     @Test
+    fun supportedOn_keepsEveryChoiceWhereEveryEngineExists() {
+        TorType.entries.forEach { assertEquals(it, it.supportedOn(hasInternalTor = true, hasExternalTor = true)) }
+    }
+
+    @Test
+    fun supportedOn_externalWithoutExternalTorRunsTheBuiltInOne() {
+        assertEquals(TorType.INTERNAL, TorType.EXTERNAL.supportedOn(hasInternalTor = true, hasExternalTor = false))
+        assertEquals(TorType.INTERNAL, TorType.INTERNAL.supportedOn(hasInternalTor = true, hasExternalTor = false))
+        assertEquals(TorType.OFF, TorType.OFF.supportedOn(hasInternalTor = true, hasExternalTor = false))
+    }
+
+    @Test
+    fun supportedOn_noBuiltInTorTurnsInternalOff() {
+        assertEquals(TorType.OFF, TorType.INTERNAL.supportedOn(hasInternalTor = false, hasExternalTor = false))
+        assertEquals(TorType.OFF, TorType.EXTERNAL.supportedOn(hasInternalTor = false, hasExternalTor = false))
+        assertEquals(TorType.EXTERNAL, TorType.EXTERNAL.supportedOn(hasInternalTor = false, hasExternalTor = true))
+    }
+
+    @Test
+    fun supportedOn_keepsEveryOtherSetting() {
+        val stored = TorSettings(torType = TorType.EXTERNAL, externalSocksPort = 9150, imagesViaTor = true, videosViaTor = true)
+        assertEquals(stored.copy(torType = TorType.INTERNAL), stored.supportedOn(hasInternalTor = true, hasExternalTor = false))
+        val internal = TorSettings(torType = TorType.INTERNAL)
+        assertTrue(internal === internal.supportedOn(hasInternalTor = true, hasExternalTor = false))
+    }
+
+    @Test
     fun parseTorType_negativeCode_defaultsToInternal() = assertEquals(TorType.INTERNAL, parseTorType(-1))
 
     @Test

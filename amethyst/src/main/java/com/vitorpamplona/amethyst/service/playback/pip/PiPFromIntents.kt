@@ -31,8 +31,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.util.Consumer
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.DEFAULT_MUTED_SETTING
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.ui.components.getActivity
 import kotlinx.coroutines.launch
 

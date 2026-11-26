@@ -21,11 +21,13 @@
 package com.vitorpamplona.amethyst.service.playback.composable.mediaitem
 
 import android.os.Bundle
+import androidx.compose.runtime.Immutable
 import androidx.core.net.toUri
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.vitorpamplona.amethyst.commons.model.nip71Video.CaptionTrack
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
 import com.vitorpamplona.amethyst.commons.util.cache.GenericBaseCache
 import com.vitorpamplona.amethyst.commons.video.normalizeStreamMimeType
 import com.vitorpamplona.quartz.utils.Log
@@ -110,3 +112,12 @@ class MediaItemCache : GenericBaseCache<MediaItemData, LoadedMediaItem>(20) {
             )
         }
 }
+
+/** The shared [MediaItemData] key with the media3 [MediaItem] built from it. */
+@Immutable
+class LoadedMediaItem(
+    val src: MediaItemData,
+    val item: MediaItem,
+)
+
+val mediaItemCache = MediaItemCache()

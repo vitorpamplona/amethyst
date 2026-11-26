@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.service.playback.composable
 
 import androidx.media3.common.PlaybackException
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.isRecoverableLiveError
+import com.vitorpamplona.amethyst.service.playback.player.playerFailureOf
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -32,6 +34,9 @@ import org.junit.Test
  * Everything except BEHIND_LIVE_WINDOW is now left terminal.
  */
 class WatchPlaybackErrorsRecoveryTest {
+    // The shared UI decides on the PlayerFailure the Android adapter maps each media3 code to.
+    private fun isRecoverableLiveError(errorCode: Int) = isRecoverableLiveError(playerFailureOf(errorCode, PlaybackException.getErrorCodeName(errorCode), null))
+
     @Test
     fun onlyBehindLiveWindowIsRecoverable() {
         assertTrue(isRecoverableLiveError(PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW))

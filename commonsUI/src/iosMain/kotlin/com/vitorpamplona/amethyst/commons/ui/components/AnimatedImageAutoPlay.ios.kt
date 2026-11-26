@@ -28,5 +28,8 @@ internal actual fun AnimatedImageAutoPlay(
     image: Image?,
     autoPlay: Boolean,
 ) {
-    // Nothing drives animated-image playback on iOS yet, so autoPlay has no effect here.
+    // Coil on iOS decodes only the first frame of a GIF/AVIF (SkiaGifDecoder), so [image] holds no
+    // animation to start or stop and autoPlay has no effect here, as on desktop. Note GIFs, banners
+    // and the drawer header play through the shared Skia player (AnimatedGifImage) instead, which
+    // fetches and decodes the file itself; an avatar would need one such player per face in a feed.
 }

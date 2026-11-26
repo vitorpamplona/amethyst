@@ -1055,6 +1055,9 @@
     <string name="nsite_open_failed">This site can’t be opened here.</string>
     <string name="napplet_desktop_failed_route">Tor isn’t running, so %1$s didn’t open. Nothing left this computer.</string>
     <string name="napplet_desktop_retry">Try again</string>
+    <string name="napplet_failed_route_device">Tor isn’t running, so %1$s didn’t open. Nothing left this device.</string>
+    <string name="napplet_failed_page_gone">%1$s stopped unexpectedly.</string>
+    <string name="napplet_js_dialog_ok">OK</string>
     <string name="napplet_signer_allow_once">Allow once</string>
     <string name="napplet_signer_allow_session">Allow for this session</string>
     <string name="napplet_signer_allow_24h">Allow for 24 hours</string>
@@ -4220,6 +4223,9 @@
     </plurals>
     <string name="cast_stop_casting">Stop casting</string>
     <string name="cast_to_device">Cast to device</string>
+    <string name="tor_not_available_on_this_device">Tor is not available on this device yet. Every connection goes direct.</string>
+    <string name="play_on_another_device">Play on another device</string>
+    <string name="play_on_another_device_description">Tap the button below to pick a speaker or TV.</string>
     <string name="chat_delivery_accepted">Accepted by at least one relay</string>
     <string name="chat_delivery_delivered_all">Delivered to all recipients' relays</string>
     <string name="chat_delivery_no_relay_info">No relay information for this message</string>
@@ -4529,6 +4535,7 @@
     <string name="error_video_open_in_browser">Open in browser</string>
     <string name="error_video_playback_failed">Can't play this video</string>
     <string name="error_video_playback_failed_description">The codec or format isn't supported on this device (%1$s). Try opening it in your browser.</string>
+    <string name="error_video_needs_tor">Your Tor settings send this video through Tor, and this kind of stream can't go through Tor on this device yet, so it was not loaded.</string>
     <string name="errors">Errors</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="event_sync_title">Relay Sync</string>
@@ -5023,6 +5030,7 @@
     <string name="desktop_notification_repost">%1$s reposted</string>
     <string name="desktop_notification_reaction">%1$s reacted</string>
     <string name="desktop_notification_follow">%1$s followed you</string>
+    <string name="upload_server_blossom_only">Uploads from this device go to Blossom servers. Pick one in your media server settings.</string>
     <string name="desktop_upload_server_not_supported">Desktop uploads go to Blossom servers. Pick one in your media server settings.</string>
     <string name="desktop_menu_help">Help</string>
     <string name="desktop_menu_website">Amethyst Website</string>

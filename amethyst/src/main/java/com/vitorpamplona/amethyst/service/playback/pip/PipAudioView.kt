@@ -26,9 +26,9 @@ import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.audio.mediaFormatLabel
 import com.vitorpamplona.amethyst.commons.audio.player.AudioCardInfo
 import com.vitorpamplona.amethyst.commons.audio.player.AudioPipContent
-import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
-import com.vitorpamplona.amethyst.service.playback.composable.rememberAudioPlaybackUi
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.rememberAudioPlaybackUi
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
 
 /**
  * The picture-in-picture window for audio sent there from an in-post audio card: the cover (artwork,

@@ -32,6 +32,7 @@ import com.vitorpamplona.amethyst.commons.account.AccountCacheState
 import com.vitorpamplona.amethyst.commons.account.AccountSessionHooks
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
 import com.vitorpamplona.amethyst.commons.account.AccountState
+import com.vitorpamplona.amethyst.commons.account.EncryptedFileAccountStores
 import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
@@ -59,16 +60,10 @@ import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.IncomingOtsEventV
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareOkHttpOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.nip52Calendar.CalendarReminderScanner
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzAttestationStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzChannelStarStore
-import com.vitorpamplona.amethyst.commons.model.preferences.BuzzWorkspaceStore
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_LOG_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
-import com.vitorpamplona.amethyst.commons.model.preferences.ConcordDirectInviteDeclineStore
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
-import com.vitorpamplona.amethyst.commons.model.preferences.DrssListenRateStore
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
-import com.vitorpamplona.amethyst.commons.model.preferences.NowPlayingSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.RelayGroupAdminCacheStore
@@ -104,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostWorkGate
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
+import com.vitorpamplona.amethyst.commons.service.connectivity.networkIdentityChanges
 import com.vitorpamplona.amethyst.commons.service.crashreports.CrashReportCache
 import com.vitorpamplona.amethyst.commons.service.crashreports.ReportAssembler
 import com.vitorpamplona.amethyst.commons.service.crashreports.UnexpectedCrashSaver
@@ -143,8 +139,11 @@ import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomSe
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
+import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.okHttpClientForRelay
+import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
 import com.vitorpamplona.amethyst.model.preferences.UiSharedPreferences
@@ -172,7 +171,6 @@ import com.vitorpamplona.amethyst.service.payments.PayToAppAvailability
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCache
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoCacheFactory
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
-import com.vitorpamplona.amethyst.service.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.service.playback.playerPool.mediaDataSourceFactory
 import com.vitorpamplona.amethyst.service.playback.service.PlaybackServiceClient
 import com.vitorpamplona.amethyst.service.pow.PowMiningForegroundService
@@ -185,9 +183,8 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundS
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.service.wot.TrustNetworkSyncWorker
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
-import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorProgressNotifier
-import com.vitorpamplona.amethyst.ui.tor.TorService
+import com.vitorpamplona.amethyst.ui.tor.androidTorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -199,6 +196,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimitsTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
@@ -213,6 +211,7 @@ import com.vitorpamplona.quartz.nip52Calendar.appt.tags.RSVPStatusTag
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
 import com.vitorpamplona.quartz.nip52Calendar.rsvp.CalendarRSVPEvent
 import com.vitorpamplona.quartz.nip55AndroidSigner.client.NostrSignerExternal
+import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomServersEvent
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
@@ -245,6 +244,7 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -394,7 +394,7 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    private val torService = TorService(appContext, applicationIOScope)
+    private val torService = androidTorService(appContext, applicationIOScope)
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Opt-in Tor startup-progress notification (TorSettings.progressNotification). Watches the
@@ -415,10 +415,7 @@ class AppModules(
     init {
         applicationIOScope.launch {
             connManager.status
-                .map { (it as? ConnectivityStatus.Active)?.networkId }
-                .filterNotNull()
-                .distinctUntilChanged()
-                .drop(1)
+                .networkIdentityChanges()
                 .collect { torManager.onNetworkChange() }
         }
     }
@@ -470,10 +467,7 @@ class AppModules(
     init {
         applicationIOScope.launch {
             connManager.status
-                .map { (it as? ConnectivityStatus.Active)?.networkId }
-                .filterNotNull()
-                .distinctUntilChanged()
-                .drop(1)
+                .networkIdentityChanges()
                 .collect { surgeDns.staleAll() }
         }
     }
@@ -645,10 +639,12 @@ class AppModules(
 
     val torEvaluatorFlow =
         TorRelayState(
-            okHttpClients,
             torPrefs.value,
             applicationIOScope,
         )
+
+    // A relay's own HTTP endpoints (NIP-11, NIP-86) go through Tor exactly when its socket does.
+    fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = torEvaluatorFlow.okHttpClientForRelay(okHttpClients, url)
 
     // manages all relay connections
     val okHttpClientForRelays =
@@ -1021,7 +1017,7 @@ class AppModules(
             geolocationFlow = { locationManager.geohashStateFlow },
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
-            okHttpClientForMoney = roleBasedHttpClientBuilder::okHttpClientForMoney,
+            cashuMintTransport = OkHttpMintTransport(roleBasedHttpClientBuilder::okHttpClientForMoney),
             externalSignerFactory = { pubKey, packageName -> NostrSignerExternal(pubKey, packageName, appContext.contentResolver) },
             cordnBlobCipher = { KeyStoreCordnBlobCipher() },
             otsResolverBuilder = { otsResolverBuilder.build() },
@@ -1036,7 +1032,8 @@ class AppModules(
             marmotNotifier = { notificationDispatcher },
             nip46Consent = Nip46ConsentBridge,
             geohashIdentityStore = { AndroidGeohashIdentityStore(it) },
-            rootFilesDir = { appContext.filesDir },
+            rootFilesDir = { appContext.filesDir.toOkioPath() },
+            accountStores = EncryptedFileAccountStores,
             powQueue = { powPublishQueue },
             meterSigner = { MeteringNostrSigner(it, resourceUsage) },
             signerPermissionStore = signerPermissionStore,
@@ -1049,23 +1046,8 @@ class AppModules(
             // Unknown (a cold start before the first callback) asks the system for the active
             // network; no network at all waits, like mobile data.
             canDownloadLargeFiles = { !connManager.isMeteredOrMobileNow() },
-            // Restore + persist the Buzz bookkeeping that has no Nostr event to rebuild from: the
-            // joined workspace relays (so the app knows which relays to sync as workspaces on cold
-            // start — Buzz membership is server-side) and the starred channels. Per account: the
-            // joined set makes a relay first-party for NIP-42, and a star is personal.
-            startBuzzPersistence = { account ->
-                BuzzWorkspaceStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzWorkspaces)
-                BuzzChannelStarStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzChannelStars)
-                // Eager like the rest, so a held NIP-OA attestation is loaded before this account's
-                // first Buzz-relay AUTH rather than after it.
-                BuzzAttestationStore(sharedSettingsStore, account.scope, account.pubKey, account.buzzAttestation)
-                // Concord Direct Invites the user declined (CORD-05 §6) stay declined across restarts.
-                ConcordDirectInviteDeclineStore(sharedSettingsStore, account.scope, account.pubKey, account.concord.directInviteInbox)
-                // Whether this account shares what it listens to as its music status, and from which apps.
-                NowPlayingSettingsStore(sharedSettingsStore, account.scope, account.pubKey, account.nowPlayingSettings)
-                // The playback speed picked for each drss feed, local as drss.io keeps it.
-                DrssListenRateStore(sharedSettingsStore, account.scope, account.pubKey, account.drss.rates)
-            },
+            // Each account's local-only state (Buzz workspaces and stars, declined Concord invites, ...).
+            accountSettingsStore = sharedSettingsStore,
         )
 
     val sessionManager =
@@ -1342,7 +1324,7 @@ class AppModules(
     // cache for NIP-11 documents
     val nip11Cache: Nip11CachedRetriever by lazy {
         Log.d("AppModules", "Nip11CachedRetriever Init")
-        Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay)
+        Nip11CachedRetriever(::okHttpClientForRelay)
     }
 
     fun setImageLoader() {

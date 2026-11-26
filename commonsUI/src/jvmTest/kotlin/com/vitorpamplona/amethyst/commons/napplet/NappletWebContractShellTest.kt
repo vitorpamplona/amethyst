@@ -87,6 +87,20 @@ class NappletWebContractShellTest {
         assertContains(shell.csp, "frame-src $origin;")
     }
 
+    @Test
+    fun aSiteOrWebxdcHelloMustComeFromTheAppOrigin() {
+        // Defence in depth: a site's frame navigated off its origin must not take over the channel.
+        for (profile in listOf(HostProfile.WEBSITE, HostProfile.WEBXDC)) {
+            val origin = NappletWebContract.appOrigin("n1", profile)
+            val html = NappletWebContract.shell(shellHtml, profile, origin, null).html.decodeToString()
+            assertContains(html, "var appOrigin = '$origin';")
+            assertContains(html, "if (e.origin !== appOrigin) return;")
+            // The source check stays in front of it.
+            assertContains(html, "e.source !== iframe.contentWindow")
+            assertFalse(html.contains(NappletWebContract.APP_ORIGIN_PLACEHOLDER))
+        }
+    }
+
     /** The shell as it was built before it moved to bytes: base64 of the joined artifact, then string replaces. */
     private fun oldShell(
         origin: String,

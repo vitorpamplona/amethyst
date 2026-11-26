@@ -93,10 +93,10 @@ import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionContainer
 import com.vitorpamplona.amethyst.commons.ui.components.zoomTransitionLayer
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.ui.actions.MediaSaverToDisk
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

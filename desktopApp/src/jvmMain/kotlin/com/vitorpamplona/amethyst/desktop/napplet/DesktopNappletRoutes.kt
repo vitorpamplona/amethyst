@@ -20,7 +20,8 @@
  */
 package com.vitorpamplona.amethyst.desktop.napplet
 
-import com.vitorpamplona.amethyst.commons.napplet.NappletProxyClaims
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletRoute
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletRouteArbiter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,7 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Applies the shared [NappletProxyClaims] (Tor always wins, as for Android's process-wide WebView
+ * Applies the shared [NappletRouteArbiter] (Tor always wins, as for Android's process-wide WebView
  * proxy) to [DesktopSocksRouter], Chromium's only way out:
  *
  * - any site on Tor → everything goes through Tor (a site that chose the open web is then
@@ -46,9 +47,10 @@ class DesktopNappletRoutes(
     private val torPort: StateFlow<Int?>,
     scope: CoroutineScope,
 ) {
-    // Which open site wants Tor; the claims are rebuilt from it with the current port.
-    private val wantsTor = LinkedHashMap<Any, Boolean>()
-    private val claims = NappletProxyClaims()
+    private val arbiter = NappletRouteArbiter()
+
+    // [apply]'s lock.
+    private val order = Any()
 
     private val mutableRoutedOverTor = MutableStateFlow(false)
 
@@ -71,7 +73,7 @@ class DesktopNappletRoutes(
         useTor: Boolean,
         timeoutMs: Long,
     ): Boolean {
-        synchronized(wantsTor) { wantsTor[owner] = useTor }
+        arbiter.want(owner, useTor, torPort.value)
         apply()
         if (!useTor) return true
         val running = awaitTor(timeoutMs)
@@ -86,25 +88,19 @@ class DesktopNappletRoutes(
     suspend fun awaitTor(timeoutMs: Long): Boolean = withTimeoutOrNull(timeoutMs) { torPort.first { it != null } } != null
 
     fun release(owner: Any) {
-        synchronized(wantsTor) {
-            wantsTor.remove(owner)
-            claims.release(owner)
-        }
+        arbiter.release(owner, torPort.value)
         apply()
     }
 
     // Computed and applied under one lock, so two updates (a claim, a release, Tor's port changing)
     // can't apply their routes out of order.
     private fun apply() {
-        synchronized(wantsTor) {
-            val port = torPort.value ?: NappletProxyClaims.TOR_NOT_READY
-            wantsTor.forEach { (owner, tor) -> claims.claim(owner, if (tor) port else NappletProxyClaims.NO_PROXY) }
-            val shared = claims.route()
+        synchronized(order) {
             val route =
-                when {
-                    claims.isEmpty() || shared.blocked -> DesktopSocksRouter.Route.Blocked
-                    shared.usesTor -> DesktopSocksRouter.Route.Tor(shared.torPort)
-                    else -> DesktopSocksRouter.Route.Direct
+                when (val shared = arbiter.route(torPort.value)) {
+                    NappletRoute.Blocked -> DesktopSocksRouter.Route.Blocked
+                    is NappletRoute.Tor -> DesktopSocksRouter.Route.Tor(shared.port)
+                    NappletRoute.Direct -> DesktopSocksRouter.Route.Direct
                 }
             router.route = route
             mutableRoutedOverTor.value = route is DesktopSocksRouter.Route.Tor

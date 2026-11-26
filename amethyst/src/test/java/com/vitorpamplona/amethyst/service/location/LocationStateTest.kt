@@ -50,7 +50,7 @@ import org.junit.Test
  * `stateIn(WhileSubscribed)` + `backgroundScope.launch { collect }` chain does not
  * get driven to completion by `advanceUntilIdle()` alone under the standard
  * dispatcher — the producer side never runs. Same root cause, same fix as
- * `amethyst/src/test/.../ui/tor/TorManagerTest.kt`, which hits it for the same
+ * `commons/src/commonTest/.../commons/tor/TorManagerTest.kt`, which hits it for the same
  * reason (see its `ioDispatcher = UnconfinedTestDispatcher(...)` comment).
  */
 @OptIn(ExperimentalCoroutinesApi::class)

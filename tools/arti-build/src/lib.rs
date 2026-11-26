@@ -38,7 +38,7 @@ static INIT_ONCE: Once = Once::new();
 // Logging
 // ============================================================================
 
-fn send_log_to_java(message: String) {
+fn send_log_to_java(message: String) { #[cfg(feature = "ffi")] ffi::forward_log(&message);
     let vm_opt = JAVA_VM.lock().unwrap();
     let callback_opt = LOG_CALLBACK.lock().unwrap();
 
@@ -678,3 +678,13 @@ pub extern "C" fn Java_com_vitorpamplona_amethyst_ui_tor_ArtiNative_destroy(
     log_info!("Arti client destroyed");
     0
 }
+
+// ============================================================================
+// C ABI for iOS — src/ffi.rs, only with `--features ffi` (build-arti-ios.sh)
+// ============================================================================
+//
+// Appended at the end, and the one hook above (in send_log_to_java) kept on the line that was
+// already there, so no existing line moves: rustc bakes the line/column of every `unwrap()` into
+// the binary, and Android's libarti_android.so must stay byte-identical without the feature.
+#[cfg(feature = "ffi")]
+mod ffi;

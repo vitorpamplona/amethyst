@@ -20,6 +20,7 @@ val verifyKmpPurity = tasks.register("verifyKmpPurity") {
     val checkedDirs =
         listOf(
             "src/commonMain", "src/commonTest",
+            "src/nonJvmMain", "src/nonJvmTest",
             "src/appleMain", "src/appleTest",
             "src/nativeMain", "src/nativeTest",
             "src/iosMain", "src/iosTest",

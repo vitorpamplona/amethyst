@@ -31,3 +31,5 @@ actual fun availableLanguages(): List<LanguageOption> {
 }
 
 actual fun languageDisplayName(tag: String): String = Locale.forLanguageTag(tag).displayName
+
+actual fun languageNameOnly(tag: String): String = Locale.forLanguageTag(tag).displayLanguage

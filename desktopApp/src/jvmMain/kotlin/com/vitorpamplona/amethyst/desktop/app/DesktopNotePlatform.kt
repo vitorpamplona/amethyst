@@ -88,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.VideoStillFrame
 import com.vitorpamplona.amethyst.commons.ui.components.WaitAndDisplay
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedGifImage
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageProbe
 import com.vitorpamplona.amethyst.commons.ui.components.mediaClip
 import com.vitorpamplona.amethyst.commons.ui.components.mediaKindOf
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
@@ -106,6 +108,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.note.types.JvmGitCardSlots
 import com.vitorpamplona.amethyst.commons.ui.note.types.rememberMediaTracks
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size20Modifier
@@ -116,8 +119,6 @@ import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
 import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
-import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedGifImage
-import com.vitorpamplona.amethyst.desktop.ui.media.AnimatedImageProbe
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopTrimPreviewPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -797,7 +798,7 @@ object DesktopNotePlatform : NotePlatform {
         baseNote: Note,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitRepositoryEvent(baseNote, accountViewModel, nav)
+    ) = SharedRenderGitRepositoryEvent(baseNote, accountViewModel, nav, JvmGitCardSlots)
 
     @Composable
     override fun RenderGitPatchEvent(
@@ -809,7 +810,7 @@ object DesktopNotePlatform : NotePlatform {
         editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+    ) = SharedRenderGitPatchEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav, JvmGitCardSlots)
 
     @Composable
     override fun RenderGitIssueEvent(
@@ -821,7 +822,7 @@ object DesktopNotePlatform : NotePlatform {
         editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+    ) = SharedRenderGitIssueEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav, JvmGitCardSlots)
 
     @Composable
     override fun RenderGitPullRequestEvent(
@@ -833,7 +834,7 @@ object DesktopNotePlatform : NotePlatform {
         editState: State<GenericLoadable<EditState>>,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav)
+    ) = SharedRenderGitPullRequestEvent(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, editState, accountViewModel, nav, JvmGitCardSlots)
 
     @Composable
     override fun RenderGitPullRequestUpdateEvent(

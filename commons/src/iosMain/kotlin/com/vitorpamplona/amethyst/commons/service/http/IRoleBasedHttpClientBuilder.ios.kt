@@ -20,4 +20,35 @@
  */
 package com.vitorpamplona.amethyst.commons.service.http
 
-actual interface IRoleBasedHttpClientBuilder
+import io.ktor.client.HttpClient
+
+/**
+ * iOS's face of the per-role HTTP clients: one Ktor client per role and URL, the counterpart of
+ * the JVM's `RoleBasedOkHttpClients`. Each role goes through Tor exactly when the same role does
+ * on Android, because both ask the same `TorRoleRouting`; see [RoleBasedKtorClients].
+ */
+actual interface IRoleBasedHttpClientBuilder {
+    /** The Ktor client a link preview of [url] goes out on. */
+    fun ktorClientForPreview(url: String): HttpClient
+
+    /** The Ktor client an image (or a cart, which is an image) at [url] goes out on. */
+    fun ktorClientForImage(url: String): HttpClient
+
+    /** The Ktor client the bytes of the video at [url] go out on. */
+    fun ktorClientForVideo(url: String): HttpClient
+
+    /** The Ktor client a money operation (LNURL, a Cashu mint, a block explorer) at [url] goes out on. */
+    fun ktorClientForMoney(url: String): HttpClient
+
+    /** The Ktor client a NIP-05 lookup of [url] goes out on. */
+    fun ktorClientForNip05(url: String): HttpClient
+
+    /** The Ktor client an upload to [url] goes out on. */
+    fun ktorClientForUploads(url: String): HttpClient
+
+    /** The Ktor client a push registration at [url] goes out on. */
+    fun ktorClientForPushRegistration(url: String): HttpClient
+
+    /** Whether the video at [url] must go through Tor (some players cannot, and must refuse it). */
+    fun shouldUseTorForVideo(url: String): Boolean
+}

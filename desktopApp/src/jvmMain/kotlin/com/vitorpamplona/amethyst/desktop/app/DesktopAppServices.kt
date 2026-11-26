@@ -100,7 +100,7 @@ class DesktopAppServices(
 
     override val otsSettings: OtsSettingsStore get() = modules.otsPrefs
 
-    override val nip86Executor: Nip86Executor by lazy { Nip86Retriever(modules.torEvaluatorFlow::okHttpClientForRelay) }
+    override val nip86Executor: Nip86Executor by lazy { Nip86Retriever(modules::okHttpClientForRelay) }
 
     override val nip46ClientStore: Nip46ClientStore get() = modules.nip46ClientStore
 

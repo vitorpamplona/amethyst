@@ -11,7 +11,7 @@ shared code between Amethyst Android (`amethyst`) and Amethyst Desktop (`desktop
 also ships on laptops, so the direction is **one UI**: every screen and the navigation shell at every
 window size move to `commonsUI`, `amethyst` shrinks to an Android shim, and `desktopApp` is a JVM
 shim that renders the same UI (`desktopApp/…/desktop/app/`, see
-`commons/plans/2026-09-27-one-ui-android-desktop.md`). The legacy desktop app (its own screens,
+`commons/plans/2026-09-27-one-ui-android-desktop.md`). `iosApp` is the iOS shim (`iosApp/README.md`). The legacy desktop app (its own screens,
 deck and navigation) is gone: its desktop-only features were rebuilt in the shared UI or dropped
 (`commons/plans/2026-10-09-legacy-desktop-retirement.md`). `cli` ships `amy`,
 a non-interactive JVM command-line client that drives the same `quartz` + `commons` code — used by
@@ -151,7 +151,7 @@ amethyst/
   standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
-module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
+module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`).
 The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Android Runtime Processes (IMPORTANT — the app runs in TWO processes)
@@ -167,8 +167,8 @@ never a shared singleton. Details: `.claude/skills/android-expert/references/two
 
 ## Tech Stack
 
-Exact versions live in `gradle/libs.versions.toml` (the source of truth — check
-there rather than trusting a number copied here).
+Exact versions live in `gradle/libs.versions.toml`, the source of truth; don't trust a
+number copied here.
 
 | Layer | Technology |
 |-------|------------|

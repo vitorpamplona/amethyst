@@ -34,6 +34,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
+import okio.buffer
 import java.io.File
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -77,9 +79,9 @@ class NappletBlobStoreTest {
         }
     private val serverUrl = "http://127.0.0.1:${server.address.port}"
     private val dir = createTempDirectory("blob-store-test").toFile()
-    private val cache = NappletBlobCache(dir)
+    private val cache = NappletBlobCache(dir.toOkioPath())
 
-    private fun store(paths: List<PathTag>) = NappletBlobStore(cache, OkHttpClient(), paths, listOf(serverUrl))
+    private fun store(paths: List<PathTag>) = NappletBlobStore(cache, OkHttpNappletHttp(OkHttpClient()), paths, listOf(serverUrl))
 
     @AfterTest
     fun tearDown() {
@@ -135,7 +137,7 @@ class NappletBlobStoreTest {
             served[hashOf(file)] = file
             val paths = listOf(PathTag("/index.html", hashOf(file)))
 
-            fun site(partition: String) = NappletBlobStore(cache.forSite(partition), OkHttpClient(), paths, listOf(serverUrl))
+            fun site(partition: String) = NappletBlobStore(cache.forSite(partition), OkHttpNappletHttp(OkHttpClient()), paths, listOf(serverUrl))
 
             assertNotNull(site(NappletBlobCache.partitionOf("alice", "x", "")).find("/"))
             assertEquals(1, requests.get())
@@ -235,7 +237,7 @@ class NappletBlobStoreTest {
             cache.put(hashOf(script), script)
             val blob = assertNotNull(store(listOf(PathTag("/app.js", hashOf(script)))).find("/app.js"))
             assertEquals(script.size.toLong(), blob.length)
-            assertContentEquals(script, blob.open().use { it.readBytes() })
+            assertContentEquals(script, blob.open().buffer().use { it.readByteArray() })
             assertEquals(0, requests.get())
         }
 

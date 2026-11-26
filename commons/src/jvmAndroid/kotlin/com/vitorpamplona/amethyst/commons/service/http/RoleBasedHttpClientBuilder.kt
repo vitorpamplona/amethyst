@@ -24,9 +24,9 @@ import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.amethyst.commons.service.http.ProxiedSocketFactory
 import com.vitorpamplona.amethyst.commons.service.resourceusage.UsageKeys
+import com.vitorpamplona.amethyst.commons.tor.TorRoleRouting
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.commons.tor.TorType
-import com.vitorpamplona.quartz.nip01Core.relay.normalizer.RelayUrlNormalizer
 import okhttp3.OkHttpClient
 import java.net.InetSocketAddress
 import java.net.Proxy
@@ -47,115 +47,40 @@ class RoleBasedHttpClientBuilder(
         base: OkHttpClient,
     ): OkHttpClient = usageMeter?.invoke(role, base) ?: base
 
-    fun shouldUseTorForImageDownload(url: String) =
-        shouldUseTorFor(
-            url,
-            torSettings.torType.value,
-            torSettings.imagesViaTor.value,
-        )
+    /**
+     * The per-role Tor decisions. They live in commonMain ([TorRoleRouting]) so the platforms
+     * without OkHttp share the same table; the methods below are its JVM face, unchanged.
+     */
+    val torRouting = TorRoleRouting(torSettings)
+
+    fun shouldUseTorForImageDownload(url: String) = torRouting.shouldUseTorForImageDownload(url)
 
     fun shouldUseTorFor(
         url: String,
         torType: TorType,
         imagesViaTor: Boolean,
-    ) = when (torType) {
-        TorType.OFF -> false
-        TorType.INTERNAL -> shouldUseTor(url, imagesViaTor)
-        TorType.EXTERNAL -> shouldUseTor(url, imagesViaTor)
-    }
+    ) = torRouting.shouldUseTorFor(url, torType, imagesViaTor)
 
-    private fun shouldUseTor(
-        normalizedUrl: String,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl) || RelayUrlNormalizer.isOverlayNetwork(normalizedUrl)) {
-            // Overlay-mesh hosts (0200::/7) are reachable only through the local mesh
-            // interface — Tor cannot route the range, so proxying only breaks the fetch.
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            true
-        } else {
-            final
-        }
+    fun shouldUseTorForVideoDownload() = torRouting.shouldUseTorForVideoDownload()
 
-    fun shouldUseTorForVideoDownload() =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> torSettings.videosViaTor.value
-            TorType.EXTERNAL -> torSettings.videosViaTor.value
-        }
+    fun shouldUseTorForVideoDownload(url: String) = torRouting.shouldUseTorForVideoDownload(url)
 
-    fun shouldUseTorForVideoDownload(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.videosViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.videosViaTor.value)
-        }
+    fun shouldUseTorForPreviewUrl(url: String) = torRouting.shouldUseTorForPreviewUrl(url)
 
-    fun shouldUseTorForPreviewUrl(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.urlPreviewsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.urlPreviewsViaTor.value)
-        }
+    fun shouldUseTorForTrustedRelays() = torRouting.shouldUseTorForTrustedRelays()
 
-    fun shouldUseTorForTrustedRelays() =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> torSettings.trustedRelaysViaTor.value
-            TorType.EXTERNAL -> torSettings.trustedRelaysViaTor.value
-        }
+    fun shouldUseTorForMoneyOperations(url: String) = torRouting.shouldUseTorForMoneyOperations(url)
 
-    private fun checkLocalHostOnionAndThen(
-        url: String,
-        final: Boolean,
-    ): Boolean = checkLocalHostOnionAndThen(url, torSettings.onionRelaysViaTor.value, final)
+    fun shouldUseTorForNIP05(url: String) = torRouting.shouldUseTorForNIP05(url)
 
-    private fun checkLocalHostOnionAndThen(
-        normalizedUrl: String,
-        isOnionRelaysActive: Boolean,
-        final: Boolean,
-    ): Boolean =
-        if (RelayUrlNormalizer.isLocalHost(normalizedUrl) || RelayUrlNormalizer.isOverlayNetwork(normalizedUrl)) {
-            false
-        } else if (RelayUrlNormalizer.isOnion(normalizedUrl)) {
-            isOnionRelaysActive
-        } else {
-            final
-        }
-
-    fun shouldUseTorForMoneyOperations(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.moneyOperationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.moneyOperationsViaTor.value)
-        }
-
-    fun shouldUseTorForNIP05(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip05VerificationsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.nip05VerificationsViaTor.value)
-        }
-
-    fun shouldUseTorForUploads(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.mediaUploadsViaTor.value)
-        }
+    fun shouldUseTorForUploads(url: String) = torRouting.shouldUseTorForUploads(url)
 
     /**
      * Relay directories (the georelays CSV that routes geohash chats) list relays the user has
      * not picked, so they follow the "new relays" switch: the directory is fetched over Tor
      * whenever the relays it names would be dialed over Tor.
      */
-    fun shouldUseTorForRelayDirectory(url: String) =
-        when (torSettings.torType.value) {
-            TorType.OFF -> false
-            TorType.INTERNAL -> checkLocalHostOnionAndThen(url, torSettings.newRelaysViaTor.value)
-            TorType.EXTERNAL -> checkLocalHostOnionAndThen(url, torSettings.newRelaysViaTor.value)
-        }
+    fun shouldUseTorForRelayDirectory(url: String) = torRouting.shouldUseTorForRelayDirectory(url)
 
     // Not [metered]: untagged requests already count as UsageKeys.ROLE_OTHER.
     fun okHttpClientForRelayDirectory(url: String): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelayDirectory(url))

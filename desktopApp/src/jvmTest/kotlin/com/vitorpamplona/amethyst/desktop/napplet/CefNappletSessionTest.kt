@@ -51,6 +51,8 @@ import com.vitorpamplona.amethyst.commons.napplet.fs.NappletPickedFile
 import com.vitorpamplona.amethyst.commons.napplet.permissions.GrantState
 import com.vitorpamplona.amethyst.commons.napplet.permissions.InMemoryNappletPermissionStore
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
@@ -79,6 +81,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import org.cef.browser.CefBrowser
 import org.cef.browser.OffscreenCefBrowser
 import org.cef.handler.CefFocusHandlerAdapter
@@ -211,7 +214,7 @@ class CefNappletSessionTest {
     private fun runtime(
         engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "jcef-cache")),
         torPort: StateFlow<Int?> = MutableStateFlow(null),
-    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs")), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
+    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs").toOkioPath()), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
 
     private fun session(
         html: ByteArray,
@@ -249,9 +252,9 @@ class CefNappletSessionTest {
         runBlocking {
             val session = session("<p>signed</p>".encodeToByteArray(), RecordingStorage(), runtime(), servedBytes = "<p>swapped</p>".encodeToByteArray())
             session.start()
-            val state = withTimeout(30_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
-            assertIs<CefNappletSession.State.Failed>(state)
-            assertEquals(CefNappletSession.Failure.UNREACHABLE, state.reason)
+            val state = withTimeout(30_000) { session.state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
+            assertIs<NappletSessionState.Failed>(state)
+            assertEquals(NappletFailure.UNREACHABLE, state.reason)
         }
 
     private fun cefRuntime(): DesktopNappletRuntime {
@@ -261,13 +264,13 @@ class CefNappletSessionTest {
 
     private suspend fun show(session: CefNappletSession) {
         session.start()
-        val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
-        assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
+        val state = withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
+        assertIs<NappletSessionState.Showing>(state, "the napplet did not open: $state")
         // A windowed CEF browser is created when its component is first shown.
         SwingUtilities.invokeAndWait {
             frames +=
                 JFrame("napplet").apply {
-                    contentPane.add(requireNotNull(state.component), BorderLayout.CENTER)
+                    contentPane.add(requireNotNull(session.component), BorderLayout.CENTER)
                     setBounds(0, 0, 960, 640)
                     isVisible = true
                 }
@@ -331,7 +334,7 @@ class CefNappletSessionTest {
             val closing =
                 session(probe("closing"), closingStorage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) }).also {
                     it.start()
-                    withTimeout(600_000) { it.state.first { state -> state is CefNappletSession.State.Showing } }
+                    withTimeout(600_000) { it.state.first { state -> state is NappletSessionState.Showing } }
                 }
             withTimeout(60_000) { while (keptStorage.values["early"] == null || closingStorage.values["early"] == null) delay(100) }
 
@@ -345,13 +348,13 @@ class CefNappletSessionTest {
             val note =
                 session(probe("note"), noteStorage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) }).also {
                     it.start()
-                    withTimeout(600_000) { it.state.first { state -> state is CefNappletSession.State.Showing } }
+                    withTimeout(600_000) { it.state.first { state -> state is NappletSessionState.Showing } }
                 }
             withTimeout(60_000) { while (noteStorage.values["early"] == null) delay(100) }
             val windowStorage = RecordingStorage()
             val window = session(probe("window"), windowStorage, runtime)
             val opening = async { show(window) }
-            withTimeout(60_000) { window.state.first { it is CefNappletSession.State.Loading || it is CefNappletSession.State.Showing } }
+            withTimeout(60_000) { window.state.first { it is NappletSessionState.Loading || it is NappletSessionState.Showing } }
             note.close()
             opening.await()
             withTimeout(60_000) { while (windowStorage.values["early"] == null) delay(100) }
@@ -842,9 +845,9 @@ class CefNappletSessionTest {
             view.resize(800, 600, 1.0)
             val session = site(mapOf("/index.html" to index.encodeToByteArray()), runtime, user, author, offscreen = view)
             session.start()
-            val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
-            assertIs<CefNappletSession.State.Showing>(state, "the site did not open: $state")
-            assertEquals(null, state.component, "a screen's app has no window to place")
+            val state = withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
+            assertIs<NappletSessionState.Showing>(state, "the site did not open: $state")
+            assertEquals(null, session.component, "a screen's app has no window to place")
             withTimeout(60_000) { view.frame.first { it != null } }
 
             // Out of sight and back, as a tab behind another: the page keeps running.
@@ -862,9 +865,9 @@ class CefNappletSessionTest {
             val runtime = runtime()
             val session = site(mapOf("/index.html" to "<p>hi</p>".encodeToByteArray()), runtime, user, NostrSignerInternal(KeyPair()), useTor = true)
             session.start()
-            val state = withTimeout(30_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
-            assertIs<CefNappletSession.State.Failed>(state)
-            assertEquals(CefNappletSession.Failure.ROUTE_BLOCKED, state.reason)
+            val state = withTimeout(30_000) { session.state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
+            assertIs<NappletSessionState.Failed>(state)
+            assertEquals(NappletFailure.ROUTE_BLOCKED, state.reason)
             assertTrue(requested.isEmpty(), "not even its files were fetched: $requested")
             // The failed window keeps no claim: a site on the open web still gets its route.
             assertTrue(runtime.routes.claim(Any(), useTor = false, timeoutMs = 0))
@@ -970,7 +973,7 @@ class CefNappletSessionTest {
             // A note's run stopped before its first frame.
             val quick = session(probe("quick$i"), RecordingStorage(), runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
             quick.start()
-            withTimeout(60_000) { quick.state.first { it is CefNappletSession.State.Showing } }
+            withTimeout(60_000) { quick.state.first { it is NappletSessionState.Showing } }
             quick.close()
         }
     }
@@ -1233,9 +1236,9 @@ class CefNappletSessionTest {
             val session = CefNappletSession(launch, "tester", useTor = false, account = null, broker = broker, runtime = runtime, offscreen = view).also { sessions += it }
             session.start()
 
-            val state = withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing || it is CefNappletSession.State.Failed } }
-            assertIs<CefNappletSession.State.Showing>(state, "the napplet did not open: $state")
-            assertEquals(null, state.component, "no window to place")
+            val state = withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
+            assertIs<NappletSessionState.Showing>(state, "the napplet did not open: $state")
+            assertEquals(null, session.component, "no window to place")
 
             val red = withTimeout(60_000) { view.frame.first { it != null && it.centerPixel().red > 0.9f } }!!
             assertEquals(320 to 200, red.width to red.height, "frames come at the size the note gave")
@@ -1321,7 +1324,7 @@ class CefNappletSessionTest {
                     """.trimIndent().encodeToByteArray()
                 val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
                 session.start()
-                withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+                withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing } }
                 withTimeout(60_000) { while (storage.values["verified"] == null) delay(100) }
                 // Long enough for the navigation, the replacement's messages and the broker's replies.
                 delay(8_000)
@@ -1354,7 +1357,7 @@ class CefNappletSessionTest {
                 """.trimIndent().encodeToByteArray()
             val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
             session.start()
-            withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+            withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing } }
             withTimeout(60_000) { while (storage.values["loads"] == null) delay(100) }
             delay(6_000)
             assertEquals("1", storage.values["loads"], "the reloaded document reached the broker as the napplet")
@@ -1385,7 +1388,7 @@ class CefNappletSessionTest {
                 """.trimIndent().encodeToByteArray()
             val session = session(html, storage, runtime, offscreen = OffscreenNappletView().apply { resize(320, 240, 1.0) })
             session.start()
-            withTimeout(600_000) { session.state.first { it is CefNappletSession.State.Showing } }
+            withTimeout(600_000) { session.state.first { it is NappletSessionState.Showing } }
             withTimeout(60_000) { while (storage.values["first"] == null) delay(100) }
             delay(5_000)
             assertFalse(storage.values.containsKey("forged"), "the second hello's port reached the broker")

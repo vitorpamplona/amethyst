@@ -225,6 +225,21 @@ interface AppPlatform {
     fun NotificationCategorySettings() {}
 
     /**
+     * Whether this app can route through Tor here (its own Tor, or an external SOCKS port like
+     * Orbot's). Where it can't, the Tor settings say so instead of offering choices that would
+     * change nothing: connections go direct.
+     */
+    val supportsTor: Boolean get() = true
+
+    /**
+     * Whether another app can lend this one a SOCKS port to route through (Orbot on Android and the
+     * desktop). Where it can't (iOS, where Orbot is a VPN rather than a proxy), the Tor engine choice
+     * leaves "external" out and a stored one runs the built-in Tor
+     * ([com.vitorpamplona.amethyst.commons.tor.supportedOn]).
+     */
+    val supportsExternalTor: Boolean get() = supportsTor
+
+    /**
      * Whether this platform can show a notification with Tor's startup progress
      * ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification]). Only Android has the
      * notifier, so the Tor settings show the switch only where this is true.
@@ -561,8 +576,17 @@ interface AppLauncher {
         nav: INav? = null,
     )
 
-    /** Whether [openNapplet] and [openSite] run anything here; cards offer Open only where they do. */
+    /** Whether [openNapplet] runs anything here; cards offer Open only where it does. */
     val opensNapplets: Boolean get() = false
+
+    /**
+     * Whether [openSite] runs anything here: where napplets run, unless the platform runs napplets
+     * before it can run sites (iOS, until its sites have their own network route).
+     */
+    val opensSites: Boolean get() = opensNapplets
+
+    /** Whether [openWebxdc] runs anything here: where napplets run, unless the platform says otherwise. */
+    val opensWebxdc: Boolean get() = opensNapplets
 
     /**
      * Runs a NIP-5D napplet in the platform's sandbox, or tells the user why it can't. [nav] is the
@@ -584,7 +608,7 @@ interface AppLauncher {
 
     /**
      * Runs the webxdc [app] attached to post [postId] by [poster] in the platform's sandbox (when
-     * [opensNapplets]), or tells the user why it can't.
+     * [opensWebxdc]), or tells the user why it can't.
      */
     fun openWebxdc(
         app: WebxdcApp,

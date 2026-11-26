@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import com.sun.net.httpserver.HttpServer
+import com.vitorpamplona.amethyst.commons.preview.OkHttpUrlPreviewTransport
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
@@ -66,7 +67,7 @@ class UrlCachedPreviewerTest {
                     .map {
                         async {
                             var state: UrlPreviewState? = null
-                            UrlCachedPreviewer.previewInfo(url, { client }) { state = it }
+                            UrlCachedPreviewer.previewInfo(url, OkHttpUrlPreviewTransport { client }) { state = it }
                             state
                         }
                     }.awaitAll()

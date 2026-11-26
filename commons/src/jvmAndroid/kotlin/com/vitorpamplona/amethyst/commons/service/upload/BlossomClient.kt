@@ -408,18 +408,7 @@ open class BlossomClient(
     private fun parseDescriptor(
         response: Response,
         serverBaseUrl: String,
-    ): BlossomUploadResult {
-        check402(response, serverBaseUrl)
-        BlossomIdenticalMediaException.existingHashOf(response.code, response.headers[BlossomIdenticalMediaException.IDENTICAL_MEDIA_HEADER])?.let {
-            throw BlossomIdenticalMediaException(serverBaseUrl, it, response.headers[BlossomServerUrl.REASON_HEADER])
-        }
-        if (!response.isSuccessful) {
-            val reason = response.headers[BlossomServerUrl.REASON_HEADER] ?: response.code.toString()
-            throw RuntimeException("Request failed ($serverBaseUrl): $reason")
-        }
-        val body = response.body.string().ifBlank { throw RuntimeException("$serverBaseUrl returned no body") }
-        return JsonMapper.fromJson<BlossomUploadResult>(body)
-    }
+    ): BlossomUploadResult = blossomDescriptorOf(response.code, { response.headers[it] }, { response.body.string() }, serverBaseUrl)
 
     /** Surfaces a BUD-07 `402 Payment Required` as a typed exception the caller can act on. */
     private fun check402(

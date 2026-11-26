@@ -1,0 +1,103 @@
+# XcodeGen spec for the iOS app shell (https://github.com/yonaskolb/XcodeGen, MIT, a build tool
+# only: nothing of it ships in the app). Generate the project on a Mac with:
+#
+#   brew install xcodegen
+#   cd iosApp/xcode && xcodegen
+#   open Amethyst.xcodeproj
+#
+# The project is generated, not committed: the spec is the source of truth and reads in review.
+# The Swift here only hosts the shared app; everything else is Kotlin in :iosApp, :commonsUI and
+# :commons (plans/2026-10-09-ios-app.md, B0/B1).
+name: Amethyst
+options:
+  bundleIdPrefix: com.vitorpamplona
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+targets:
+  Amethyst:
+    type: application
+    platform: iOS
+    sources:
+      - Amethyst
+    info:
+      path: Amethyst/Info.plist
+      properties:
+        CFBundleDisplayName: Amethyst
+        UILaunchScreen: {}
+        # Lets Compose draw at 120 Hz on ProMotion screens.
+        CADisableMinimumFrameDurationOnPhone: true
+        # Audio and video keep playing on the lock screen and in picture in picture.
+        UIBackgroundModes: [audio]
+        NSPhotoLibraryAddUsageDescription: Amethyst saves the videos you choose to your photo library.
+        NSMicrophoneUsageDescription: Amethyst records the voice messages and voice notes you choose to send.
+        # A napplet's or nSite's <input type=file> opens WebKit's own picker, which offers "Take Photo
+        # or Video": WebKit asks for the camera then, and without this text the app would crash. The
+        # photo library needs no text: WebKit's picker is the system's out-of-process one. Napplets
+        # never get the camera any other way (the web view denies getUserMedia).
+        NSCameraUsageDescription: Amethyst uses the camera only when you take a photo or video to pick as a file in an app or site.
+        # Onion relays are mostly ws:// and onion sites http://, which ATS blocks. An onion name only
+        # resolves inside Tor, whose circuit is end-to-end encrypted to the service, so plain HTTP is
+        # allowed for the `onion` TLD alone; every clearnet http:// stays blocked. Measured on the
+        # simulator in B12a (commons/plans/2026-11-25-ios-tor.md): with this, an onion GET is
+        # HTTP 200 and http://example.com still fails with ATS's -1022.
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            onion:
+              NSIncludesSubdomains: true
+              NSExceptionAllowsInsecureHTTPLoads: true
+        # openLightningWallet asks whether a wallet can take a `lightning:` URL.
+        LSApplicationQueriesSchemes:
+          - lightning
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.vitorpamplona.amethyst.ios
+        # Assets.xcassets/AppIcon: the Amethyst logo, rendered from docs/design/3rd Logo - Zitron.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Where embedAndSignAppleFrameworkForXcode puts AmethystKit.framework.
+        FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+        # Arti, Tor in Rust (tools/arti-build): AmethystKit is a static framework, so its calls into
+        # Arti's C ABI are resolved here, against the archive :iosApp:buildArtiIos builds (from
+        # source, during the pre-build step below; it is not committed). -liconv is the one system
+        # library the archive needs that the app does not already link.
+        "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(inherited) $(SRCROOT)/../../tools/arti-build/out/ios/aarch64-apple-ios"
+        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(inherited) $(SRCROOT)/../../tools/arti-build/out/ios/aarch64-apple-ios-sim"
+        OTHER_LDFLAGS: "$(inherited) -framework AmethystKit -larti -liconv"
+        # Apple-silicon simulators only: Kotlin has no iosX64 target and Arti no x86_64 slice, so a
+        # generic simulator build would otherwise ask for an Intel slice that cannot exist.
+        "ARCHS[sdk=iphonesimulator*]": arm64
+        # The Gradle build below writes outside the sandbox Xcode gives build scripts.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
+    preBuildScripts:
+      # Also builds Arti's static library for the SDK being built (:iosApp:buildArtiIos, which
+      # needs rustup: see iosApp/README.md). Cargo and Gradle skip it while its sources are unchanged.
+      - name: Build AmethystKit (Kotlin)
+        basedOnDependencyAnalysis: false
+        script: |
+          cd "$SRCROOT/../.."
+          # Xcode keeps the environment it was launched with, so an inherited JAVA_HOME can name a
+          # JDK that has since been upgraded away. Ask the system for the current JDK 21 instead.
+          if JDK=$(/usr/libexec/java_home -v 21 2>/dev/null); then export JAVA_HOME="$JDK"; fi
+          ./gradlew :iosApp:embedAndSignAppleFrameworkForXcode
+      - name: Stamp the app version (gradle/libs.versions.toml)
+        basedOnDependencyAnalysis: false
+        script: |
+          # The same numbers as Android: `app` is CFBundleShortVersionString, `appCode` the build.
+          # Written into the Info.plist template (generated by xcodegen, not committed) before Xcode
+          # processes it: a post-build edit was overwritten by that processing.
+          CATALOG="$SRCROOT/../../gradle/libs.versions.toml"
+          APP=$(sed -n 's/^app = "\(.*\)"$/\1/p' "$CATALOG")
+          CODE=$(sed -n 's/^appCode = "\(.*\)"$/\1/p' "$CATALOG")
+          PLIST="$SRCROOT/Amethyst/Info.plist"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CODE" "$PLIST"

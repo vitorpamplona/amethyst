@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +39,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownTitle
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.latestBuzzEdit
@@ -51,6 +53,7 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReplyContext
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.richtext.TextRendering
+import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -61,6 +64,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.ReplyNoteComposition
 import com.vitorpamplona.amethyst.commons.ui.note.ReplyToLabel
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.nip22Comments.DisplayCommentScope
+import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.datasources.PreloadThreadForReply
 import com.vitorpamplona.amethyst.commons.ui.theme.HalfVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -325,3 +329,47 @@ fun observeChatMessageEdit(note: Note): Note? {
 }
 
 private fun Note.latestChatEdit(): Note? = latestConcordEdit() ?: latestBuzzEdit() ?: latestMarmotEdit()
+
+/**
+ * Markdown the app converted from another format (a wiki article's Djot), translated and cropped
+ * the way a note is, and drawn by the markdown renderer without guessing the format again.
+ */
+@Composable
+private fun RenderMarkdownBody(
+    markdown: String,
+    id: String,
+    tags: ImmutableListOfLists<String>,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    callbackUri: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val platform = LocalRichTextPlatform.current
+    TranslatableRichTextViewer(
+        content = markdown,
+        id = id,
+        accountViewModel = accountViewModel,
+    ) { text ->
+        ExpandableTextViewer(
+            content = text,
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = backgroundColor,
+            id = id,
+        ) { shown, modifier ->
+            Column(modifier) {
+                platform.Markdown(
+                    content = shown,
+                    tags = tags,
+                    canPreview = canPreview,
+                    quotesLeft = quotesLeft,
+                    backgroundColor = backgroundColor,
+                    callbackUri = callbackUri,
+                    accountViewModel = accountViewModel,
+                    nav = nav,
+                )
+            }
+        }
+    }
+}

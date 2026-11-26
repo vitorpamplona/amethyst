@@ -63,6 +63,7 @@ import com.vitorpamplona.amethyst.commons.resources.orbot_socks_port
 import com.vitorpamplona.amethyst.commons.resources.privacy_options
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_engine
 import com.vitorpamplona.amethyst.commons.resources.settings_section_tor_routing
+import com.vitorpamplona.amethyst.commons.resources.tor_not_available_on_this_device
 import com.vitorpamplona.amethyst.commons.resources.tor_preset
 import com.vitorpamplona.amethyst.commons.resources.tor_preset_explainer
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_notification_description
@@ -117,6 +118,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsSw
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
+import com.vitorpamplona.amethyst.commons.ui.tor.torEngineChoices
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.jetbrains.compose.resources.StringResource
@@ -158,6 +160,15 @@ fun PrivacyOptionsContent(
                 .padding(horizontal = 16.dp, vertical = 12.dp),
     ) {
         SettingsSection(Res.string.settings_section_tor_engine) {
+            if (!LocalAppPlatform.current.supportsTor) {
+                // Nothing to choose: saying so beats offering a switch that changes nothing.
+                Text(
+                    text = stringRes(Res.string.tor_not_available_on_this_device),
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(vertical = 8.dp),
+                )
+                return@SettingsSection
+            }
             TorEngineTile(torSettings, torType)
             AnimatedVisibility(
                 visible = torType == TorType.EXTERNAL,
@@ -231,7 +242,7 @@ private fun TorEngineTile(
         icon = MaterialSymbols.Security,
         title = Res.string.use_internal_tor,
         description = Res.string.use_internal_tor_explainer,
-        options = TorType.entries,
+        options = torEngineChoices(LocalAppPlatform.current.supportsExternalTor),
         labelRes = { it.resourceId },
         selected = torType,
         onSelect = { torSettings.torType.tryEmit(it) },

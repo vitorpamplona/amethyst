@@ -22,30 +22,35 @@ package com.vitorpamplona.amethyst.commons.ui.actions.uploads
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
+import kotlinx.collections.immutable.toImmutableList
 
-/** No document picker wired yet: reports a cancel. */
+// The system document picker (UIDocumentPickerViewController). An empty result is a cancel.
+
+/** Audio and PDF files, as Android's picker offers. */
 @Composable
 actual fun FileSelect(onFilesSelected: (ImmutableList<SelectedMedia>) -> Unit) {
-    LaunchedEffect(Unit) { onFilesSelected(persistentListOf()) }
+    val onPicked by rememberUpdatedState(onFilesSelected)
+    LaunchedEffect(Unit) { onPicked(pickDocuments(listOf("audio/*", "application/pdf"), allowsMultiple = true).toImmutableList()) }
 }
 
-/** No document picker wired yet: reports a cancel. */
 @Composable
 actual fun DocumentSelectSingle(
     mimeTypes: List<String>,
     onPicked: (SelectedMedia?) -> Unit,
 ) {
-    LaunchedEffect(Unit) { onPicked(null) }
+    val callback by rememberUpdatedState(onPicked)
+    LaunchedEffect(Unit) { callback(pickDocuments(mimeTypes, allowsMultiple = false).firstOrNull()) }
 }
 
-/** No document picker wired yet: reports a cancel. */
 @Composable
 actual fun MultiDocumentSelect(
     mimeTypes: List<String>,
     onPicked: (ImmutableList<SelectedMedia>) -> Unit,
 ) {
-    LaunchedEffect(Unit) { onPicked(persistentListOf()) }
+    val callback by rememberUpdatedState(onPicked)
+    LaunchedEffect(Unit) { callback(pickDocuments(mimeTypes, allowsMultiple = true).toImmutableList()) }
 }

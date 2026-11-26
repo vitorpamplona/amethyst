@@ -38,8 +38,10 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletLaunchPlan
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -67,6 +69,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.UUID
 
@@ -88,7 +91,7 @@ class DesktopNappletHost(
     val runtime =
         DesktopNappletRuntime(
             engine = DesktopCefEngine(File(modules.filesDir, "jcef"), DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.BROWSER_PROFILE), onQuit = { modules.quitRequests.tryEmit(Unit) }),
-            blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
+            blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir.toOkioPath())),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
@@ -186,6 +189,9 @@ class DesktopNappletHost(
 
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
 
+    /** Whether [launch]'s own traffic goes through Tor: Android's rule, shared ([NappletLaunchPlan.useTorFor]). */
+    private fun siteUsesTor(launch: NappletLaunch): Boolean = NappletLaunchPlan.useTorFor(launch.profile, torEnabled()) { networkChoices.useTor(launch.identity.coordinate) }
+
     private fun appletsAndWebsitesViaTor(): Boolean = modules.torPrefs.value.appletsAndWebsitesViaTor.value
 
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
@@ -202,7 +208,7 @@ class DesktopNappletHost(
     fun openSite(event: Event): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open sites"))
         return NappletLaunch.fromSite(event).map { launch ->
-            open(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate))
+            open(launch, account, useTor = siteUsesTor(launch))
         }
     }
 
@@ -425,7 +431,7 @@ class DesktopNappletHost(
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your Observer"))
         val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
-        return runCatching { startInline(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate)) }
+        return runCatching { startInline(launch, account, useTor = siteUsesTor(launch)) }
     }
 
     private fun startInline(
@@ -479,7 +485,7 @@ class DesktopNappletHost(
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open apps"))
         return launchOf(event).map { launch ->
-            val useTor = launch.profile.exposesNetwork && torEnabled() && networkChoices.useTor(launch.identity.coordinate)
+            val useTor = siteUsesTor(launch)
             startScreen(launch, account, useTor, routeId)
         }
     }
@@ -608,7 +614,7 @@ class DesktopNappletHost(
             ledger = modules.nappletPermissionLedger.forAccount(account.pubKey),
             signerLedger = signerLedger,
             storage = storage.forAccount(account.pubKey),
-            httpClient = { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
+            http = OkHttpNappletHttp { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
             useTor = { coordinate ->
                 networkChoices.awaitReady()
                 torEnabled() && networkChoices.useTor(coordinate)

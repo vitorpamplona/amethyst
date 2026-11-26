@@ -32,3 +32,5 @@ actual fun decodeBytes(
             ?: Charsets.UTF_8
     return bytes.toString(charset)
 }
+
+actual fun isSupportedCharset(charsetName: String): Boolean = runCatching { Charset.isSupported(charsetName) }.getOrDefault(false)

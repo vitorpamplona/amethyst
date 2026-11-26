@@ -30,14 +30,18 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
+import com.vitorpamplona.amethyst.commons.napplet.openStream
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.downloadClient
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okio.Path.Companion.toOkioPath
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
@@ -96,7 +100,7 @@ class NappletContentServer(
                 WebxdcRuntime.script(webxdc.selfAddr, webxdc.selfName, webxdc.isAppSender),
             )
         } else {
-            NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(cachePartition), client, paths, servers)
+            NappletBlobStore(NappletBlobCache(NappletBlobCache.dirFor(cacheDir.toOkioPath())).forSite(cachePartition), OkHttpNappletHttp(client), paths, servers)
         }
 
     private val server = NappletSiteServer(blobs, shellHtmlBytes, shimJs, appOrigin, profile, declaredDomains, imeProxy)
@@ -139,11 +143,11 @@ class NappletContentServer(
     fun serve(request: WebResourceRequest): WebResourceResponse? {
         // A document navigation accepts text/html; a sub-resource (js/css/img) does not.
         val acceptsHtml = request.requestHeaders["Accept"]?.contains(NappletSiteServer.MIME_HTML, ignoreCase = true) == true
-        val response = runBlocking { server.serve(request.method, request.url.toString(), acceptsHtml) } ?: return null
+        val response = runBlocking { server.serve(request.method, request.url.toString(), acceptsHtml, mainFrameNavigation = request.isForMainFrame) } ?: return null
         // The file may be trimmed away before it opens; an exception here would crash the WebView.
         val body =
             try {
-                response.open()
+                response.openStream()
             } catch (e: IOException) {
                 Log.w("NappletContentServer", "Could not open ${request.url}", e)
                 return WebResourceResponse("text/plain", "utf-8", 502, "Bad Gateway", emptyMap(), ByteArrayInputStream(ByteArray(0)))

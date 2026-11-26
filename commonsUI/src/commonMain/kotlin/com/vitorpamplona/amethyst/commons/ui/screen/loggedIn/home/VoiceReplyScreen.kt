@@ -41,12 +41,12 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.ui.actions.mediaServers.FileServerSelectionRow
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.UploadProgressIndicator
 import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceAnonymizationSection
+import com.vitorpamplona.amethyst.commons.ui.actions.uploads.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.PostingTopBar
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
-import com.vitorpamplona.amethyst.commons.ui.note.platform.VoiceMessagePreview
 import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
@@ -155,12 +155,14 @@ private fun VoiceReplyScreenBody(
                 )
             }
 
-            // Voice anonymization section
-            VoiceAnonymizationSection(
-                selectedPreset = viewModel.selectedPreset,
-                processingPreset = viewModel.processingPreset,
-                onPresetSelected = { viewModel.selectPreset(it) },
-            )
+            // Voice anonymization section, where the platform can re-voice a recording
+            if (accountViewModel.host.canAnonymizeVoice) {
+                VoiceAnonymizationSection(
+                    selectedPreset = viewModel.selectedPreset,
+                    processingPreset = viewModel.processingPreset,
+                    onPresetSelected = { viewModel.selectPreset(it) },
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))

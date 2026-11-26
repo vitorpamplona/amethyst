@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.marmot
 
 import com.vitorpamplona.amethyst.commons.model.preferences.SecretEncryption
 import kotlinx.coroutines.test.runTest
+import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -62,9 +63,9 @@ class EncryptedMarmotStoresTest {
             val (dir, encryption) = accountDir()
             val payload = byteArrayOf(1, 2, 3, 4, 5)
 
-            EncryptedMlsGroupStateStore(dir, encryption).save(groupId, payload)
+            EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption).save(groupId, payload)
 
-            val reopened = EncryptedMlsGroupStateStore(dir, encryption).load(groupId)
+            val reopened = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption).load(groupId)
             assertEquals("the same bytes come back", payload.toList(), reopened?.toList())
         }
 
@@ -73,14 +74,14 @@ class EncryptedMarmotStoresTest {
         runTest {
             val (dir, encryption) = accountDir()
 
-            assertNull(EncryptedMlsGroupStateStore(dir, encryption).load("c".repeat(63) + "3"))
+            assertNull(EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption).load("c".repeat(63) + "3"))
         }
 
     @Test
     fun deletingAGroupRemovesItFromTheListing() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMlsGroupStateStore(dir, encryption)
+            val store = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption)
             store.save(groupId, byteArrayOf(9))
             store.save(otherGroupId, byteArrayOf(8))
 
@@ -96,11 +97,11 @@ class EncryptedMarmotStoresTest {
         runTest {
             val (dir, encryption) = accountDir()
             val window = ByteArray(64) { (it * 7).toByte() }
-            val store = EncryptedMlsGroupStateStore(dir, encryption)
+            val store = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption)
             store.save(groupId, byteArrayOf(1))
             assertTrue(store.saveConvergenceWindow(groupId, window))
 
-            assertEquals(window.toList(), EncryptedMlsGroupStateStore(dir, encryption).loadConvergenceWindow(groupId)?.toList())
+            assertEquals(window.toList(), EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption).loadConvergenceWindow(groupId)?.toList())
             val onDisk = File(dir, "mls_groups/$groupId/convergence").readBytes()
             assertTrue("encrypted at rest", !onDisk.toList().windowed(window.size).contains(window.toList()))
 
@@ -113,12 +114,12 @@ class EncryptedMarmotStoresTest {
     fun theSenderRatchetRoundTripsIndependentlyOfTheGroupState() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMlsGroupStateStore(dir, encryption)
+            val store = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption)
 
             store.save(groupId, byteArrayOf(1))
             store.saveSenderRatchet(groupId, byteArrayOf(7, 7, 7))
 
-            val reopened = EncryptedMlsGroupStateStore(dir, encryption)
+            val reopened = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption)
             assertEquals("ratchet preserved", listOf<Byte>(7, 7, 7), reopened.loadSenderRatchet(groupId)?.toList())
             assertEquals("and the group blob is untouched", listOf<Byte>(1), reopened.load(groupId)?.toList())
         }
@@ -136,7 +137,7 @@ class EncryptedMarmotStoresTest {
     fun theNewestMessageTimeSurvivesAReopenWithoutReadingTheLog() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             assertNull(store.newestMessageCreatedAt(groupId))
 
             store.appendMessage(groupId, innerEvent('1', 200))
@@ -145,8 +146,8 @@ class EncryptedMarmotStoresTest {
             assertEquals(500L, store.newestMessageCreatedAt(groupId))
 
             assertTrue(File(dir, "mls_groups/$groupId/messages").delete())
-            assertEquals("kept apart from the log", 500L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
-            assertNull("another group has none", EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(otherGroupId))
+            assertEquals("kept apart from the log", 500L, EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).newestMessageCreatedAt(groupId))
+            assertNull("another group has none", EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).newestMessageCreatedAt(otherGroupId))
         }
 
     /** A log written before the newest time was kept: read once, then answered without it. */
@@ -154,37 +155,37 @@ class EncryptedMarmotStoresTest {
     fun aLogWithNoNewestTimeIsReadOnceAndTheAnswerKept() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             store.appendMessage(groupId, innerEvent('1', 200))
             store.appendMessage(groupId, innerEvent('2', 700))
             File(dir, "mls_groups/$groupId/newest").delete()
 
-            assertEquals(700L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+            assertEquals(700L, EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).newestMessageCreatedAt(groupId))
             assertTrue(File(dir, "mls_groups/$groupId/messages").delete())
-            assertEquals(700L, EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+            assertEquals(700L, EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).newestMessageCreatedAt(groupId))
         }
 
     @Test
     fun deletingAGroupForgetsItsNewestMessageTime() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             store.appendMessage(groupId, innerEvent('1', 200))
             store.delete(groupId)
             assertNull(store.newestMessageCreatedAt(groupId))
-            assertNull(EncryptedMarmotMessageStore(dir, encryption).newestMessageCreatedAt(groupId))
+            assertNull(EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).newestMessageCreatedAt(groupId))
         }
 
     @Test
     fun appendedMessagesComeBackInOrderAfterAReopen() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
 
             store.appendMessage(groupId, """{"id":"one"}""")
             store.appendMessage(groupId, """{"id":"two"}""")
 
-            val reopened = EncryptedMarmotMessageStore(dir, encryption).loadMessages(groupId)
+            val reopened = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadMessages(groupId)
             assertEquals("both, in append order", listOf("""{"id":"one"}""", """{"id":"two"}"""), reopened)
         }
 
@@ -197,7 +198,7 @@ class EncryptedMarmotStoresTest {
     fun expiriesKeepTheirFirstValueSurviveAReopenAndAreForgottenWithTheirMessage() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             val one = "1".repeat(64)
             val two = "2".repeat(64)
 
@@ -209,15 +210,15 @@ class EncryptedMarmotStoresTest {
 
             val expected = mapOf(one to 100L, two to 200L)
             assertEquals("first write wins", expected, store.loadExpiries(groupId))
-            assertEquals("a reopen reads the same", expected, EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+            assertEquals("a reopen reads the same", expected, EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadExpiries(groupId))
 
             store.removeMessages(groupId, setOf(one))
             assertEquals(mapOf(two to 200L), store.loadExpiries(groupId))
-            assertEquals(mapOf(two to 200L), EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+            assertEquals(mapOf(two to 200L), EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadExpiries(groupId))
             assertEquals("another group is untouched", mapOf(one to 300L), store.loadExpiries(otherGroupId))
 
             store.recordExpiry(groupId, one, 400L)
-            assertEquals(mapOf(two to 200L, one to 400L), EncryptedMarmotMessageStore(dir, encryption).loadExpiries(groupId))
+            assertEquals(mapOf(two to 200L, one to 400L), EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadExpiries(groupId))
 
             store.delete(groupId)
             assertEquals(emptyMap<String, Long>(), store.loadExpiries(groupId))
@@ -231,7 +232,7 @@ class EncryptedMarmotStoresTest {
     fun epochRecordsSurviveAReopenAndKeepTheirFirstValue() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             val verdictId = "c".repeat(64)
 
             store.recordMediaSecret(groupId, 3, byteArrayOf(1, 2))
@@ -242,7 +243,7 @@ class EncryptedMarmotStoresTest {
             store.recordModerationVerdict(groupId, verdictId, true)
             store.recordModerationVerdict(groupId, verdictId, false)
 
-            val reopened = EncryptedMarmotMessageStore(dir, encryption)
+            val reopened = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             val secrets = reopened.loadMediaSecrets(groupId)
             assertEquals(listOf<Byte>(1, 2), secrets[3]?.toList())
             assertEquals(listOf<Byte>(3), secrets[4]?.toList())
@@ -255,19 +256,19 @@ class EncryptedMarmotStoresTest {
         runTest {
             val (dir, encryption) = accountDir()
 
-            assertTrue(EncryptedMarmotMessageStore(dir, encryption).loadMessages("d".repeat(63) + "4").isEmpty())
+            assertTrue(EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadMessages("d".repeat(63) + "4").isEmpty())
         }
 
     @Test
     fun deletingAGroupDropsItsMessageLog() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
             store.appendMessage(groupId, """{"id":"one"}""")
 
             store.delete(groupId)
 
-            assertTrue(EncryptedMarmotMessageStore(dir, encryption).loadMessages(groupId).isEmpty())
+            assertTrue(EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadMessages(groupId).isEmpty())
         }
 
     /** The group snapshot is what a cold start restores from before replaying the log. */
@@ -275,11 +276,11 @@ class EncryptedMarmotStoresTest {
     fun theGroupSnapshotRoundTrips() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMarmotMessageStore(dir, encryption)
+            val store = EncryptedMarmotMessageStore(dir.toOkioPath(), encryption)
 
             store.recordGroupSnapshot(groupId, """{"epoch":4}""")
 
-            assertEquals("""{"epoch":4}""", EncryptedMarmotMessageStore(dir, encryption).loadGroupSnapshot(groupId))
+            assertEquals("""{"epoch":4}""", EncryptedMarmotMessageStore(dir.toOkioPath(), encryption).loadGroupSnapshot(groupId))
         }
 
     /** Two accounts are two directories: one must never read the other's groups. */
@@ -289,10 +290,10 @@ class EncryptedMarmotStoresTest {
             val (dirA, encA) = accountDir()
             val (dirB, encB) = accountDir()
 
-            EncryptedMlsGroupStateStore(dirA, encA).save(groupId, byteArrayOf(1))
+            EncryptedMlsGroupStateStore(dirA.toOkioPath(), encA).save(groupId, byteArrayOf(1))
 
-            assertNull("B cannot see A's group", EncryptedMlsGroupStateStore(dirB, encB).load(groupId))
-            assertTrue("nor list it", EncryptedMlsGroupStateStore(dirB, encB).listGroups().isEmpty())
+            assertNull("B cannot see A's group", EncryptedMlsGroupStateStore(dirB.toOkioPath(), encB).load(groupId))
+            assertTrue("nor list it", EncryptedMlsGroupStateStore(dirB.toOkioPath(), encB).listGroups().isEmpty())
         }
 
     /** The hex check is a path-traversal guard: a crafted id must not be able to leave the account dir. */
@@ -300,7 +301,7 @@ class EncryptedMarmotStoresTest {
     fun aNonHexGroupIdIsRejected() =
         runTest {
             val (dir, encryption) = accountDir()
-            val store = EncryptedMlsGroupStateStore(dir, encryption)
+            val store = EncryptedMlsGroupStateStore(dir.toOkioPath(), encryption)
 
             listOf("../escape", "not hex", "abc/def", "").forEach { bad ->
                 val thrown =

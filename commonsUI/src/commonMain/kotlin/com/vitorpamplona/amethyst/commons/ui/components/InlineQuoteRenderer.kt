@@ -25,9 +25,7 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.Note
-import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
-import com.vitorpamplona.amethyst.commons.util.toShortDisplay
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
 /**
@@ -57,15 +55,8 @@ fun interface InlineQuoteRenderer {
 }
 
 /**
- * A link to the quoted note, for front ends that install no card renderer of their own (Android
- * installs its quoted-note card in its theme root).
+ * The shared quoted-note card ([DefaultInlineQuoteRenderer]) unless a subtree provides another. It is
+ * the default, not something each front end installs, so a new one (iOS) cannot ship plain links by
+ * leaving it out.
  */
-val PlainInlineQuoteRenderer =
-    InlineQuoteRenderer { note, _, _, accountViewModel, nav ->
-        ClickableTextPrimary(
-            text = "@${note.idNote().toShortDisplay()}",
-            onClick = { routeFor(note, accountViewModel.account)?.let { nav.nav(it) } },
-        )
-    }
-
-val LocalInlineQuoteRenderer = compositionLocalOf { PlainInlineQuoteRenderer }
+val LocalInlineQuoteRenderer = compositionLocalOf<InlineQuoteRenderer> { DefaultInlineQuoteRenderer }

@@ -1,2 +1,4 @@
 .arti-source/
 target/
+# iOS archives from build-arti-ios.sh (not committed, see README.md -> "iOS")
+out/

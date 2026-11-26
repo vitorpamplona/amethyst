@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.ui.components
 
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.unknownMediaAspectRatio
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test

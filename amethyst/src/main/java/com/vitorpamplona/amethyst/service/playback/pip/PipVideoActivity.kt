@@ -30,43 +30,52 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.OptIn
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.media3.common.util.UnstableApi
 import com.vitorpamplona.amethyst.commons.model.MediaAspectRatioCache
-import com.vitorpamplona.amethyst.service.playback.composable.DEFAULT_MUTED_SETTING
-import com.vitorpamplona.amethyst.service.playback.composable.GetVideoController
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.GetMediaItem
-import com.vitorpamplona.amethyst.service.playback.composable.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.DEFAULT_MUTED_SETTING
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.GetVideoController
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.GetMediaItem
+import com.vitorpamplona.amethyst.commons.ui.playback.mediaitem.MediaItemData
+import com.vitorpamplona.amethyst.commons.ui.playback.pip.RegisterBackgroundMedia
+import com.vitorpamplona.amethyst.commons.ui.playback.player.LocalPlaybackPlatform
+import com.vitorpamplona.amethyst.service.playback.player.AndroidPlaybackPlatform
 
 class PipVideoActivity : ComponentActivity() {
     @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        setContent {
-            val videoData by rememberVideoDataFromIntents()
-            videoData?.let { mediaItemData ->
-                // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes.
-                // Audio is never started muted: the feed's mute default is about silent autoplaying
-                // video, and an audio track somebody just sent to PiP is meant to be heard.
-                val muted = remember(mediaItemData) { !mediaItemData.isAudio && DEFAULT_MUTED_SETTING.value }
+        // This window doesn't go through the app theme, so it installs the player platform itself.
+        val playbackPlatform = AndroidPlaybackPlatform(applicationContext)
 
-                GetMediaItem(mediaItemData) { mediaItem ->
-                    GetVideoController(
-                        mediaItem = mediaItem,
-                        muted = muted,
-                        play = true,
-                        // PiP IS the opt-in for background playback — never release on background.
-                        releaseOnBackgroundTimeout = false,
-                    ) { controllerState ->
-                        RegisterBackgroundMedia(controllerState)
-                        RegisterControllerReceiver(controllerState)
-                        WatchControllerForActions(mediaItemData, controllerState)
-                        if (mediaItemData.isAudio) {
-                            RenderPipAudio(controllerState, mediaItemData)
-                        } else {
-                            RenderPipVideo(controllerState, mediaItemData.waveformData)
+        setContent {
+            CompositionLocalProvider(LocalPlaybackPlatform provides playbackPlatform) {
+                val videoData by rememberVideoDataFromIntents()
+                videoData?.let { mediaItemData ->
+                    // keeps a copy of the value to avoid recompositions here when the DEFAULT value changes.
+                    // Audio is never started muted: the feed's mute default is about silent autoplaying
+                    // video, and an audio track somebody just sent to PiP is meant to be heard.
+                    val muted = remember(mediaItemData) { !mediaItemData.isAudio && DEFAULT_MUTED_SETTING.value }
+
+                    GetMediaItem(mediaItemData) { mediaItem ->
+                        GetVideoController(
+                            mediaItem = mediaItem,
+                            muted = muted,
+                            play = true,
+                            // PiP IS the opt-in for background playback — never release on background.
+                            releaseOnBackgroundTimeout = false,
+                        ) { controllerState ->
+                            RegisterBackgroundMedia(controllerState)
+                            RegisterControllerReceiver(controllerState)
+                            WatchControllerForActions(mediaItemData, controllerState)
+                            if (mediaItemData.isAudio) {
+                                RenderPipAudio(controllerState, mediaItemData)
+                            } else {
+                                RenderPipVideo(controllerState, mediaItemData.waveformData)
+                            }
                         }
                     }
                 }

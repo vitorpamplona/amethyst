@@ -64,7 +64,7 @@ class NappletBlossomUploaderTest {
         NappletBlossomUploader(
             servers = { servers.map { it.first } },
             auth = { _, _, _ -> "Nostr auth" },
-            blossom = { url -> servers.first { it.first == url }.second },
+            blossom = { url -> servers.first { it.first == url }.second.asNappletRail() },
         )
 
     @Test

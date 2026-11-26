@@ -125,6 +125,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.layouts.DisappearingScaffold
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberFeedContentPadding
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
 import com.vitorpamplona.amethyst.commons.ui.note.ClearTextIcon
 import com.vitorpamplona.amethyst.commons.ui.note.NoteCompose
 import com.vitorpamplona.amethyst.commons.ui.note.SearchIcon
@@ -279,7 +280,17 @@ private fun SearchBar(
                 // window (Waydroid/DeX freeform) is respected too.
                 .windowInsetsPadding(WindowInsets.systemBars.only(WindowInsetsSides.Top)),
     ) {
-        SearchTextField(searchBarViewModel, accountViewModel, Modifier)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Opened from another screen (the top bar's magnifier), search needs its own way
+            // back: iOS has no system back gesture inside the app, and on Android it was only the
+            // system one.
+            if (nav.canPop()) {
+                IconButton(onClick = nav::popBack, modifier = Modifier.padding(start = 4.dp)) {
+                    ArrowBackIcon()
+                }
+            }
+            SearchTextField(searchBarViewModel, accountViewModel, Modifier.weight(1f))
+        }
         // Inline Namecoin lookup feedback for the global search field.
         // Mirrors the wiring in OnchainZapSendDialog: the local prefix
         // search can race ahead of the on-chain resolution and show a

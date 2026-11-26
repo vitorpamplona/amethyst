@@ -33,3 +33,9 @@ actual fun availableLanguages(): List<LanguageOption> =
         .map { LanguageOption(it, languageDisplayName(it)) }
 
 actual fun languageDisplayName(tag: String): String = NSLocale.currentLocale.localizedStringForLanguageCode(tag) ?: tag
+
+actual fun languageNameOnly(tag: String): String {
+    val language = tag.substringBefore('-').substringBefore('_')
+    if (language.isBlank()) return ""
+    return NSLocale.currentLocale.localizedStringForLanguageCode(language) ?: ""
+}

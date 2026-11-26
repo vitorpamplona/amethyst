@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
@@ -41,7 +40,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -79,7 +77,6 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.rememberDialogState
 import androidx.compose.ui.window.rememberWindowState
 import com.vitorpamplona.amethyst.commons.browser.ui.pill.AccessInfoSheet
-import com.vitorpamplona.amethyst.commons.browser.ui.pill.OnionIcon
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.ConsentQueue
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConnectInfo
 import com.vitorpamplona.amethyst.commons.connectedApps.consent.SignerConsentInfo
@@ -93,9 +90,15 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletConsentInfo
 import com.vitorpamplona.amethyst.commons.napplet.NappletDownloadProgress
 import com.vitorpamplona.amethyst.commons.napplet.NappletPromptQueues
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletConsentCard
 import com.vitorpamplona.amethyst.commons.napplet.ui.NappletDownloadIndicator
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletMessagePane
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletOnionSwitch
+import com.vitorpamplona.amethyst.commons.napplet.ui.NappletWaitingPane
 import com.vitorpamplona.amethyst.commons.napplet.ui.labelRes
+import com.vitorpamplona.amethyst.commons.napplet.ui.oldestQuestionOf
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_access_napplet
@@ -113,10 +116,6 @@ import com.vitorpamplona.amethyst.commons.resources.browser_pill_stop
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_larger
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_smaller
 import com.vitorpamplona.amethyst.commons.resources.browser_pill_text_value
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_forced
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_off
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_on
-import com.vitorpamplona.amethyst.commons.resources.browser_pill_tor_title
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_downloading
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_in_use
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_engine_restart
@@ -126,7 +125,6 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_fetch
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_failed_route
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_fetching
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_permission_title
-import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_retry
 import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.service.call.CallSessionBridge
 import com.vitorpamplona.amethyst.commons.ui.connectedApps.consent.BatchedConsentCard
@@ -145,7 +143,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.awt.Toolkit
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import androidx.compose.material3.Icon as VectorIcon
 import java.awt.Window as AwtWindow
 
 /**
@@ -200,17 +197,17 @@ private fun NappletWindow(
                 Box(Modifier.fillMaxWidth().weight(1f)) {
                     when (val current = state) {
                         // Chromium's own window, embedded: it draws over Compose, so nothing else goes here.
-                        is CefNappletSession.State.Showing -> current.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
-                        is CefNappletSession.State.Loading -> {
+                        is NappletSessionState.Showing -> session.component?.let { SwingPanel(factory = { it }, modifier = Modifier.fillMaxSize()) }
+                        is NappletSessionState.Loading -> {
                             val download by session.download.collectAsState()
                             LoadingPane(host, download, session.launch.title)
                         }
-                        is CefNappletSession.State.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
-                        is CefNappletSession.State.Failed ->
+                        is NappletSessionState.WaitingForTor -> WaitingPane(stringRes(Res.string.tor_waiting))
+                        is NappletSessionState.Failed ->
                             when (current.reason) {
-                                CefNappletSession.Failure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title), onRetry = { host.reopen(session) })
-                                CefNappletSession.Failure.ENGINE -> EngineFailurePane(host.engine, onRetry = { host.reopen(session) })
-                                CefNappletSession.Failure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, session.launch.title), onRetry = { host.reopen(session) })
+                                NappletFailure.UNREACHABLE -> MessagePane(stringRes(Res.string.napplet_desktop_failed_fetch, session.launch.title), onRetry = { host.reopen(session) })
+                                NappletFailure.ENGINE, NappletFailure.RENDERER_GONE -> EngineFailurePane(host.engine, onRetry = { host.reopen(session) })
+                                NappletFailure.ROUTE_BLOCKED -> MessagePane(stringRes(Res.string.napplet_desktop_failed_route, session.launch.title), onRetry = { host.reopen(session) })
                             }
                     }
                 }
@@ -270,7 +267,7 @@ internal fun SandboxToolbar(
             }
             ToolbarButton(MaterialSymbols.AutoMirrored.ArrowForward, stringRes(Res.string.browser_pill_forward), enabled = page.canGoForward) { session.goForward() }
             val state by session.state.collectAsState()
-            val showing = state is CefNappletSession.State.Showing
+            val showing = state is NappletSessionState.Showing
             if (page.isLoading) {
                 ToolbarButton(MaterialSymbols.Close, stringRes(Res.string.browser_pill_stop), enabled = showing) { session.stop() }
             } else {
@@ -325,37 +322,7 @@ internal fun SandboxToolbar(
             // Only an nSite has a route of its own to choose, and only while Tor is on.
             val torEnabled by host.torEnabledState.collectAsState()
             if (isWebsite && torEnabled) {
-                val useTor = session.useTor
-                Row(
-                    Modifier.padding(horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    VectorIcon(
-                        OnionIcon,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = if (useTor || routedOverTor) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Column {
-                        Text(stringRes(Res.string.browser_pill_tor_title), style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            stringRes(
-                                when {
-                                    useTor -> Res.string.browser_pill_tor_on
-                                    routedOverTor -> Res.string.browser_pill_tor_forced
-                                    else -> Res.string.browser_pill_tor_off
-                                },
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.widthIn(max = 220.dp),
-                        )
-                    }
-                    Switch(checked = useTor, onCheckedChange = onNetworkMode)
-                }
+                NappletOnionSwitch(useTor = session.useTor, routedOverTor = routedOverTor, onNetworkMode = onNetworkMode)
             }
         }
         if (finding) {
@@ -580,12 +547,7 @@ internal fun ConsentWindows(
 internal fun oldestQuestion(
     apps: (app: String?) -> Boolean,
     vararg queues: List<ConsentQueue.Request<*, *>>,
-): ConsentQueue.Request<*, *>? =
-    queues
-        .asSequence()
-        .flatten()
-        .filter { apps(it.app) }
-        .minByOrNull { it.order }
+): ConsentQueue.Request<*, *>? = oldestQuestionOf(apps, *queues)
 
 /** The name a NIP-46 or site question gives the app that asks, when it carries one. */
 internal fun consentTitle(info: Any?): String? =
@@ -704,27 +666,13 @@ internal fun LoadingPane(
 }
 
 @Composable
-internal fun WaitingPane(message: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            CircularProgressIndicator()
-            Text(message, textAlign = TextAlign.Center)
-        }
-    }
-}
+internal fun WaitingPane(message: String) = NappletWaitingPane(message)
 
 @Composable
 internal fun MessagePane(
     message: String,
     onRetry: (() -> Unit)?,
-) {
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(message, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.error, modifier = Modifier.widthIn(max = 480.dp))
-            if (onRetry != null) Button(onClick = onRetry) { Text(stringRes(Res.string.napplet_desktop_retry)) }
-        }
-    }
-}
+) = NappletMessagePane(message, onRetry)
 
 /**
  * A page that could not run in Chromium. When Chromium itself did not start, says why, and offers

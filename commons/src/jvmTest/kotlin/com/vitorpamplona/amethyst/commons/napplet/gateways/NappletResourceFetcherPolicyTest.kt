@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.gateways
 
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletInetAddresses
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,14 +54,14 @@ class NappletResourceFetcherPolicyTest {
             )
 
         blocked.forEach {
-            assertFalse(it, NappletResourceFetcher.isPublicAddress(InetAddress.getByName(it)))
+            assertFalse(it, NappletInetAddresses.isPublic(InetAddress.getByName(it)))
         }
     }
 
     @Test
     fun permitsPublicAddresses() {
-        assertTrue(NappletResourceFetcher.isPublicAddress(InetAddress.getByName("1.1.1.1")))
-        assertTrue(NappletResourceFetcher.isPublicAddress(InetAddress.getByName("2606:4700:4700::1111")))
+        assertTrue(NappletInetAddresses.isPublic(InetAddress.getByName("1.1.1.1")))
+        assertTrue(NappletInetAddresses.isPublic(InetAddress.getByName("2606:4700:4700::1111")))
     }
 
     @Test

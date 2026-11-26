@@ -22,6 +22,8 @@ package com.vitorpamplona.amethyst.commons.service.http
 
 import androidx.collection.LruCache
 import com.vitorpamplona.crypto.SymmetricCipher
+import com.vitorpamplona.crypto.aes.AESGCM
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nipB7Blossom.BlossomUri
 
 /**
@@ -91,3 +93,13 @@ class DecryptInformation(
     val cipher: SymmetricCipher,
     val mimeType: String?,
 )
+
+/**
+ * [bytes] decrypted, or null when they don't open. A whole blob: the AEAD tag covers all of it.
+ * Tries the correct way first; if that fails, AES-GCM is retried with the nonce read as UTF-8,
+ * which is how 0xChat started encrypting.
+ */
+fun DecryptInformation.decryptBlob(bytes: ByteArray): ByteArray? = cipher.decryptOrNull(bytes) ?: (cipher as? AESGCM)?.copyUsingUTF8Nonce()?.decryptOrNull(bytes)
+
+/** The same key with the nonce's hex text as the nonce bytes: what early 0xChat files used. */
+private fun AESGCM.copyUsingUTF8Nonce(): AESGCM = AESGCM(keyBytes, nonce.toHexKey().encodeToByteArray())

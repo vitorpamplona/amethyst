@@ -99,6 +99,12 @@ interface AccountViewModelHost {
     val drawingBackgroundsDir: Path? get() = null
 
     /**
+     * Whether [anonymizeVoice] works here. The composers hide the voice presets where it does not,
+     * so no preset button leads to an error (iOS records but has no re-voicing pipeline yet).
+     */
+    val canAnonymizeVoice: Boolean get() = false
+
+    /**
      * Re-voices the recording at [input] with the voice preset named [presetName], into a new file
      * beside it.
      */

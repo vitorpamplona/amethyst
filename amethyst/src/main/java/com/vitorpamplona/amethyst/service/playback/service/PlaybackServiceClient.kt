@@ -25,7 +25,8 @@ import android.content.Context
 import android.os.Bundle
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.vitorpamplona.amethyst.service.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.MediaControllerState
+import com.vitorpamplona.amethyst.service.playback.player.Media3Player
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -104,7 +105,7 @@ object PlaybackServiceClient {
                     trySend(
                         MediaControllerState(
                             id = id,
-                            controller = controller,
+                            controller = Media3Player(controller),
                         ),
                     )
                 } catch (e: Exception) {

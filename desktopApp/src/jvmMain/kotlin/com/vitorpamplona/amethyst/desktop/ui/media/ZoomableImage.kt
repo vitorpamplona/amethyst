@@ -53,6 +53,8 @@ import coil3.size.Size
 import com.vitorpamplona.amethyst.commons.service.MediaLoadFailure
 import com.vitorpamplona.amethyst.commons.service.image.withFullResolution
 import com.vitorpamplona.amethyst.commons.ui.components.MediaFailureCard
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedGifImage
+import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageProbe
 import com.vitorpamplona.amethyst.commons.ui.components.mediaLoadFailureOf
 
 @OptIn(ExperimentalComposeUiApi::class)

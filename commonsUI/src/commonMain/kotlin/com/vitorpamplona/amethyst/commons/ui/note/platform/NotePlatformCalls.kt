@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import com.vitorpamplona.amethyst.commons.audio.RecordingResult
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.cartridges.CartDetector
 import com.vitorpamplona.amethyst.commons.model.Note
@@ -46,11 +45,9 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
-import okio.Path
 
 // Call-site shims for [NotePlatform]: the same names and defaults the app's own composables have,
 // so shared note code reads as it did and only its imports point here.
@@ -409,30 +406,6 @@ fun RenderGitPullRequestUpdateEvent(
 
 /** The longest voice message the recorder allows, in seconds. */
 const val MAX_VOICE_RECORD_SECONDS = 600
-
-@Composable
-fun RecordVoiceButton(
-    onVoiceTaken: (RecordingResult) -> Unit,
-    maxDurationSeconds: Int? = null,
-) = LocalNotePlatform.current.RecordVoiceButton(onVoiceTaken, maxDurationSeconds)
-
-@Composable
-fun RecordAudioBox(
-    modifier: Modifier = Modifier,
-    onRecordTaken: (RecordingResult) -> Unit,
-    maxDurationSeconds: Int? = null,
-    content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
-) = LocalNotePlatform.current.RecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
-
-@Composable
-fun VoiceMessagePreview(
-    voiceMetadata: AudioMeta,
-    localFile: Path? = null,
-    onRemove: () -> Unit,
-    onReRecord: ((RecordingResult) -> Unit)? = null,
-    isUploading: Boolean = false,
-    modifier: Modifier = Modifier,
-) = LocalNotePlatform.current.VoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
 
 @Composable
 fun rememberUrlPreviewState(

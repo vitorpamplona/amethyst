@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -40,7 +42,7 @@ import kotlin.test.assertTrue
 /** The serving rules both hosts share, from a cache that already holds the files (no network). */
 class NappletSiteServerTest {
     private val dir = createTempDirectory("site-server-test").toFile()
-    private val cache = NappletBlobCache(dir)
+    private val cache = NappletBlobCache(dir.toOkioPath())
     private val origin = NappletWebContract.appOrigin("nsite1")
     private val shellHtml = "<!doctype html><html><head><title>shell</title></head><body>__APP_SANDBOX__ __APP_BOOTSTRAP__</body></html>".encodeToByteArray()
 
@@ -63,7 +65,7 @@ class NappletSiteServerTest {
         profile: HostProfile,
         paths: List<PathTag>,
     ) = NappletSiteServer(
-        blobs = NappletBlobStore(cache, OkHttpClient(), paths, emptyList()),
+        blobs = NappletBlobStore(cache, OkHttpNappletHttp(OkHttpClient()), paths, emptyList()),
         shellHtml = shellHtml,
         shimJs = "/*shim*/",
         appOrigin = origin,
@@ -141,6 +143,29 @@ class NappletSiteServerTest {
         }
 
     @Test
+    fun theShellIsServedOnlyToTheTopFramesNavigation() =
+        runBlocking {
+            // A frame's no-cors fetch of the shell reads nothing: the shell carries the launch.
+            assertEquals(404, assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = false)).status)
+            assertEquals(200, assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = true)).status)
+        }
+
+    @Test
+    fun noResponseIsSniffedIntoAnotherType() =
+        runBlocking {
+            val responses =
+                listOf(
+                    site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true),
+                    site.serve("GET", "$origin/", acceptsHtml = true),
+                    site.serve("GET", "$origin/app.js", acceptsHtml = false),
+                    site.serve("GET", "$origin/missing.js", acceptsHtml = false),
+                    site.serve("POST", "$origin/api", acceptsHtml = false),
+                    site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = false),
+                )
+            responses.forEach { assertEquals("nosniff", assertNotNull(it).headers[NappletSiteServer.NOSNIFF_HEADER], "status ${it.status}") }
+        }
+
+    @Test
     fun aClientRouteFallsBackToThePageButAMissingFileIsA404() =
         runBlocking {
             val route = assertNotNull(site.serve("GET", "$origin/posts/42", acceptsHtml = true))
@@ -176,6 +201,29 @@ class NappletSiteServerTest {
         runBlocking {
             val missing = server(HostProfile.NAPPLET, listOf(PathTag("/index.html", "b".repeat(64))))
             assertEquals(404, assertNotNull(missing.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true)).status)
+        }
+
+    @Test
+    fun aHostOnItsOwnSchemeServesTheSameHostsThere() =
+        runBlocking {
+            val origins = NappletWebContract.NAPPLET_SCHEME
+            val appOrigin = origins.appOrigin("nsite1")
+            val server =
+                NappletSiteServer(
+                    blobs = NappletBlobStore(cache, OkHttpNappletHttp(OkHttpClient()), listOf(file("/index.html", "<p>HOME</p>")), emptyList()),
+                    shellHtml = shellHtml,
+                    shimJs = "/*shim*/",
+                    appOrigin = appOrigin,
+                    profile = HostProfile.WEBSITE,
+                    declaredDomains = emptyList(),
+                    origins = origins,
+                )
+            val shell = assertNotNull(server.serve("GET", "napplet://napplet.local/__shell__", acceptsHtml = true))
+            assertContains(shell.readBody().decodeToString(), "iframe.src = 'napplet://nsite1.napplet.local/';")
+            assertContains(assertNotNull(server.serve("GET", "$appOrigin/", acceptsHtml = true)).readBody().decodeToString(), "<p>HOME</p>")
+            // The https shell is not this host's: a site's request there is the browser's to send.
+            assertNull(server.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true))
+            assertEquals(405, assertNotNull(server.serve("POST", origins.shellUrl, acceptsHtml = false)).status)
         }
 
     @Test

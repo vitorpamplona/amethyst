@@ -145,16 +145,11 @@ fun AppShellLayout(
             confirmValueChange = { it != SheetValue.PartiallyExpanded },
         )
 
-    val openSheetFunction =
-        remember {
-            {
-                scope.launch {
-                    openAccountSwitcherBottomSheet = true
-                    sheetState.show()
-                }
-                Unit
-            }
-        }
+    // Only composes the sheet: ModalBottomSheet shows itself (LaunchedEffect(sheetState) { show() }).
+    // Calling show() here as well moved the sheet's target to shown before its first frame, so the
+    // scrim's fade, keyed on that target, started fully dark: on iOS the screen blinked to dark
+    // before the sheet slid up.
+    val openSheetFunction = remember { { openAccountSwitcherBottomSheet = true } }
 
     // The layout tier can change while the app runs (fold/unfold, rotation, window resize)
     // and the shells below place `content` at different composition positions. Movable

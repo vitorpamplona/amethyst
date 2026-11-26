@@ -69,3 +69,6 @@ actual fun edgeToEdgeDialogProperties(
         dismissOnClickOutside = dismissOnClickOutside,
         decorFitsSystemWindows = false,
     )
+
+// Android's DialogProperties have no scrim or transition switch. Android keeps its own viewer for now.
+actual fun mediaViewerDialogProperties(): DialogProperties = edgeToEdgeDialogProperties()

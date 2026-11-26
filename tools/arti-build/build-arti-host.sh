@@ -38,7 +38,7 @@ fi
 
 # Sync the latest wrapper sources into the .arti-source clone — build-arti.sh
 # normally does this, but if you've only edited lib.rs the host build needs it too.
-cp "$SCRIPT_DIR/src/lib.rs" "$WRAPPER_DIR/src/lib.rs"
+cp "$SCRIPT_DIR"/src/*.rs "$WRAPPER_DIR/src/"
 # Keep the dependency lock in sync with the committed one (build is --locked).
 cp "$SCRIPT_DIR/Cargo.lock" "$WRAPPER_DIR/Cargo.lock"
 

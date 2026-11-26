@@ -52,6 +52,34 @@ plugins {
 // Desktop packageVersion inherits via project.version in desktopApp/build.gradle.kts.
 val appVersion = libs.versions.app.get()
 
+// The version name every app shows (Android's versionName, the iOS drawer footer): the catalog's
+// `app`, plus the branch when it is not main/master, so a test build says which branch it is.
+fun currentGitBranch(): String =
+    try {
+        val git =
+            providers.exec {
+                commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
+                workingDir = rootDir
+                isIgnoreExitValue = true
+            }
+        if (git.result.get().exitValue != 0) "unknown" else git.standardOutput.asText.get().trim()
+    } catch (e: Exception) {
+        println("Could not determine git branch: ${e.message}")
+        "unknown"
+    }
+
+fun appVersionNameFor(baseVersion: String): String {
+    val currentBranch = currentGitBranch()
+    if (currentBranch == "main" || currentBranch == "master" || currentBranch == "unknown" || currentBranch == "HEAD") {
+        return baseVersion
+    }
+    // Clean branch name for version (replace special characters), at most 20 characters.
+    val cleanBranch = currentBranch.replace(Regex("[^a-zA-Z0-9\\-_]"), "-").take(20)
+    return "$baseVersion-$cleanBranch"
+}
+
+extra.set("appVersionName", appVersionNameFor(appVersion))
+
 allprojects {
     version = appVersion
 

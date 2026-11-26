@@ -23,12 +23,14 @@ package com.vitorpamplona.amethyst.ui.note.platform
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import coil3.compose.AsyncImage
 import com.vitorpamplona.amethyst.Amethyst
-import com.vitorpamplona.amethyst.commons.audio.RecordingResult
+import com.vitorpamplona.amethyst.commons.audio.VoiceRecorder
 import com.vitorpamplona.amethyst.commons.audio.WaveformData
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.richtext.BaseMediaContent
@@ -43,16 +45,16 @@ import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.types.EditState
+import com.vitorpamplona.amethyst.commons.ui.note.types.JvmGitCardSlots
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWaveformPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.amethyst.service.playback.composable.VideoViewInner
 import com.vitorpamplona.amethyst.service.playback.diskCache.VideoPrefetcher
+import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessageRecorder
 import com.vitorpamplona.amethyst.ui.note.creators.location.DEFAULT_MAP_ZOOM
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWaveformPlayer
 import com.vitorpamplona.quartz.nip94FileMetadata.tags.DimensionTag
-import com.vitorpamplona.quartz.nipA0VoiceMessages.AudioMeta
 import com.vitorpamplona.quartz.podcasts.PodcastAudio
 import kotlinx.collections.immutable.ImmutableList
-import okio.Path
 import com.vitorpamplona.amethyst.commons.ui.components.LoadUrlPreview as AppLoadUrlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.rememberUrlPreviewState as AppRememberUrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitIssueEvent as AppRenderGitIssueEvent
@@ -60,22 +62,19 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPatchEvent as A
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestEvent as AppRenderGitPullRequestEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitPullRequestUpdateEvent as AppRenderGitPullRequestUpdateEvent
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderGitRepositoryEvent as AppRenderGitRepositoryEvent
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.EpisodeAudioPlayer as AppEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.NoteMediaView as AppNoteMediaView
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
+import com.vitorpamplona.amethyst.commons.ui.playback.audio.RenderAudioWithWaveform as AppRenderAudioWithWaveform
+import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as AppVideoView
 import com.vitorpamplona.amethyst.service.playback.composable.TrimPreviewPlayer as AppTrimPreviewPlayer
-import com.vitorpamplona.amethyst.service.playback.composable.VideoView as AppVideoView
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordAudioBox as AppRecordAudioBox
-import com.vitorpamplona.amethyst.ui.actions.uploads.RecordVoiceButton as AppRecordVoiceButton
-import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceMessagePreview as AppVoiceMessagePreview
 import com.vitorpamplona.amethyst.ui.components.GifVideoView as AppGifVideoView
 import com.vitorpamplona.amethyst.ui.components.ZoomableContentView as AppZoomableContentView
 import com.vitorpamplona.amethyst.ui.components.ZoomableImageDialog as AppZoomableImageDialog
 import com.vitorpamplona.amethyst.ui.components.pdf.PdfViewerDialog as AppPdfViewerDialog
 import com.vitorpamplona.amethyst.ui.note.creators.location.LoadCityName as AppLoadCityName
 import com.vitorpamplona.amethyst.ui.note.creators.location.LocationPreviewMap as AppLocationPreviewMap
-import com.vitorpamplona.amethyst.ui.note.types.EpisodeAudioPlayer as AppEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.MusicTrackAudioPlayer as AppMusicTrackAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.NoteMediaView as AppNoteMediaView
-import com.vitorpamplona.amethyst.ui.note.types.PodcastEpisodeAudioPlayer as AppPodcastEpisodeAudioPlayer
-import com.vitorpamplona.amethyst.ui.note.types.RenderAudioWithWaveform as AppRenderAudioWithWaveform
 
 /** Android's [NotePlatform]: the app's own media, map, audio, chess, git, napplet and zap composables. */
 object AndroidNotePlatform : NotePlatform {
@@ -391,6 +390,7 @@ object AndroidNotePlatform : NotePlatform {
         baseNote = baseNote,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -412,6 +412,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -433,6 +434,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -454,6 +456,7 @@ object AndroidNotePlatform : NotePlatform {
         editState = editState,
         accountViewModel = accountViewModel,
         nav = nav,
+        slots = JvmGitCardSlots,
     )
 
     @Composable
@@ -494,29 +497,11 @@ object AndroidNotePlatform : NotePlatform {
         accountViewModel = accountViewModel,
     )
 
-    @Composable
-    override fun RecordVoiceButton(
-        onVoiceTaken: (RecordingResult) -> Unit,
-        maxDurationSeconds: Int?,
-    ) = AppRecordVoiceButton(onVoiceTaken, maxDurationSeconds)
-
     override val canRecordAudio: Boolean get() = true
 
     @Composable
-    override fun RecordAudioBox(
-        modifier: Modifier,
-        onRecordTaken: (RecordingResult) -> Unit,
-        maxDurationSeconds: Int?,
-        content: @Composable (isRecording: Boolean, elapsedSeconds: Int, onStop: () -> Unit) -> Unit,
-    ) = AppRecordAudioBox(modifier, onRecordTaken, maxDurationSeconds, content)
-
-    @Composable
-    override fun VoiceMessagePreview(
-        voiceMetadata: AudioMeta,
-        localFile: Path?,
-        onRemove: () -> Unit,
-        onReRecord: ((RecordingResult) -> Unit)?,
-        isUploading: Boolean,
-        modifier: Modifier,
-    ) = AppVoiceMessagePreview(voiceMetadata, localFile, onRemove, onReRecord, isUploading, modifier)
+    override fun rememberVoiceRecorder(): VoiceRecorder {
+        val context = LocalContext.current
+        return remember(context) { VoiceMessageRecorder(context) }
+    }
 }
