@@ -151,7 +151,7 @@ amethyst/
   standalone relay); never on `:commonsUI`, `:amethyst` or `:desktopApp`.
 
 **Plans per module:** design docs for new subsystems live in the owning
-module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`, `commons/plans/`).
+module's `plans/YYYY-MM-DD-<slug>.md` (e.g. `cli/plans/`).
 The global `docs/plans/` folder is frozen — don't add new plans there.
 
 ## Android Runtime Processes (IMPORTANT — the app runs in TWO processes)
@@ -167,8 +167,8 @@ never a shared singleton. Details: `.claude/skills/android-expert/references/two
 
 ## Tech Stack
 
-Exact versions live in `gradle/libs.versions.toml` (the source of truth — check
-there rather than trusting a number copied here).
+Exact versions live in `gradle/libs.versions.toml`, the source of truth; don't trust a
+number copied here.
 
 | Layer | Technology |
 |-------|------------|
