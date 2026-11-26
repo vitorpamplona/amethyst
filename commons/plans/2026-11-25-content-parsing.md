@@ -218,6 +218,14 @@ Finishing touches found by running the app (2026-11-26):
   code fences), with their indented and lazy continuation lines. Each note is then parsed once,
   numbered in the order it is first called, and drawn in the same `Footnotes` block as Djot's
   and AsciiDoc's. A call with no note stays text, and a note nobody calls is not drawn.
+- **Footnotes are links, both ways** (`FootnoteTargets`, every format): a call (`¹`) scrolls to
+  its note, and the note's `↩` back to the text that first called it, in an article's page, a
+  feed or the chat alike (`BringIntoViewRequester`, with a margin so a top bar doesn't cover the
+  target). Markdown definitions inside a quote or a list item, which the parser leaves as
+  paragraphs, are notes too. A collapsed preview keeps the definitions of the notes it still
+  calls (`MarkdownFootnotes.crop`), so a call doesn't show as `[^label]` before "Show More".
+- **A secret emoji inside a document** reveals its message under it; the emoji and the message
+  sat in one inline slot without a container, and the message drew nothing.
 - **One code block for documents and the coding-agent chat** (`CodeBlockBody`): the chat's header
   (the language and a copy button) and the documents' highlighting. Articles, wikis and long-form
   notes gained the copy button; the chat's code gained highlighting. The chat wraps long lines in

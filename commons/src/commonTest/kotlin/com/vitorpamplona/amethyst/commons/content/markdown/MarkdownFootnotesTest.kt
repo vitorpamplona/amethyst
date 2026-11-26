@@ -130,6 +130,70 @@ class MarkdownFootnotesTest {
     }
 
     @Test
+    fun definitionsInsideAQuote() {
+        assert(
+            "Q" to "> Quoted call[^q].\n>\n> [^q]: Defined in the quote\n> on two lines.",
+            """
+            QUOTE
+              P["Quoted call" fn(1) "."]
+            FOOTNOTES
+              1. [q]
+                P["Defined in the quote" SB "on two lines."]
+            """,
+        )
+    }
+
+    @Test
+    fun definitionsInsideAListItem() {
+        assert(
+            "L" to "- An item[^i]\n\n  [^i]: Defined in the item.\n- Next",
+            """
+            UL loose
+              - 
+                P["An item" fn(1)]
+              - 
+                P["Next"]
+            FOOTNOTES
+              1. [i]
+                P["Defined in the item."]
+            """,
+        )
+    }
+
+    @Test
+    fun aOneWordDefinitionIsANoteNotALink() {
+        // `[^w]: word` is also a valid link definition; inside a quote the parser reads it as one.
+        assert(
+            "W" to "> See[^w].\n>\n> [^w]: https://example.com",
+            """
+            QUOTE
+              P["See" fn(1) "."]
+            FOOTNOTES
+              1. [w]
+                P[nostr:LinkSegment("https://example.com")]
+            """,
+        )
+    }
+
+    private fun assert(
+        case: Pair<String, String>,
+        expected: String,
+    ) = assertEquals(expected.trimIndent(), dump(case.second), case.first)
+
+    @Test
+    fun aCropKeepsTheDefinitionsOfTheNotesItStillCalls() {
+        val full = "Intro[^a] and[^b].\n\nMore text[^c].\n\n[^a]: Note A\n    second line.\n[^b]: Note B.\n[^c]: Note C."
+        val cut = full.indexOf("More")
+        assertEquals(
+            "Intro[^a] and[^b].\n\n\n\n[^a]: Note A\n    second line.\n\n[^b]: Note B.",
+            MarkdownFootnotes.crop(full, cut),
+        )
+        // Nothing called, or nothing cut: the text as it is.
+        assertEquals("Plain", MarkdownFootnotes.crop("Plain text", 5))
+        assertEquals(full, MarkdownFootnotes.crop(full, full.length))
+    }
+
+    @Test
     fun manyNotesStayLinear() {
         val n = 5_000
         val text = StringBuilder()
