@@ -1,6 +1,7 @@
 # iOS napplets and nSites (NIP-5D, NIP-5A) on WKWebView, with Tor
 
-Status: N0–N4 done, 2026-11-26 (what changed from §5 while doing them: §5.7). Branch `feat/ios-napplets`.
+Status: N0–N4 and N4.5 (the shared session core, Desktop moved onto it) done, 2026-11-26 (what
+changed from §5 while doing them: §5.7; the core: §7b). Branch `feat/ios-napplets`.
 Builds on `commons/plans/2026-10-09-ios-app.md` §B9 and `commons/plans/2026-11-25-ios-tor.md`.
 Security baseline: `commons/plans/2026-10-31-embed-security-review.md`,
 `amethyst/plans/archive/2026-06-22-napplet-nsite-security.md`.
@@ -568,6 +569,37 @@ Decisions taken from it:
   history first, session-grant lifetime, refusing local-network addresses for open-web sites,
   DNS prefetch off, and `NSCameraUsageDescription` for the file picker.
 
+### 7b. As built: the shared core (N4.5, 2026-11-26)
+
+In `commons/commonMain`, package `commons.napplet.session` (no Compose needed):
+
+- `NappletLaunchPlan.of(launch, account, useTor, appletBlobsUseTor, sharedStorageJar, origins)`:
+  `appOrigin` (the account is in the seed only for a shared jar, Desktop; iOS passes `false`, as
+  Android's origin), `useTor`, `blobsUseTor`, `guards` (`WEBRTC` per Android's `isNeeded`, a WEBSITE
+  on Tor included, and `COOKIES`), `entryPath`, `shellHead(bridgeHead)` (puts
+  `NappletWebContract.WEBRTC_CHECK` first wherever WEBRTC is needed). `useTorFor(profile, torEnabled,
+  siteViaTor)` is the one useTor rule for iOS's launcher.
+- `NappletRequestPolicy`: `isInternal(url, origins)`, `classify(...)` → `LOCAL | SERVE | PAPER_ART |
+  NETWORK | CANCEL`, and `contentRules(profile, appOrigin, origins)` + `contentRuleListJson(...)`, the
+  WKContentRuleList for N5 (block-all then allow our hosts for NAPPLET/WEBXDC; block
+  `https?://…napplet.local` for WEBSITE/PAPER).
+- `NappletNavigationPolicy.decide(url, frame, userGesture, profile, origins)` → `Allow | Cancel |
+  OpenLink(url)`, `popup(...)`, `frameOf(isMain, parentIsMain)` (Chromium) and `frameByOrigin(isMain,
+  frameOrigin, appOrigin)` (WebKit: a frame at the app origin is the app's frame and may not leave).
+  `NappletBridgeGate.acceptsUrl` / `acceptsOrigin`.
+- `NappletPageBridge` (page side): holds acting requests while unattended (EXPIRED / TOO_MANY
+  replies, as Android), batches deliveries into one `deliveryScript` per burst, in order.
+- `NappletSessionRouting<K>` (trusted side): `routeInc` on the arrival thread, `routeIntent`,
+  `route` → reply / push / live subscription, teardown of subscriptions, INC, intents, attendance.
+- `NappletSessionCore<K>`: the state machine (`Loading`, `WaitingForTor`, `Showing`,
+  `Failed(UNREACHABLE | ENGINE | ROUTE_BLOCKED | RENDERER_GONE)`), fail-closed route, files, server,
+  guard refusal, the engine callbacks, `setAttended`, ordered `close()`.
+- Ports: `NappletWebEngine` (`installGuard`, `bridgeHead`, `suspend loadShell`, `evaluateInShell`,
+  `close`), `NappletRoutePort` (`torRunning`, `claim`, `awaitTor`, `release`), `NappletLinkOpener`.
+
+Desktop's `CefNappletSession` is now the CEF adapter (1,062 → 798 lines). Android is unchanged.
+Deviations from the review's §3, and why, are in `2026-11-26-napplet-host-core.md` §5.
+
 ## 8. Phases
 
 Each phase is testable on its own and lands as its own PR.
@@ -588,6 +620,11 @@ Each phase is testable on its own and lands as its own PR.
 - **N4. Broker on iOS.** `NappletResourceFetcher` and `buildAccountNappletBroker` go to
   commonMain. `IosNappletHost` builds the broker. Test: a `NappletRequestRouter` round trip
   on the simulator with a fake prompt queue.
+- **N4.5. Shared session core (done 2026-11-26, §7b).** The policies, `NappletPageBridge`,
+  `NappletSessionRouting` and `NappletSessionCore` in commonMain; Desktop's `CefNappletSession`
+  becomes its CEF adapter; the shared shell checks a site's hello origin. Test: commonTest with a
+  fake engine on JVM and `iosSimulatorArm64Test`, and a Desktop napplet and nSite opened by hand.
+  Android moves later, on its own branch, after a device test.
 - **N5. iOS session + scheme handler + bridge, NIP-5D only, no network.** `IosNappletSession`,
   `NappletSchemeHandler`, the content-world bridge, the guards, the navigation policy and
   `Route.NostrApp` with `AppLauncher.openNapplet`. Test: open a known napplet on the simulator.

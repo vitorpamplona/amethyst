@@ -149,3 +149,41 @@ Existing `NappletRequestRouterTest`, `NappletBridgeDocumentsTest` and `NappletSi
 6. LAN reachability for direct stores, and DNS prefetch (rows 19 and 20).
 7. Back history and renderer-gone handling (rows 27 and 28).
 8. Put the iOS-only header and shell-serving hardening in the shared server (row 29).
+
+## 5. As built (N4.5, 2026-11-26)
+
+Steps 1-2 of §3.3 landed together for Desktop (`commons.napplet.session`, see the iOS plan §7b);
+Android is untouched and moves on its own branch. Where the code differs from §3.1:
+
+- **Guards are named, not scripts.** The port takes `installGuard(NappletGuard)` instead of
+  `addDocumentStartScript(js, allFrames, isolated)`: each engine knows how it runs a script in every
+  frame (Android's document-start script, a WK user script, Desktop's extension), and the core only
+  needs "can you". `WEBRTC` failing refuses the launch (`Failed(ENGINE)`); `COOKIES` failing logs.
+- **The route is its own port** (`NappletRoutePort`), not `engine.setRoute`: Desktop's route is the
+  process-wide SOCKS router, iOS's a per-store proxy, and neither belongs to the browser object.
+- **`loadShell` suspends** (CEF's app starts lazily) and returns false when the engine closed meanwhile.
+- **`fire-N` ids stay in Android's IPC.** In-process hosts need no correlation id for a
+  fire-and-forget message; giving one would put an `id` on replies Desktop sends without one today.
+  `withReplyId(payload, null)` leaves a reply as it is.
+- **The trusted half is `NappletSessionRouting`**, and `NappletSessionCore` wires it to
+  `NappletPageBridge` in-process. Android's broker service can hold a routing per token later.
+- **Request kinds add `LOCAL` and `PAPER_ART`** to Serve/Cancel/Network: Desktop leaves page-made
+  documents to the browser and serves a front page's art from its cache.
+- **Attendance:** `attendedWhenShown = true` keeps Desktop's behaviour (attended from creation,
+  never false, so nothing is ever held there). iOS and Android call `setAttended` from visibility.
+- **`RENDERER_GONE`** exists in the core (bridge closed, late replies dropped, route released);
+  Desktop does not wire CEF's render-process callback yet, and its screens show the engine-failure
+  pane for it.
+- **One behaviour change on Desktop, besides the shell's origin check:** a website on Tor now gets
+  the in-shell `WEBRTC_CHECK` (Android's matrix). It passes there, because the engine's extension
+  covers the napplet.local shell; the site's own frames rely on `disable_non_proxied_udp`, as before.
+- Not done here (row 29): main-frame-only shell serving and `nosniff` in `NappletSiteServer`; the
+  WKContentRuleList is produced (`NappletRequestPolicy.contentRuleListJson`) but compiled only in N5.
+- **Checked on Desktop (macOS, 2026-11-26):** the real-Chromium `CefNappletSessionTest`
+  (`AMETHYST_CEF_TEST=1`) passes 22/22 (2 skipped: they need external carts). On macOS its
+  windowed tests need `JAVA_TOOL_OPTIONS="--add-exports=java.desktop/sun.awt=ALL-UNNAMED
+  --add-exports=java.desktop/sun.lwawt=ALL-UNNAMED --add-exports=java.desktop/sun.lwawt.macosx=ALL-UNNAMED"`
+  (the `run` task adds them; the `test` task doesn't). By hand: the Fokus napplet and the Armada
+  nSite open; Armada's NIP-07 `getPublicKey` reached the consent window and its answer reached the
+  page. The first hand run caught a bug the fake engine can't: CEF's `CefRequest` is valid only
+  during the callback, so the adapter now reads method and URL before going async.
