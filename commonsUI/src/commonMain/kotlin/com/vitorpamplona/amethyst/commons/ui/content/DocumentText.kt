@@ -21,11 +21,9 @@
 package com.vitorpamplona.amethyst.commons.ui.content
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -40,7 +38,6 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkInteractionListener
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.SpanStyle
@@ -88,7 +85,6 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.InvoiceSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
-import com.vitorpamplona.amethyst.commons.richtext.MarkdownChunks
 import com.vitorpamplona.amethyst.commons.richtext.MathSegment
 import com.vitorpamplona.amethyst.commons.richtext.MediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.NipMentionSegment
@@ -108,8 +104,6 @@ import com.vitorpamplona.amethyst.commons.richtext.WithdrawSegment
 import com.vitorpamplona.amethyst.commons.ui.components.BleedingMedia
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
-import com.vitorpamplona.amethyst.commons.ui.markdown.codeColors
-import com.vitorpamplona.amethyst.commons.ui.markdown.highlightCode
 import com.vitorpamplona.amethyst.commons.ui.note.WebxdcPostCard
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalTimestampText
@@ -180,23 +174,13 @@ fun RichTextScope.RenderInlines(
 @Composable
 fun RenderCodeBlock(block: CodeBlock) {
     val style = MaterialTheme.colorScheme.markdownStyle.codeBlockStyle
-    val colors = MaterialTheme.colorScheme.codeColors
-    val text =
-        remember(block, colors) {
-            if (MarkdownChunks.isHighlightable(block.language, block.code)) {
-                highlightCode(block.code, block.language, colors)
-            } else {
-                AnnotatedString(block.code)
-            }
-        }
-    Box(modifier = style?.modifier ?: Modifier) {
-        MaterialText(
-            text = text,
-            style = style?.textStyle ?: MarkdownTextStyle,
-            softWrap = false,
-            modifier = Modifier.horizontalScroll(rememberScrollState()),
-        )
-    }
+    CodeBlockBody(
+        code = block.code,
+        language = block.language,
+        textStyle = style?.textStyle ?: MarkdownTextStyle,
+        wrap = false,
+        modifier = style?.modifier ?: Modifier,
+    )
 }
 
 /** The box in front of a task list's item. */
