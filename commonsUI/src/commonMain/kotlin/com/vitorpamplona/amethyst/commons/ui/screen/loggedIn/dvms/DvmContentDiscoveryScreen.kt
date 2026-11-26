@@ -80,6 +80,7 @@ import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.WatchNoteEvent
 import com.vitorpamplona.amethyst.commons.ui.note.elements.BannerImage
+import com.vitorpamplona.amethyst.commons.ui.note.types.feedbackMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.RenderFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.SaveableFeedState
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.discover.nip90DVMs.DVMCard
@@ -319,10 +320,12 @@ fun FeedDVM(
     accountViewModel: AccountViewModel,
     nav: INav,
 ) {
-    val status = latestStatus.status() ?: return
+    if (latestStatus.status() == null) return
 
-    var currentStatus by remember {
-        mutableStateOf(status.description)
+    // NIP-90: the human-readable line is the `status` tag's extra info; the content is a sample of
+    // the results (or ciphertext), shown only when it is text.
+    var currentStatus by remember(latestStatus) {
+        mutableStateOf(latestStatus.feedbackMessage() ?: "")
     }
 
     Column(

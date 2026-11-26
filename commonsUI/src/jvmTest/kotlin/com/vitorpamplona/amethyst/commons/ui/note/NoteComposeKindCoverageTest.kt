@@ -33,19 +33,19 @@ import kotlin.test.fail
 /**
  * Every class Quartz's `EventFactory` can build gets a card of its own in the feed.
  *
- * A kind with no branch in `RenderNoteRow` silently falls through to `RenderTextEvent`, which
- * draws the event's `content` as a note: a blank card for tag-only kinds, raw JSON or ciphertext
- * for others. Nothing else notices, so this test reads both sources and checks that each class
- * the factory constructs is matched by an `is` branch of `RenderNoteRow` or `AcceptableNote`,
- * directly or through a supertype (resolved by reflection, so a base-class branch like
- * `is DvmRequestEvent` covers its subclasses).
+ * A kind with no branch in `RenderNoteRow` falls through to its `else`: `RenderTextEvent` for the
+ * text kinds `hasTextCard` names, the generic unknown-kind card for every other one, which says
+ * "Unsupported" where the kind has a renderer to write. Nothing else notices, so this test reads
+ * both sources and checks that each class the factory constructs is matched by an `is` branch of
+ * `RenderNoteRow` or `AcceptableNote`, directly or through a supertype (resolved by reflection, so
+ * a base-class branch like `is DvmRequestEvent` covers its subclasses).
  *
  * Adding a kind to Quartz therefore needs a card here, or an entry in [TEXT_CARD_KINDS] saying
  * why the text card is the right one.
  */
 class NoteComposeKindCoverageTest {
     companion object {
-        /** Kinds whose card IS the text card: `RenderTextEvent` is written for them. */
+        /** Kinds whose card IS the text card: `RenderTextEvent` is written for them. Mirrors `hasTextCard`. */
         @Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
         private val TEXT_CARD_KINDS: Set<Class<out Event>> =
             setOf(
