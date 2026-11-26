@@ -65,7 +65,9 @@ sealed class AppRunState {
     data object Idle : AppRunState()
 
     data class Building(
-        val target: AndroidAppTarget,
+        /** The app module (`amethyst`) or Xcode project being built. */
+        val label: String,
+        /** The Android variant (`playDebug`) or Xcode scheme. */
         val variant: String,
     ) : AppRunState()
 
@@ -210,8 +212,8 @@ class AndroidAppRunner(
         if (_states.value[root.path]?.isRunning == true) throw IOException("${target.label} is already being built")
         val log = File(root, "build/amethyst-device-run.log")
         try {
-            set(root, AppRunState.Building(target, variant))
-            val connection = devices.connection(serial)
+            set(root, AppRunState.Building(target.label, variant))
+            val connection = devices.androidConnection(serial)
             gradle(target, variant, serial, log)
             val built = apkFor(target, variant, abis(connection.adb.getprop(serial, "ro.product.cpu.abilist")))
             val packageName = built.applicationId ?: packageName(built.file)

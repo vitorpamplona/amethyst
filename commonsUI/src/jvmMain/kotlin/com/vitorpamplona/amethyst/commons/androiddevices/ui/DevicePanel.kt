@@ -86,11 +86,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
 import com.vitorpamplona.amethyst.commons.androiddevices.AppRunState
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceConnection
+import com.vitorpamplona.amethyst.commons.androiddevices.DeviceDriver
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceInfo
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceKind
 import com.vitorpamplona.amethyst.commons.androiddevices.DevicePanelViewModel
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceStatus
 import com.vitorpamplona.amethyst.commons.androiddevices.DevicesState
+import com.vitorpamplona.amethyst.commons.androiddevices.SimulatorConnection
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -118,7 +120,6 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_no_adb
 import com.vitorpamplona.amethyst.commons.resources.android_device_no_avds
 import com.vitorpamplona.amethyst.commons.resources.android_device_no_emulator
 import com.vitorpamplona.amethyst.commons.resources.android_device_no_permission
-import com.vitorpamplona.amethyst.commons.resources.android_device_no_sdk
 import com.vitorpamplona.amethyst.commons.resources.android_device_none
 import com.vitorpamplona.amethyst.commons.resources.android_device_none_hint
 import com.vitorpamplona.amethyst.commons.resources.android_device_offline
@@ -153,7 +154,18 @@ import com.vitorpamplona.amethyst.commons.resources.android_device_volume_down
 import com.vitorpamplona.amethyst.commons.resources.android_device_volume_up
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.copy
+import com.vitorpamplona.amethyst.commons.resources.devices_none_installed
 import com.vitorpamplona.amethyst.commons.resources.dismiss
+import com.vitorpamplona.amethyst.commons.resources.ios_back
+import com.vitorpamplona.amethyst.commons.resources.ios_copy_hint
+import com.vitorpamplona.amethyst.commons.resources.ios_device_log
+import com.vitorpamplona.amethyst.commons.resources.ios_live
+import com.vitorpamplona.amethyst.commons.resources.ios_no_idb
+import com.vitorpamplona.amethyst.commons.resources.ios_no_simulators
+import com.vitorpamplona.amethyst.commons.resources.ios_side_button
+import com.vitorpamplona.amethyst.commons.resources.ios_simulator
+import com.vitorpamplona.amethyst.commons.resources.ios_simulators
+import com.vitorpamplona.amethyst.commons.resources.ios_stop
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedDropdownMenu
 import com.vitorpamplona.amethyst.commons.ui.components.RoundedMenuItemModifier
@@ -165,6 +177,7 @@ import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.androiddevice.adb.DeviceCrash
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.avd.AvdInfo
+import com.vitorpamplona.iossimulator.simctl.SimDevice
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -205,7 +218,7 @@ fun DevicePanel(
 ) {
     val viewModel =
         rememberViewModel(key = "DevicePanel-$chatKey-$owner-${folder?.path}") {
-            DevicePanelViewModel(AndroidDevices.shared, AndroidDevices.apps, chatKey, folder, owner, ownerLabel)
+            DevicePanelViewModel(AndroidDevices.shared, AndroidDevices.apps, AndroidDevices.iosApps, chatKey, folder, owner, ownerLabel)
         }
     // The ViewModel outlives the panel (it is the chat screen's): it polls adb only while shown.
     DisposableEffect(viewModel) {
@@ -218,7 +231,7 @@ fun DevicePanel(
     val scope = rememberCoroutineScope()
     val device = selected
     val online = device?.status == DeviceStatus.ONLINE
-    val connection by produceState<DeviceConnection?>(null, device?.serial, online) {
+    val connection by produceState<DeviceDriver?>(null, device?.serial, online) {
         if (device == null || !online) {
             value = null
             return@produceState
@@ -234,7 +247,7 @@ fun DevicePanel(
                 } catch (_: IOException) {
                     null
                 }
-            if (value?.emulator != null || !(device.startedHere || device.liveStream)) break
+            if (value.isLive() || !(device.startedHere || device.liveStream)) break
             delay(CONNECT_RETRY_MS)
         } while (++tries < CONNECT_RETRIES)
     }
@@ -243,7 +256,7 @@ fun DevicePanel(
         Header(
             state = state,
             selected = device,
-            live = connection?.emulator != null,
+            live = connection.isLive(),
             viewModel = viewModel,
             owner = owner,
             onOpenFull = onOpenFull,
@@ -254,9 +267,17 @@ fun DevicePanel(
         val stage = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
         when {
             !state.loaded -> EmptyState(MaterialSymbols.PhoneAndroid, stringRes(Res.string.android_device_looking), progress = true)
-            !state.adbFound && state.sdkDir == null -> EmptyState(MaterialSymbols.PhoneAndroid, stringRes(Res.string.android_device_no_sdk))
-            !state.adbFound -> EmptyState(MaterialSymbols.PhoneAndroid, stringRes(Res.string.android_device_no_adb, state.sdkDir?.path.orEmpty()))
-            device == null -> NoDevice(state, startsCopies = viewModel.startsCopies, modifier = Modifier.weight(1f), onStart = { viewModel.start(it.name) })
+            // No Android SDK says so only where there are no simulators either: a Mac with Xcode alone still has devices.
+            !state.adbFound && state.sdkDir == null && !state.ios.xcodeFound -> EmptyState(MaterialSymbols.PhoneAndroid, stringRes(Res.string.devices_none_installed))
+            !state.adbFound && !state.ios.xcodeFound -> EmptyState(MaterialSymbols.PhoneAndroid, stringRes(Res.string.android_device_no_adb, state.sdkDir?.path.orEmpty()))
+            device == null ->
+                NoDevice(
+                    state,
+                    startsCopies = viewModel.startsCopies,
+                    modifier = Modifier.weight(1f),
+                    onStart = { viewModel.start(it.name) },
+                    onStartSimulator = { viewModel.startSimulator(it.udid) },
+                )
             !online ->
                 DeviceFrame(PHONE_RATIO, focused = false, modifier = stage) {
                     when (device.status) {
@@ -270,12 +291,14 @@ fun DevicePanel(
             else -> {
                 if (device.kind == DeviceKind.PHYSICAL) AgentLeave(device) { viewModel.allowAgent(device.serial, it) }
                 val c = connection
-                if (c != null) {
-                    LiveDeviceScreen(connection = c, activity = viewModel.activity, agentName = agentName, modifier = stage)
-                } else {
-                    DeviceFrame(PHONE_RATIO, focused = false, modifier = stage) { FrameMessage("", progress = true) }
+                when {
+                    c != null -> LiveDeviceScreen(connection = c, activity = viewModel.activity, agentName = agentName, modifier = stage)
+                    // Without idb's companion a simulator has no screen to show here: say how to get it.
+                    device.isIos && !state.ios.idbFound -> DeviceFrame(PHONE_RATIO, focused = false, modifier = stage) { FrameMessage(stringRes(Res.string.ios_no_idb), progress = false) }
+                    else -> DeviceFrame(PHONE_RATIO, focused = false, modifier = stage) { FrameMessage("", progress = true) }
                 }
                 KeysBar(
+                    ios = device.isIos,
                     onKey = viewModel::press,
                     onRotate = viewModel::rotate,
                     onScreenshot =
@@ -291,15 +314,24 @@ fun DevicePanel(
         val notes =
             listOfNotNull(error) +
                 if (device != null) {
-                    state.startFailures.map { (avd, why) -> stringRes(Res.string.android_device_start_failed, state.avds.firstOrNull { it.name == avd }?.displayName ?: avd, why) }
+                    state.startFailures.map { (what, why) ->
+                        val name =
+                            state.avds.firstOrNull { it.name == what }?.displayName ?: state.ios.simulators
+                                .firstOrNull { it.udid == what }
+                                ?.name ?: what
+                        stringRes(Res.string.android_device_start_failed, name, why)
+                    }
                 } else {
                     emptyList()
                 }
         notes.forEach { StatusCard(MaterialSymbols.Error, it, tint = MaterialTheme.colorScheme.error) }
         RunStatus(viewModel)
-        if (online) Logcat(viewModel)
+        if (online) Logcat(viewModel, ios = device.isIos)
     }
 }
+
+/** Whether the device's screen streams to the panel: the emulator's gRPC, or a simulator's idb companion. */
+private fun DeviceDriver?.isLive(): Boolean = this is SimulatorConnection || (this as? DeviceConnection)?.emulator != null
 
 @Composable
 private fun Header(
@@ -313,8 +345,17 @@ private fun Header(
 ) {
     var picking by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
-    val targets by viewModel.targets.collectAsStateWithLifecycle()
+    val androidTargets by viewModel.targets.collectAsStateWithLifecycle()
+    val iosTargets by viewModel.iosTargets.collectAsStateWithLifecycle()
     val run by viewModel.runState.collectAsStateWithLifecycle()
+    val ios = selected?.isIos == true
+    // What Run runs on the device shown: its platform's apps, as (title, action).
+    val runs: List<Pair<String, () -> Unit>> =
+        if (ios) {
+            iosTargets.flatMap { t -> t.schemes.map { scheme -> stringRes(Res.string.android_device_run_variant, t.label, scheme) to { viewModel.runIos(t, scheme) } } }
+        } else {
+            androidTargets.flatMap { t -> t.variants.map { variant -> stringRes(Res.string.android_device_run_variant, t.label, variant) to { viewModel.run(t, variant) } } }
+        }
     Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.weight(1f)) {
             // The device, and how it is: a button that opens the picker.
@@ -325,7 +366,7 @@ private fun Header(
                     .padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TonalIcon(if (selected?.kind == DeviceKind.PHYSICAL) MaterialSymbols.Usb else MaterialSymbols.PhoneAndroid, size = 36.dp)
+                TonalIcon(deviceIcon(selected), size = 36.dp)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f, fill = false)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -339,7 +380,17 @@ private fun Header(
                         Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = stringRes(Res.string.android_device_pick), tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
                     }
                     // How the screen gets here, in full, on hover.
-                    HoverTooltip(stringRes(if (live) Res.string.android_device_live else Res.string.android_device_polled)) {
+                    HoverTooltip(
+                        stringRes(
+                            if (live && ios) {
+                                Res.string.ios_live
+                            } else if (live) {
+                                Res.string.android_device_live
+                            } else {
+                                Res.string.android_device_polled
+                            },
+                        ),
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             StatusDot(statusColor(selected?.status), size = 7.dp)
                             Spacer(Modifier.width(6.dp))
@@ -361,7 +412,13 @@ private fun Header(
                             MenuItem(
                                 title = d.name,
                                 subtitle = deviceDetails(d, owner),
-                                leading = { StatusDot(statusColor(d.status)) },
+                                leading = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        StatusDot(statusColor(d.status))
+                                        Spacer(Modifier.width(8.dp))
+                                        Icon(deviceIcon(d), contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                                    }
+                                },
                                 selected = d.serial == selected?.serial,
                             ) {
                                 picking = false
@@ -393,15 +450,37 @@ private fun Header(
                         }
                     }
                 }
+                // Simulators the same way: a chat's own copy of each it has none of; the Devices screen, the shut-down ones.
+                val simulators =
+                    if (viewModel.startsCopies) {
+                        state.startableSimulators.filter { sim -> state.devices.none { it.simulator == sim.udid && it.owner == owner } }
+                    } else {
+                        state.startableSimulators
+                    }
+                if (simulators.isNotEmpty()) {
+                    MenuLabel(stringRes(Res.string.ios_simulators))
+                    RoundedMenuSection {
+                        simulators.forEach { sim ->
+                            MenuItem(
+                                title = sim.name,
+                                subtitle = sim.runtimeName,
+                                leading = { Icon(MaterialSymbols.PhoneIphone, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp)) },
+                                action = stringRes(if (viewModel.startsCopies) Res.string.android_device_start_copy else Res.string.android_device_start),
+                            ) {
+                                picking = false
+                                viewModel.startSimulator(sim.udid)
+                            }
+                        }
+                    }
+                }
             }
         }
-        // Run: the chat's Android app, built and opened on the device shown.
-        if (selected?.isOnline == true && targets.isNotEmpty()) {
-            val target = targets.first()
-            val variant = target.variants.first()
-            HoverTooltip(stringRes(Res.string.android_device_run_variant, target.label, variant)) {
+        // Run: the chat's app for the device shown (Gradle's, or Xcode's on a simulator), built and opened there.
+        if (selected?.isOnline == true && runs.isNotEmpty()) {
+            val (title, action) = runs.first()
+            HoverTooltip(title) {
                 FilledIconButton(
-                    onClick = { viewModel.run(target, variant) },
+                    onClick = action,
                     enabled = !run.isRunning,
                     modifier = Modifier.size(36.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer),
@@ -414,7 +493,7 @@ private fun Header(
                 }
             }
         }
-        if (selected != null || targets.size > 1 || onOpenFull != null) {
+        if (selected != null || runs.size > 1 || onOpenFull != null) {
             Box {
                 IconButton(onClick = { menu = true }, modifier = Modifier.size(36.dp)) {
                     Icon(MaterialSymbols.MoreVert, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
@@ -428,28 +507,27 @@ private fun Header(
                             }
                         }
                     }
-                    // Every variant of every app here.
-                    if (targets.isNotEmpty()) {
+                    // Every variant (or scheme) of every app here.
+                    if (runs.isNotEmpty()) {
                         RoundedMenuSection {
-                            targets.forEach { target ->
-                                target.variants.forEach { variant ->
-                                    MenuItem(
-                                        title = stringRes(Res.string.android_device_run_variant, target.label, variant),
-                                        leading = { Icon(MaterialSymbols.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
-                                        enabled = selected?.isOnline == true && !run.isRunning,
-                                    ) {
-                                        menu = false
-                                        viewModel.run(target, variant)
-                                    }
+                            runs.forEach { (title, action) ->
+                                MenuItem(
+                                    title = title,
+                                    leading = { Icon(MaterialSymbols.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
+                                    enabled = selected?.isOnline == true && !run.isRunning,
+                                ) {
+                                    menu = false
+                                    action()
                                 }
                             }
                         }
                     }
-                    if (selected?.kind == DeviceKind.EMULATOR) {
+                    if (selected?.isVirtual == true) {
                         RoundedMenuSection {
-                            // Over the emulator's gRPC endpoint, which lets only a token holder load a
-                            // snapshot: an emulator this app started, not one Android Studio did.
-                            if (live && selected.startedHere) {
+                            // An emulator over its gRPC endpoint, which lets only a token holder load a
+                            // snapshot: one this app started, not one Android Studio did. A simulator: a
+                            // workstream's copy, made again from the simulator it copies.
+                            if (if (ios) selected.owner != null else live && selected.startedHere) {
                                 MenuItem(stringRes(Res.string.android_device_reset), leading = { MenuIcon(MaterialSymbols.RestartAlt) }) {
                                     menu = false
                                     viewModel.reset()
@@ -464,7 +542,7 @@ private fun Header(
                         }
                         RoundedMenuSection {
                             MenuItem(
-                                stringRes(Res.string.android_device_stop),
+                                stringRes(if (ios) Res.string.ios_stop else Res.string.android_device_stop),
                                 leading = { MenuIcon(MaterialSymbols.PowerSettingsNew, MaterialTheme.colorScheme.error) },
                                 color = MaterialTheme.colorScheme.error,
                             ) {
@@ -506,13 +584,25 @@ private fun deviceDetails(
     owner: String?,
 ): String =
     listOfNotNull(
-        stringRes(if (d.kind == DeviceKind.EMULATOR) Res.string.android_device_emulator else Res.string.android_device_phone),
+        when (d.kind) {
+            DeviceKind.EMULATOR -> stringRes(Res.string.android_device_emulator)
+            DeviceKind.SIMULATOR -> d.osVersion ?: stringRes(Res.string.ios_simulator)
+            DeviceKind.PHYSICAL -> stringRes(Res.string.android_device_phone)
+        },
         when {
             d.owner == null -> null
             d.owner == owner -> stringRes(Res.string.android_device_own_copy)
             else -> stringRes(Res.string.android_device_other_copy, d.ownerLabel ?: d.owner)
         },
     ).joinToString(" · ")
+
+/** An iPhone for a simulator, a USB plug for a phone, an Android phone for an emulator. */
+private fun deviceIcon(device: DeviceInfo?) =
+    when (device?.kind) {
+        DeviceKind.SIMULATOR -> MaterialSymbols.PhoneIphone
+        DeviceKind.PHYSICAL -> MaterialSymbols.Usb
+        else -> MaterialSymbols.PhoneAndroid
+    }
 
 @Composable
 private fun avdLine(avd: AvdInfo): String = listOfNotNull(avd.apiLevel?.let { "API $it" }, avd.abi).joinToString(" · ")
@@ -591,13 +681,14 @@ private fun ColumnScope.EmptyState(
     }
 }
 
-/** No device picked or online: the AVDs to start, and how to bring a phone. */
+/** No device picked or online: the AVDs and simulators to start, and how to bring a phone. */
 @Composable
 private fun NoDevice(
     state: DevicesState,
     startsCopies: Boolean,
     modifier: Modifier = Modifier,
     onStart: (AvdInfo) -> Unit,
+    onStartSimulator: (SimDevice) -> Unit,
 ) {
     Column(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 24.dp),
@@ -606,11 +697,22 @@ private fun NoDevice(
     ) {
         TonalIcon(MaterialSymbols.PhoneAndroid, size = 72.dp)
         Text(stringRes(Res.string.android_device_none), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        val simulators = state.startableSimulators
         Text(
             stringRes(
                 when {
-                    !state.emulatorFound -> Res.string.android_device_no_emulator
-                    state.avds.isEmpty() -> Res.string.android_device_no_avds
+                    // A Mac with Xcode and no Android SDK: the simulators are what there is.
+                    !state.adbFound && state.ios.xcodeFound ->
+                        if (simulators.isEmpty()) {
+                            Res.string.ios_no_simulators
+                        } else if (startsCopies) {
+                            Res.string.ios_copy_hint
+                        } else {
+                            Res.string.android_device_none_hint
+                        }
+                    !state.emulatorFound && simulators.isEmpty() -> Res.string.android_device_no_emulator
+                    state.avds.isEmpty() && simulators.isEmpty() -> Res.string.android_device_no_avds
+                    startsCopies && state.avds.isEmpty() -> Res.string.ios_copy_hint
                     startsCopies -> Res.string.android_device_copy_hint
                     else -> Res.string.android_device_none_hint
                 },
@@ -620,7 +722,7 @@ private fun NoDevice(
             textAlign = TextAlign.Center,
             modifier = Modifier.widthIn(max = 360.dp),
         )
-        if (state.emulatorFound && state.avds.isNotEmpty()) {
+        if (state.adbFound && state.emulatorFound && state.avds.isNotEmpty()) {
             Surface(shape = CardShape, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth().padding(top = 6.dp)) {
                 Column {
                     state.avds.forEachIndexed { i, avd ->
@@ -644,12 +746,43 @@ private fun NoDevice(
                 }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(MaterialSymbols.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(stringRes(Res.string.android_device_phone_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+        if (simulators.isNotEmpty()) {
+            Text(stringRes(Res.string.ios_simulators), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(top = 4.dp))
+            Surface(shape = CardShape, color = MaterialTheme.colorScheme.surfaceContainerLow, modifier = Modifier.widthIn(max = 480.dp).fillMaxWidth()) {
+                Column {
+                    simulators.forEachIndexed { i, sim ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 64.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        Row(Modifier.padding(start = 14.dp, end = 10.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TonalIcon(MaterialSymbols.PhoneIphone, size = 36.dp, container = MaterialTheme.colorScheme.surfaceContainerHighest, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.width(14.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(sim.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(sim.runtimeName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                state.startFailures[sim.udid]?.let {
+                                    Text(stringRes(Res.string.android_device_start_failed, sim.name, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 2.dp))
+                                }
+                            }
+                            Spacer(Modifier.width(8.dp))
+                            FilledTonalButton(onClick = { onStartSimulator(sim) }, contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                                Text(stringRes(if (startsCopies) Res.string.android_device_start_copy else Res.string.android_device_start), style = MaterialTheme.typography.labelLarge)
+                            }
+                        }
+                    }
+                }
+            }
+            if (!state.ios.idbFound) {
+                Text(stringRes(Res.string.ios_no_idb), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, textAlign = TextAlign.Center, modifier = Modifier.widthIn(max = 360.dp))
+            }
+        }
+        if (state.adbFound) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(MaterialSymbols.Usb, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(stringRes(Res.string.android_device_phone_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText)
+            }
         }
         state.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
+        state.ios.error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center) }
     }
 }
 
@@ -685,6 +818,8 @@ private fun AgentLeave(
 /** The phone's buttons, in a floating pill: navigation, rotation, volume, power, and a picture for the chat. */
 @Composable
 private fun KeysBar(
+    /** An iPhone: back is a swipe, and the power button is the side button. */
+    ios: Boolean,
     onKey: (DeviceKey) -> Unit,
     onRotate: () -> Unit,
     onScreenshot: (() -> Unit)?,
@@ -695,14 +830,14 @@ private fun KeysBar(
         val compact = maxWidth < CompactKeysWidth
         val button = if (compact) 30.dp else 36.dp
         ToolbarPill {
-            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(Res.string.android_device_back), size = button) { onKey(DeviceKey.BACK) }
+            ToolbarButton(MaterialSymbols.AutoMirrored.ArrowBack, stringRes(if (ios) Res.string.ios_back else Res.string.android_device_back), size = button) { onKey(DeviceKey.BACK) }
             ToolbarButton(MaterialSymbols.RadioButtonUnchecked, stringRes(Res.string.android_device_home), size = button) { onKey(DeviceKey.HOME) }
             ToolbarButton(MaterialSymbols.CropSquare, stringRes(Res.string.android_device_recents), size = button) { onKey(DeviceKey.RECENTS) }
             if (!compact) ToolbarDivider()
             ToolbarButton(MaterialSymbols.ScreenRotation, stringRes(Res.string.android_device_rotate), size = button, onClick = onRotate)
             ToolbarButton(MaterialSymbols.AutoMirrored.VolumeDown, stringRes(Res.string.android_device_volume_down), size = button) { onKey(DeviceKey.VOLUME_DOWN) }
             ToolbarButton(MaterialSymbols.AutoMirrored.VolumeUp, stringRes(Res.string.android_device_volume_up), size = button) { onKey(DeviceKey.VOLUME_UP) }
-            ToolbarButton(MaterialSymbols.PowerSettingsNew, stringRes(Res.string.android_device_power), size = button) { onKey(DeviceKey.POWER) }
+            ToolbarButton(MaterialSymbols.PowerSettingsNew, stringRes(if (ios) Res.string.ios_side_button else Res.string.android_device_power), size = button) { onKey(DeviceKey.POWER) }
             onScreenshot?.let {
                 if (!compact) ToolbarDivider()
                 ToolbarButton(MaterialSymbols.CameraAlt, stringRes(Res.string.android_device_screenshot_to_chat), size = button, tint = MaterialTheme.colorScheme.primary, onClick = it)
@@ -739,7 +874,7 @@ private fun RunStatus(viewModel: DevicePanelViewModel) {
     val run by viewModel.runState.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     when (val r = run) {
-        is AppRunState.Building -> StatusCard(null, stringRes(Res.string.android_device_building, r.target.label, r.variant), progress = true)
+        is AppRunState.Building -> StatusCard(null, stringRes(Res.string.android_device_building, r.label, r.variant), progress = true)
         is AppRunState.Installing -> StatusCard(null, stringRes(Res.string.android_device_installing, r.packageName), progress = true)
         is AppRunState.Done -> StatusCard(MaterialSymbols.CheckCircle, stringRes(Res.string.android_device_run_done, r.packageName), tint = MaterialTheme.colorScheme.allGoodColor)
         is AppRunState.Failed ->
@@ -778,7 +913,7 @@ private fun CrashBanner(viewModel: DevicePanelViewModel) {
                         Text(
                             stringRes(
                                 when (crash.kind) {
-                                    DeviceCrash.Kind.JAVA -> Res.string.android_device_crashed
+                                    DeviceCrash.Kind.JAVA, DeviceCrash.Kind.IOS -> Res.string.android_device_crashed
                                     DeviceCrash.Kind.NATIVE -> Res.string.android_device_crashed_native
                                     DeviceCrash.Kind.ANR -> Res.string.android_device_anr
                                 },
@@ -829,7 +964,10 @@ private const val CRASH_LINES = 5
 
 /** The device's log, folded under the screen: the app's own lines, or everything at warning and up. */
 @Composable
-private fun Logcat(viewModel: DevicePanelViewModel) {
+private fun Logcat(
+    viewModel: DevicePanelViewModel,
+    ios: Boolean,
+) {
     var open by remember { mutableStateOf(false) }
     var appOnly by remember { mutableStateOf(true) }
     LaunchedEffect(open, appOnly) { viewModel.showLogcat(open, appOnly) }
@@ -846,7 +984,7 @@ private fun Logcat(viewModel: DevicePanelViewModel) {
     ) {
         Icon(MaterialSymbols.Terminal, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(10.dp))
-        Text(stringRes(Res.string.android_device_logcat), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        Text(stringRes(if (ios) Res.string.ios_device_log else Res.string.android_device_logcat), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
         if (open) {
             FilterChip(
                 selected = appOnly,
@@ -880,12 +1018,29 @@ private fun Logcat(viewModel: DevicePanelViewModel) {
 }
 
 private val LOG_FIELDS = Regex("\\s+")
+private val COMPACT_DATE = Regex("^\\d{4}-\\d\\d-\\d\\d ")
 
-/** One threadtime line: the time dimmed, the level as a colored letter, then tag and message. */
+/** `log show --style compact`'s type column (Df, I, Db, E, F, A) as a logcat level. */
+private val COMPACT_LEVELS = mapOf("E" to "E", "F" to "F", "Fa" to "F", "I" to "I", "Db" to "D", "Df" to "I", "A" to "I")
+
+/**
+ * One log line, the time dimmed, the level as a colored letter, then tag and message: logcat's
+ * threadtime (`11-26 10:02:03.123  4821  4830 E Tag: message`), or an iOS simulator's compact
+ * unified log (`2026-11-26 10:02:03.123 E  Notes[4821:1a2b] message`), with its level read the same way.
+ */
 @Composable
 private fun LogLine(line: String) {
     // Split once per line, not on every recomposition of the list.
-    val parts = remember(line) { line.split(LOG_FIELDS, limit = 6) }
+    val parts =
+        remember(line) {
+            if (COMPACT_DATE.containsMatchIn(line)) {
+                val p = line.split(LOG_FIELDS, limit = 4)
+                // As threadtime lays it out: date, time, two unused fields, level, the rest.
+                listOf(p.getOrElse(0) { "" }, p.getOrElse(1) { "" }, "", "", COMPACT_LEVELS[p.getOrNull(2)] ?: "I", p.getOrElse(3) { "" })
+            } else {
+                line.split(LOG_FIELDS, limit = 6)
+            }
+        }
     val level = parts.getOrNull(4)?.takeIf { it.length == 1 }
     val color =
         when (level) {

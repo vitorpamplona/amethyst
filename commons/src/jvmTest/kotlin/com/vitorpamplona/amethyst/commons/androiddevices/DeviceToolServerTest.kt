@@ -126,8 +126,8 @@ class DeviceToolServerTest {
         runBlocking {
             val result = server.call(DeviceToolServer.LIST, args("{}"))
             assertFalse(result.isError, result.text)
-            assertTrue(result.text.contains("- emulator-5554 (emulator, online)"), result.text)
-            assertTrue(result.text.contains("R58M: Pixel 8 (phone, online, the user hasn't allowed agents on it)"), result.text)
+            assertTrue(result.text.contains("- emulator-5554 (Android emulator, online)"), result.text)
+            assertTrue(result.text.contains("R58M: Pixel 8 (Android phone, online, the user hasn't allowed agents on it)"), result.text)
         }
 
     @Test
@@ -239,7 +239,7 @@ class DeviceToolServerTest {
             // emulator-5554 is shared (nobody's copy): the user's state may live there.
             val result = server.call(DeviceToolServer.RESET, args("""{"device":"emulator-5554"}"""))
             assertTrue(result.isError)
-            assertTrue(result.text.contains("only resets this workstream's own emulator copy"), result.text)
+            assertTrue(result.text.contains("only resets this workstream's own copy"), result.text)
         }
 
     @Test
@@ -247,7 +247,7 @@ class DeviceToolServerTest {
         runBlocking {
             // Nothing listens on this port: the gRPC touch fails and adb takes over.
             val dead = EmulatorController(GrpcChannel("127.0.0.1", 1, null, callTimeoutMs = 2_000))
-            val connection = DeviceConnection("emulator-5554", devices.connection("emulator-5554").adb, dead)
+            val connection = DeviceConnection("emulator-5554", devices.androidConnection("emulator-5554").adb, dead)
             connection.tap(100, 200)
             assertTrue(adb.commands.contains("-s emulator-5554 shell input tap 100 200"), adb.commands.toString())
         }

@@ -160,7 +160,7 @@ class ClaudeCodeService(
     /** The assistant on the user's own AI key, for when no agent program here can run it. */
     val online: OnlineAgentBackend = OnlineAgentBackend(OnlineSessionStore(File(appDataDir, ONLINE_SESSIONS_FOLDER))),
     /** Whether coding chats get the Android device tools: when an Android SDK is installed here. */
-    private val deviceTools: Boolean = AndroidSdk.home() != null,
+    private val deviceTools: Boolean = AndroidDevices.supported,
 ) {
     /** Every agent whose sessions the list shows: the coding agents, and the assistant's online one. */
     private val allAgents: List<AgentBackend> get() = backends + online
@@ -862,8 +862,13 @@ class ClaudeCodeService(
     ): ClaudeChat {
         // In a workstream, an agent that takes the app's tools can ask the user to publish its work.
         val publish = if (agent.capabilities.hostTools && agentWorkspaces.isInWorkstreams(cwd)) publishTool(key, cwd) else null
-        // With an Android SDK here, a coding agent can drive the device panel's emulator or phone.
-        val device = if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, owner = { deviceOwner(key, cwd.path) }, ownerLabel = { deviceOwnerLabel(key, cwd.path) }, folder = cwd) else null
+        // With an Android SDK or Xcode here, a coding agent can drive the device panel's emulator, phone or simulator.
+        val device =
+            if (kind == ChatKind.CODE && agent.capabilities.hostTools && deviceTools) {
+                DeviceToolServer(AndroidDevices.shared, AndroidDevices.apps, AndroidDevices.iosApps, owner = { deviceOwner(key, cwd.path) }, ownerLabel = { deviceOwnerLabel(key, cwd.path) }, folder = cwd)
+            } else {
+                null
+            }
         val preApproved = listOfNotNull(publish?.qualifiedName(PublishToolServer.REQUEST)) + device?.let { DeviceToolServer.PRE_APPROVED.map(it::qualifiedName) }.orEmpty()
         val chat =
             ClaudeChat(

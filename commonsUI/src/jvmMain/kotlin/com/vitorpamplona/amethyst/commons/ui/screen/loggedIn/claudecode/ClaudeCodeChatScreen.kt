@@ -119,7 +119,6 @@ import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
-import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
@@ -471,9 +470,9 @@ fun ClaudeCodeChatScreen(
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
     // From the service's own list, not the disk; a new workstream is in it once its clones are.
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
-    // The dock's Android device panel follows the coding chat in front: its workstream's device, its
-    // folder for Run, and its composer for a screenshot. Where an Android SDK is installed.
-    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
+    // The dock's device panel follows the coding chat in front: its workstream's device, its folder
+    // for Run, and its composer for a screenshot. Where an Android SDK or Xcode is installed.
+    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidDevices.supported }
     val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
     val dock = LocalDockController.current
     val chatScope = rememberCoroutineScope()

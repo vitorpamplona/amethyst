@@ -40,6 +40,9 @@ enum class PixelFormat(
     PNG(0),
     RGBA8888(1),
     RGB888(2),
+
+    /** A JPEG, as idb streams an iOS simulator's screen; never on the emulator's wire. */
+    JPEG(-1),
     ;
 
     companion object {

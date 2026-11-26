@@ -100,10 +100,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.agents.AgentBackend
 import com.vitorpamplona.agents.PermissionMode
+import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
 import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspaces
-import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatStatus
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeService
 import com.vitorpamplona.amethyst.commons.claudecode.ClaudeCodeSessionsViewModel
@@ -327,8 +327,8 @@ private fun SessionsPane(
                         if (!searching) viewModel.search("")
                     }) { Icon(MaterialSymbols.Search, contentDescription = stringRes(Res.string.claude_code_search_hint)) }
                 }
-                // The emulators and phones the chats test on, where an Android SDK is installed.
-                if (remember { AndroidSdk.home() != null }) {
+                // The emulators, phones and simulators the chats test on, where an Android SDK or Xcode is installed.
+                if (remember { AndroidDevices.supported }) {
                     HoverTooltip(stringRes(Res.string.android_devices_title)) {
                         IconButton(onClick = { nav.nav(Route.AndroidDevices()) }) { Icon(MaterialSymbols.PhoneAndroid, contentDescription = stringRes(Res.string.android_devices_title)) }
                     }

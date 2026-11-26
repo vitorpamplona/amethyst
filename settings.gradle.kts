@@ -87,6 +87,7 @@ include(":agentCore")
 include(":claudeCodeClient")
 include(":codexClient")
 include(":androidDeviceClient")
+include(":iosSimulatorClient")
 
 // quartz lives in its own repo (vitorpamplona/quartz) and comes from Nostr + Blossom through Magpie
 // (above), like every library below. To change it alongside the app, point Gradle at a local

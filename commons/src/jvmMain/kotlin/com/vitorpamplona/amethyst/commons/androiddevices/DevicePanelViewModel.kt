@@ -24,6 +24,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.emulator.LaunchOptions
+import com.vitorpamplona.iossimulator.xcode.XcodeAppTarget
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -47,12 +48,14 @@ import java.io.IOException
 
 /**
  * The device panel beside a coding chat ([chatKey], working in [folder]), or the full Devices
- * screen without one: which device it shows, starting and stopping emulators, the Run button, the
- * hardware keys and logcat. The live screen itself is the UI's ([connection] gives it the device).
+ * screen without one: which device it shows, starting and stopping emulators and simulators, the
+ * Run button, the hardware keys and the device log. The live screen itself is the UI's
+ * ([connection] gives it the device).
  */
 class DevicePanelViewModel(
     private val devices: AndroidDevices,
     private val apps: AndroidAppRunner,
+    private val iosApps: IosAppRunner? = null,
     /** The chat whose device this shows; null for the Devices screen, which keeps its own pick. */
     val chatKey: String?,
     private val folder: File?,
@@ -88,7 +91,7 @@ class DevicePanelViewModel(
                 ?: state.devices
                     // Another workstream's copy is never a chat's by default; the Devices screen shows any.
                     .filter { it.isOnline && (owner == null || it.owner == null) }
-                    .sortedBy { it.kind != DeviceKind.EMULATOR }
+                    .sortedBy { it.kind == DeviceKind.PHYSICAL }
                     .firstOrNull()
         }.stateIn(viewModelScope, SharingStarted.Eagerly, devices.selected(pickKey))
 
@@ -100,9 +103,22 @@ class DevicePanelViewModel(
     /** The Android apps in the chat's folder, for the Run button. */
     val targets: StateFlow<List<AndroidAppTarget>> = _targets.asStateFlow()
 
+    private val _iosTargets = MutableStateFlow<List<XcodeAppTarget>>(emptyList())
+
+    /** The Xcode apps in the chat's folder, for the Run button on a simulator. */
+    val iosTargets: StateFlow<List<XcodeAppTarget>> = _iosTargets.asStateFlow()
+
+    private val iosStates: StateFlow<Map<String, AppRunState>> = iosApps?.states ?: MutableStateFlow(emptyMap())
+
+    /** How the Run of the platform shown is going: Gradle's on an Android device, Xcode's on a simulator. */
     val runState: StateFlow<AppRunState> =
-        combine(apps.states, _targets) { states, targets -> targets.firstNotNullOfOrNull { states[it.root.path] } ?: AppRunState.Idle }
-            .stateIn(viewModelScope, SharingStarted.Eagerly, AppRunState.Idle)
+        combine(apps.states, _targets, iosStates, _iosTargets, selected) { states, targets, ios, iosTargets, device ->
+            if (device?.isIos == true) {
+                iosTargets.firstNotNullOfOrNull { ios[it.root.path] } ?: AppRunState.Idle
+            } else {
+                targets.firstNotNullOfOrNull { states[it.root.path] } ?: AppRunState.Idle
+            }
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, AppRunState.Idle)
 
     private val _error = MutableStateFlow<String?>(null)
 
@@ -110,7 +126,10 @@ class DevicePanelViewModel(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        folder?.let { dir -> viewModelScope.launch(Dispatchers.IO) { _targets.value = AndroidAppTargets.find(dir) } }
+        folder?.let { dir ->
+            viewModelScope.launch(Dispatchers.IO) { _targets.value = AndroidAppTargets.find(dir) }
+            iosApps?.let { runner -> viewModelScope.launch(Dispatchers.IO) { _iosTargets.value = runner.targets(dir) } }
+        }
         // An error belongs to the device it came from: gone with it, or when another is shown.
         viewModelScope.launch {
             selected
@@ -178,13 +197,19 @@ class DevicePanelViewModel(
         coldBoot: Boolean = false,
     ) = devices.startInBackground(avd, LaunchOptions(coldBoot = coldBoot), owner = owner, ownerLabel = ownerLabel) { serial -> select(serial) }
 
+    /** Boots the simulator [udid]: this chat's own copy of it, or, on the Devices screen, the simulator itself. */
+    fun startSimulator(udid: String) = devices.startSimulatorInBackground(udid, owner = owner, ownerLabel = ownerLabel) { booted -> select(booted) }
+
     /** Whether a start from here makes this chat's own copy (a chat) or starts the AVD itself (the Devices screen). */
     val startsCopies: Boolean get() = owner != null
 
-    /** Back to the state the AVD last saved: a copy to where it started. */
+    /** Back to where a copy started: the state its AVD last saved, or a fresh copy of its simulator. */
     fun reset() {
         val serial = selected.value?.serial ?: return
-        act { devices.reset(serial) }
+        act {
+            val fresh = devices.reset(serial)
+            if (fresh != serial) select(fresh)
+        }
     }
 
     /**
@@ -210,7 +235,7 @@ class DevicePanelViewModel(
         allow: Boolean,
     ) = devices.allowAgent(serial, allow)
 
-    suspend fun connection(serial: String): DeviceConnection = devices.connection(serial)
+    suspend fun connection(serial: String): DeviceDriver = devices.connection(serial)
 
     private fun act(block: suspend () -> Unit) {
         viewModelScope.launch {
@@ -228,10 +253,10 @@ class DevicePanelViewModel(
 
     fun press(key: DeviceKey) {
         val serial = selected.value?.serial ?: return
-        act { devices.connection(serial).screen().key(key) }
+        act { devices.connection(serial).press(key) }
     }
 
-    /** A quarter turn to the left, as the emulator's own rotate button turns it. */
+    /** A quarter turn to the left, as the emulator's (or the simulator's) own rotate button turns it. */
     fun rotate() {
         val serial = selected.value?.serial ?: return
         act {
@@ -255,11 +280,27 @@ class DevicePanelViewModel(
         }
     }
 
+    /** Builds [scheme] of [target] with Xcode, installs and opens it on the simulator shown. */
+    fun runIos(
+        target: XcodeAppTarget,
+        scheme: String,
+    ) {
+        val serial = selected.value?.serial ?: return
+        val runner = iosApps ?: return
+        viewModelScope.launch {
+            try {
+                runner.run(target, scheme, serial)
+            } catch (e: IOException) {
+                Log.w(TAG, "Run failed", e)
+            }
+        }
+    }
+
     /** A full-size screenshot as a PNG file, to attach to the chat's next message. */
     suspend fun screenshotFile(): File? {
         val serial = selected.value?.serial ?: return null
         return try {
-            val png = devices.connection(serial).adb.screencapPng(serial)
+            val png = devices.connection(serial).screenshotPng()
             withContext(Dispatchers.IO) {
                 File.createTempFile("device-", ".png").also {
                     it.deleteOnExit()
@@ -292,23 +333,29 @@ class DevicePanelViewModel(
                     val serial = selected.value?.serial
                     if (serial != null && selected.value?.isOnline == true) {
                         try {
-                            val adb = devices.connection(serial).adb
+                            val connection = devices.connection(serial)
                             val pkg = (runState.value as? AppRunState.Done)?.packageName ?: (runState.value as? AppRunState.Installing)?.packageName
-                            val pid = if (appOnly && pkg != null) adb.pidOf(serial, pkg) else null
-                            _logcat.value = adb.logcat(serial, LOGCAT_LINES, pid, if (pid == null) 'W' else 'V').lines().filter { it.isNotBlank() && !it.startsWith("---------") }
+                            val app = pkg?.takeIf { appOnly && connection.isRunning(it) == true }
+                            _logcat.value =
+                                connection
+                                    .log(LOGCAT_LINES, app, if (app == null) 'W' else 'V', crashesOnly = false)
+                                    .text
+                                    .lines()
+                                    .filter { it.isNotBlank() && !it.startsWith("---------") }
                         } catch (e: IOException) {
                             _logcat.value = listOf(e.message ?: "logcat failed")
                         }
                     }
-                    delay(LOGCAT_POLL_MS)
+                    // An iOS simulator's log is read with `log show`, which takes a second or two.
+                    delay(if (selected.value?.isIos == true) IOS_LOG_POLL_MS else LOGCAT_POLL_MS)
                 }
             }
     }
 
-    /** Whether the device shown can be stopped from here: an emulator. */
+    /** Whether the device shown can be stopped from here: an emulator or a simulator. */
     val canStop: StateFlow<Boolean> =
         selected
-            .map { it?.kind == DeviceKind.EMULATOR }
+            .map { it?.isVirtual == true }
             .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     override fun onCleared() {
@@ -320,6 +367,7 @@ class DevicePanelViewModel(
         private const val SCREEN_PICK = "devices-screen"
         private const val LOGCAT_LINES = 300
         private const val LOGCAT_POLL_MS = 2_000L
+        private const val IOS_LOG_POLL_MS = 4_000L
         private const val CRASH_POLL_MS = 3_000L
     }
 }

@@ -36,10 +36,11 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.dock.DockPanelSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.dock.PanelBadge
 
 /**
- * The Android device as a dock panel, in the column the dock keeps for it, the way Android Studio's
- * Running Devices sits beside the editor. It follows the coding chat in front ([DeviceChatFocus]):
- * that chat's workstream device, its app for Run, its composer for screenshots. Its title opens the
- * full Android devices screen, where the panel steps aside. Folded, its icon flags a crash.
+ * The device (an Android emulator or phone, or an iOS simulator) as a dock panel, in the column the
+ * dock keeps for it, the way Android Studio's Running Devices sits beside the editor. It follows the
+ * coding chat in front ([DeviceChatFocus]): that chat's workstream device, its app for Run, its
+ * composer for screenshots. Its title opens the full Devices screen, where the panel steps aside.
+ * Folded, its icon flags a crash.
  */
 val DevicesDockPanel =
     DockPanelSpec(

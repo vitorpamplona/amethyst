@@ -38,6 +38,8 @@ import com.vitorpamplona.androiddevice.emulator.LaunchOptions
 import com.vitorpamplona.androiddevice.emulator.LaunchedEmulator
 import com.vitorpamplona.androiddevice.emulator.RunningEmulator
 import com.vitorpamplona.androiddevice.grpc.GrpcChannel
+import com.vitorpamplona.iossimulator.XcodeTools
+import com.vitorpamplona.iossimulator.simctl.SimDevice
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -65,7 +67,15 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
-enum class DeviceKind { EMULATOR, PHYSICAL }
+enum class DeviceKind {
+    EMULATOR,
+    PHYSICAL,
+
+    /** An iOS simulator ([DevicePlatform.IOS]): like an emulator, it is the agents' to use. */
+    SIMULATOR,
+}
+
+enum class DevicePlatform { ANDROID, IOS }
 
 enum class DeviceStatus {
     /** An emulator this app is starting, not yet seen by adb. */
@@ -103,8 +113,17 @@ data class DeviceInfo(
     val owner: String? = null,
     /** What to call [owner] in the picker: the workstream's title. */
     val ownerLabel: String? = null,
+    val platform: DevicePlatform = DevicePlatform.ANDROID,
+    /** An iOS simulator's udid as [serial] has it, or, for a workstream's copy, the simulator it copies. */
+    val simulator: String? = null,
+    /** "iOS 26.0": the simulator's runtime. */
+    val osVersion: String? = null,
 ) {
     val isOnline: Boolean get() = status == DeviceStatus.ONLINE
+    val isIos: Boolean get() = platform == DevicePlatform.IOS
+
+    /** A virtual device this app can stop: an emulator or a simulator, not a phone. */
+    val isVirtual: Boolean get() = kind != DeviceKind.PHYSICAL
 }
 
 @Immutable
@@ -118,9 +137,15 @@ data class DevicesState(
     val loaded: Boolean = false,
     /** Why the last look failed, as adb said it. */
     val error: String? = null,
-    /** AVDs this app is starting, and why the last start of each failed. */
+    /** AVDs (by name) and simulators (by udid) this app started, and why the last start of each failed. */
     val startFailures: Map<String, String> = emptyMap(),
-)
+    /** The iOS simulators, on a Mac with Xcode. */
+    val ios: SimulatorsState = SimulatorsState(),
+) {
+    /** The simulators that can be started (shut down), each once: a copy is listed by its source. */
+    val startableSimulators: List<SimDevice>
+        get() = ios.simulators.filter { it.isShutdown && !it.name.endsWith(IosSimulators.COPY_MARK) }
+}
 
 /** What an agent just did on a device, for the panel to show where it touched. */
 @Immutable
@@ -173,6 +198,8 @@ class AndroidDevices(
     /** Where an emulator this app starts writes what it prints. */
     private val logDir: File = File(System.getProperty("java.io.tmpdir"), "amethyst-emulators"),
     private val pollMs: Long = 2_000,
+    /** The iOS simulators, merged into the list; none in tests, which fake only the Android SDK. */
+    private val ios: IosSimulators? = null,
 ) {
     private val _state = MutableStateFlow(DevicesState())
     val state: StateFlow<DevicesState> = _state.asStateFlow()
@@ -265,6 +292,7 @@ class AndroidDevices(
                     cachedAvds?.takeIf { System.currentTimeMillis() - it.second < AVD_TTL_MS }?.first
                         ?: Avds.list(avdHome()).also { cachedAvds = it to System.currentTimeMillis() }
                 val emulators = EmulatorDiscovery.running(discoveryDirs())
+                val sims = ios?.list() ?: SimulatorsState()
                 var error: String? = null
                 val adbDevices =
                     if (adb == null) {
@@ -281,7 +309,8 @@ class AndroidDevices(
                 adbDevices.filter { it.isOnline && it.isEmulator && it.serial !in booted }.forEach { d ->
                     if (adb?.bootCompleted(d.serial) == true) booted += d.serial
                 }
-                val seen = adbDevices.map { it.serial }.toSet()
+                val simDevices = simulatorDevices(sims)
+                val seen = adbDevices.map { it.serial }.toSet() + simDevices.map { it.serial }
                 booted.retainAll(seen)
                 connections.keys.retainAll(seen)
                 adbOnlyUntil.keys.retainAll(seen)
@@ -299,10 +328,13 @@ class AndroidDevices(
                         sdkDir = sdk.sdkDir,
                         adbFound = adb != null,
                         emulatorFound = sdk.emulator != null,
-                        devices = merge(adbDevices, emulators, avds),
+                        devices = merge(adbDevices, emulators, avds) + simDevices,
                         avds = avds,
                         loaded = true,
                         error = error,
+                        ios = sims,
+                        // Android's are kept as each start ends; the simulators' are the manager's.
+                        startFailures = it.startFailures.filterKeys { k -> !k.isUdid() } + ios?.failures().orEmpty(),
                     )
                 }
             }
@@ -362,6 +394,43 @@ class AndroidDevices(
                 }
         return listed + pending
     }
+
+    /** The simulators that run (or are booting) as devices; shut-down ones are [DevicesState.startableSimulators]. */
+    private fun simulatorDevices(sims: SimulatorsState): List<DeviceInfo> {
+        val ios = ios ?: return emptyList()
+        return sims.simulators
+            .filter { !it.isShutdown || ios.isBooting(it.udid) }
+            .map { d ->
+                val copy = ios.copyOf(d.udid)
+                DeviceInfo(
+                    serial = d.udid,
+                    // A copy goes by the simulator it copies; the picker says whose copy it is.
+                    name = copy?.let { c -> sims.simulators.firstOrNull { it.udid == c.source }?.name } ?: d.name.removeSuffix(IosSimulators.COPY_MARK),
+                    kind = DeviceKind.SIMULATOR,
+                    status =
+                        when {
+                            ios.isBooting(d.udid) || d.state == "Booting" -> DeviceStatus.BOOTING
+                            d.isBooted -> DeviceStatus.ONLINE
+                            d.isShutdown -> DeviceStatus.STARTING
+                            else -> DeviceStatus.OFFLINE
+                        },
+                    liveStream = sims.idbFound,
+                    startedHere = ios.startedHere(d.udid),
+                    agentAllowed = true,
+                    owner = copy?.owner,
+                    ownerLabel = copy?.ownerLabel,
+                    platform = DevicePlatform.IOS,
+                    simulator = copy?.source ?: d.udid,
+                    osVersion = d.runtimeName,
+                )
+            }
+    }
+
+    /**
+     * Whether [serial] is an iOS simulator: listed as one, or a udid (a copy just made, before the
+     * list has it). An Android serial is never a udid.
+     */
+    private fun isSimulator(serial: String): Boolean = device(serial)?.isIos == true || (ios != null && serial.isUdid())
 
     /** [refresh], unless the last one is younger than [maxAgeMs]: a burst of tool calls asks adb once. */
     suspend fun refreshIfStale(maxAgeMs: Long = 1_000) {
@@ -485,6 +554,11 @@ class AndroidDevices(
     suspend fun stop(serial: String) {
         val device = device(serial)
         if (device?.kind == DeviceKind.PHYSICAL) throw IOException("A phone can't be stopped from here")
+        if (device?.isIos == true || (device == null && isSimulator(serial))) {
+            (ios ?: return).stop(serial)
+            refresh()
+            return
+        }
         val launch = launched.remove(serial)
         try {
             adb()?.emuKill(serial)
@@ -503,6 +577,7 @@ class AndroidDevices(
 
     /** Stops the copies [owner] started: its workstream was removed or its clones freed. */
     fun releaseOwner(owner: String) {
+        ios?.releaseOwner(owner)
         val mine = owners.filterValues { it.first == owner }.keys
         if (mine.isEmpty()) return
         scope.launch {
@@ -520,15 +595,22 @@ class AndroidDevices(
      * Puts an emulator back to the state the AVD last saved (its quick-boot snapshot): a
      * workstream's copy to where it started. Needs the emulator's gRPC endpoint (one this app started).
      */
-    suspend fun reset(serial: String) {
+    suspend fun reset(serial: String): String {
+        if (isSimulator(serial)) {
+            val fresh = (ios ?: throw IOException("No simulators here")).reset(serial)
+            // A fresh copy has a udid of its own: whoever had the old one has this one.
+            _selection.update { picks -> picks.mapValues { (_, s) -> if (s == serial) fresh else s } }
+            refresh()
+            return fresh
+        }
         // One Android Studio started answers this app with a signed token whose issuer may not load
         // snapshots (PERMISSION_DENIED), so it isn't asked.
         if (!launched.containsKey(serial)) throw IOException("Only an emulator started from here can be reset: restart it to drop its changes")
-        val controller = connection(serial).emulator ?: throw IOException("Its control port didn't answer: restart it to drop its changes")
+        val controller = androidConnection(serial).emulator ?: throw IOException("Its control port didn't answer: restart it to drop its changes")
         controller.loadSnapshot()
         // The loaded state drops adb's connection to the guest for a moment ("device offline"):
         // back only once adb reaches it again, so the next command doesn't fail.
-        val adb = adb() ?: return
+        val adb = adb() ?: return serial
         val started = System.currentTimeMillis()
         while (System.currentTimeMillis() - started < RESET_RECONNECT_MS) {
             // adb itself may stumble while the guest reconnects: the reset is done, so keep looking.
@@ -543,6 +625,7 @@ class AndroidDevices(
             delay(RESET_POLL_MS)
         }
         booted += serial
+        return serial
     }
 
     /**
@@ -585,7 +668,15 @@ class AndroidDevices(
      * How to drive [serial], with the emulator's gRPC endpoint when it opens (checked once with a
      * status call; an emulator that refuses it is driven through adb).
      */
-    suspend fun connection(serial: String): DeviceConnection {
+    suspend fun connection(serial: String): DeviceDriver {
+        if (isSimulator(serial)) {
+            return (ios ?: throw IOException("No simulators here")).connection(serial)
+        }
+        return androidConnection(serial)
+    }
+
+    /** [connection] of an Android device: adb, and the emulator's gRPC endpoint when it opens. */
+    suspend fun androidConnection(serial: String): DeviceConnection {
         connections[serial]?.let { cached ->
             val retryAt = adbOnlyUntil[serial]
             if (cached.emulator != null || retryAt == null || System.currentTimeMillis() < retryAt) return cached
@@ -691,7 +782,12 @@ class AndroidDevices(
      */
     suspend fun pollCrashes(serial: String): List<SeenCrash> =
         crashLock.withLock {
-            val found = (adb() ?: return@withLock emptyList()).crashes(serial)
+            val found =
+                if (isSimulator(serial)) {
+                    connection(serial).crashes()
+                } else {
+                    (adb() ?: return@withLock emptyList()).crashes(serial)
+                }
             val known = crashesSeen[serial]
             if (known == null) {
                 crashesSeen[serial] = found.mapTo(HashSet()) { it.id }
@@ -724,6 +820,43 @@ class AndroidDevices(
     fun shutdown() {
         launched.values.forEach { it.process.destroy() }
         launched.clear()
+        ios?.shutdown()
+    }
+
+    /**
+     * Boots the simulator [udid] and returns the udid that runs once it is ready. With an [owner],
+     * it is that owner's own copy (see [IosSimulators.boot]); without one, the simulator itself.
+     */
+    suspend fun startSimulator(
+        udid: String,
+        owner: String? = null,
+        ownerLabel: String? = null,
+    ): String {
+        val sims = ios ?: throw IOException("iOS simulators need a Mac with Xcode")
+        refresh()
+        try {
+            // The copy (or the simulator) shows as booting while it starts: the poll sees it as soon as simctl lists it.
+            return sims.boot(udid, owner, ownerLabel)
+        } finally {
+            refresh()
+        }
+    }
+
+    /** [startSimulator] in the background, for a button; a failure shows in [DevicesState.startFailures]. */
+    fun startSimulatorInBackground(
+        udid: String,
+        owner: String? = null,
+        ownerLabel: String? = null,
+        onBooted: (String) -> Unit = {},
+    ) {
+        scope.launch {
+            try {
+                onBooted(startSimulator(udid, owner, ownerLabel))
+            } catch (e: IOException) {
+                Log.w(TAG, "Could not boot the simulator $udid", e)
+                refresh()
+            }
+        }
     }
 
     companion object {
@@ -736,13 +869,26 @@ class AndroidDevices(
         private const val MAX_CRASHES = 50
         private const val AVD_TTL_MS = 10_000L
 
+        private val UDID = Regex("[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}")
+
+        private fun String.isUdid() = UDID.matches(this)
+
         val shared: AndroidDevices by lazy {
-            AndroidDevices().also { devices ->
+            AndroidDevices(ios = IosSimulators()).also { devices ->
                 Runtime.getRuntime().addShutdownHook(Thread({ devices.shutdown() }, "android-devices-shutdown"))
             }
         }
 
         /** Builds and runs the apps of the chats' folders on [shared]'s devices. */
         val apps: AndroidAppRunner by lazy { AndroidAppRunner(shared) }
+
+        /** Builds and runs the chats' iOS apps on [shared]'s simulators. */
+        val iosApps: IosAppRunner by lazy { IosAppRunner(shared) }
+
+        /**
+         * Whether this computer can run devices at all: an Android SDK, or Xcode's simulators (a
+         * Mac). The device panel and the agents' device tools are offered only then.
+         */
+        val supported: Boolean by lazy { AndroidSdk.home() != null || XcodeTools().available }
     }
 }

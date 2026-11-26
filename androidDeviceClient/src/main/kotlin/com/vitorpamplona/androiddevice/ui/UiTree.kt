@@ -64,8 +64,10 @@ data class UiNode(
     val focused: Boolean,
     val selected: Boolean,
     val password: Boolean,
+    /** Whether text can be typed in it, when its platform says so; else read from its class. */
+    val editable: Boolean? = null,
 ) {
-    val isEditable: Boolean get() = className.endsWith("EditText") || className.endsWith("TextField")
+    val isEditable: Boolean get() = editable ?: (className.endsWith("EditText") || className.endsWith("TextField"))
 
     /** Whether it says or does anything: the rest are layout. */
     val isInteresting: Boolean

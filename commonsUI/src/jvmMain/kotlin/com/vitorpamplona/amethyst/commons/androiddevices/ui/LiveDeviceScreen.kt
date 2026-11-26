@@ -74,7 +74,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.androiddevices.DeviceActivity
-import com.vitorpamplona.amethyst.commons.androiddevices.DeviceConnection
+import com.vitorpamplona.amethyst.commons.androiddevices.DeviceDriver
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -123,7 +123,7 @@ private class DrawnFrame(
 
 private fun ScreenFrame.toBitmap(): ImageBitmap =
     when (format) {
-        PixelFormat.PNG -> SkiaImage.makeFromEncoded(pixels).toComposeImageBitmap()
+        PixelFormat.PNG, PixelFormat.JPEG -> SkiaImage.makeFromEncoded(pixels).toComposeImageBitmap()
         PixelFormat.RGBA8888 -> SkiaImage.makeRaster(ImageInfo(width, height, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), pixels, width * 4).toComposeImageBitmap()
         PixelFormat.RGB888 -> {
             val rgba = ByteArray(width * height * 4)
@@ -148,7 +148,7 @@ private fun ScreenFrame.toBitmap(): ImageBitmap =
  */
 @Composable
 fun LiveDeviceScreen(
-    connection: DeviceConnection,
+    connection: DeviceDriver,
     activity: Flow<DeviceActivity>,
     agentName: String,
     modifier: Modifier = Modifier,

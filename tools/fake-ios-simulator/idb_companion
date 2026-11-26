@@ -1,0 +1,407 @@
+#!/usr/bin/env python3
+# A stand-in for idb's companion (`idb_companion --udid X --grpc-domain-sock PATH`), for
+# exercising the device panel's iOS path on a computer without Xcode. It speaks gRPC over HTTP/2
+# on the Unix socket, as the real one does, for the RPCs the app calls, and draws a small app:
+# a button that counts taps, a text field that shows what is typed, a dot where the finger is.
+# Needs `pip install h2 pillow`. See README.md.
+import io, json, os, socket, struct, sys, threading, time
+
+import h2.config
+import h2.connection
+import h2.events
+from PIL import Image, ImageDraw
+
+W_PT, H_PT, DENSITY = 375, 667, 2.0
+BUTTON = (40, 300, 335, 350)  # x1, y1, x2, y2 in points
+FIELD = (40, 380, 335, 424)
+
+
+class Screen:
+    def __init__(self, name):
+        self.name = name
+        self.taps = 0
+        self.text = ""
+        self.finger = None
+        self.down_on_button = False
+        self.focused = False
+        self.orientation = 0  # HIDOrientationType numbering: 0 portrait, 2 landscape left
+        self.version = 0
+        self.lock = threading.Condition()
+
+    def changed(self):
+        with self.lock:
+            self.version += 1
+            self.lock.notify_all()
+
+    def draw(self, scale):
+        w, h = int(W_PT * DENSITY * scale), int(H_PT * DENSITY * scale)
+        k = DENSITY * scale
+        img = Image.new("RGB", (w, h), (246, 246, 250))
+        d = ImageDraw.Draw(img)
+        d.rectangle([0, 0, w, int(100 * k)], fill=(28, 28, 36))
+        d.text((int(20 * k), int(60 * k)), f"{self.name} (fake)", fill=(255, 255, 255))
+        x1, y1, x2, y2 = (int(v * k) for v in BUTTON)
+        d.rounded_rectangle([x1, y1, x2, y2], radius=int(10 * k), fill=(10, 132, 255))
+        d.text((x1 + int(20 * k), y1 + int(18 * k)), f"Tap me: {self.taps}", fill=(255, 255, 255))
+        x1, y1, x2, y2 = (int(v * k) for v in FIELD)
+        d.rectangle([x1, y1, x2, y2], outline=(10, 132, 255) if self.focused else (190, 190, 200), width=max(1, int(2 * k)))
+        d.text((x1 + int(10 * k), y1 + int(14 * k)), self.text or "Type here", fill=(20, 20, 20) if self.text else (150, 150, 150))
+        if self.finger:
+            fx, fy = self.finger
+            r = int(12 * k)
+            d.ellipse([int(fx * k) - r, int(fy * k) - r, int(fx * k) + r, int(fy * k) + r], fill=(255, 59, 48))
+        if self.orientation in (2, 3):
+            img = img.rotate(90 if self.orientation == 2 else -90, expand=True)
+        return img
+
+    def jpeg(self, scale):
+        buf = io.BytesIO()
+        self.draw(scale).save(buf, "JPEG", quality=75)
+        return buf.getvalue()
+
+    def png(self):
+        buf = io.BytesIO()
+        self.draw(1.0).save(buf, "PNG")
+        return buf.getvalue()
+
+    def touch(self, x, y, down):
+        inside = BUTTON[0] <= x <= BUTTON[2] and BUTTON[1] <= y <= BUTTON[3]
+        if down:
+            if self.finger is None:
+                self.down_on_button = inside
+                self.focused = FIELD[0] <= x <= FIELD[2] and FIELD[1] <= y <= FIELD[3]
+            self.finger = (x, y)
+        else:
+            if self.down_on_button and inside:
+                self.taps += 1
+            self.finger = None
+            self.down_on_button = False
+        self.changed()
+
+    def type(self, text):
+        if self.focused:
+            self.text += text
+            self.changed()
+
+    def tree(self):
+        def frame(r):
+            return {"x": r[0], "y": r[1], "width": r[2] - r[0], "height": r[3] - r[1]}
+
+        return [{
+            "type": "Application", "AXLabel": "FakeApp", "frame": frame((0, 0, W_PT, H_PT)), "enabled": True,
+            "children": [
+                {"type": "StaticText", "AXLabel": f"{self.name} (fake)", "frame": frame((20, 50, 300, 80)), "enabled": True},
+                {"type": "Button", "AXLabel": f"Tap me: {self.taps}", "AXUniqueId": "tap.button", "frame": frame(BUTTON), "enabled": True, "traits": ["Button"]},
+                {"type": "TextField", "AXLabel": "Message", "AXValue": self.text or None, "placeholder": "Type here", "frame": frame(FIELD), "enabled": True, "focused": self.focused},
+            ],
+        }]
+
+
+# --- protobuf, by hand: just the fields the app sends and reads ---------------------------------
+
+def varint(n):
+    out = bytearray()
+    while True:
+        b = n & 0x7F
+        n >>= 7
+        if n:
+            out.append(b | 0x80)
+        else:
+            out.append(b)
+            return bytes(out)
+
+
+def field(num, wire, payload):
+    return varint((num << 3) | wire) + payload
+
+
+def f_varint(num, n):
+    return field(num, 0, varint(n)) if n else b""
+
+
+def f_bytes(num, b):
+    return field(num, 2, varint(len(b)) + b)
+
+
+def f_str(num, s):
+    return f_bytes(num, s.encode()) if s else b""
+
+
+def f_double(num, x):
+    return field(num, 1, struct.pack("<d", x)) if x else b""
+
+
+def parse(b):
+    out, i = {}, 0
+    while i < len(b):
+        key, i = read_varint(b, i)
+        num, wire = key >> 3, key & 7
+        if wire == 0:
+            v, i = read_varint(b, i)
+        elif wire == 1:
+            v = struct.unpack("<d", b[i:i + 8])[0]
+            i += 8
+        elif wire == 2:
+            n, i = read_varint(b, i)
+            v = b[i:i + n]
+            i += n
+        elif wire == 5:
+            v = b[i:i + 4]
+            i += 4
+        else:
+            raise ValueError("wire type %d" % wire)
+        out.setdefault(num, []).append(v)
+    return out
+
+
+def read_varint(b, i):
+    shift = result = 0
+    while True:
+        c = b[i]
+        i += 1
+        result |= (c & 0x7F) << shift
+        if not c & 0x80:
+            return result, i
+        shift += 7
+
+
+def first(m, num, default=None):
+    return m.get(num, [default])[-1]
+
+
+def frames(data):
+    """Splits a gRPC body into its messages; returns (messages, leftover)."""
+    out = []
+    while len(data) >= 5:
+        n = struct.unpack(">I", data[1:5])[0]
+        if len(data) < 5 + n:
+            break
+        out.append(data[5:5 + n])
+        data = data[5 + n:]
+    return out, data
+
+
+def frame(msg):
+    return b"\x00" + struct.pack(">I", len(msg)) + msg
+
+
+# --- HTTP/2 -------------------------------------------------------------------------------------
+
+class Connection:
+    def __init__(self, sock, screen, udid):
+        self.sock = sock
+        self.screen = screen
+        self.udid = udid
+        self.h2 = h2.connection.H2Connection(h2.config.H2Configuration(client_side=False, header_encoding="utf-8"))
+        self.lock = threading.Condition()
+        self.streams = {}  # id -> {"path", "data", "messages", "open"}
+
+    def flush(self):
+        data = self.h2.data_to_send()
+        if data:
+            self.sock.sendall(data)
+
+    def send(self, stream_id, data, end=False):
+        """Sends [data] on [stream_id] within the flow-control window, waiting for it to open."""
+        while data:
+            with self.lock:
+                while True:
+                    if stream_id not in self.streams:
+                        return False
+                    window = min(self.h2.local_flow_control_window(stream_id), self.h2.max_outbound_frame_size)
+                    if window > 0:
+                        break
+                    self.lock.wait(1)
+                chunk, data = data[:window], data[window:]
+                self.h2.send_data(stream_id, chunk)
+                self.flush()
+        if end:
+            with self.lock:
+                self.h2.end_stream(stream_id)
+                self.flush()
+        return True
+
+    def headers(self, stream_id):
+        with self.lock:
+            self.h2.send_headers(stream_id, [(":status", "200"), ("content-type", "application/grpc")])
+            self.flush()
+
+    def trailers(self, stream_id, status=0, message=""):
+        with self.lock:
+            if stream_id not in self.streams:
+                return
+            t = [("grpc-status", str(status))]
+            if message:
+                t.append(("grpc-message", message))
+            self.h2.send_headers(stream_id, t, end_stream=True)
+            self.flush()
+            self.streams.pop(stream_id, None)
+
+    def unary(self, stream_id, answer):
+        self.headers(stream_id)
+        self.send(stream_id, frame(answer))
+        self.trailers(stream_id)
+
+    def run(self):
+        with self.lock:
+            self.h2.initiate_connection()
+            self.flush()
+        while True:
+            data = self.sock.recv(65536)
+            if not data:
+                return
+            with self.lock:
+                events = self.h2.receive_data(data)
+                self.flush()
+            for e in events:
+                self.on(e)
+            with self.lock:
+                self.flush()
+
+    def on(self, e):
+        if isinstance(e, h2.events.RequestReceived):
+            path = dict(e.headers).get(":path", "")
+            with self.lock:
+                self.streams[e.stream_id] = {"path": path.rsplit("/", 1)[-1], "data": b"", "started": False}
+        elif isinstance(e, h2.events.DataReceived):
+            with self.lock:
+                self.h2.acknowledge_received_data(e.flow_controlled_length, e.stream_id)
+                s = self.streams.get(e.stream_id)
+                if s is None:
+                    return
+                s["data"] += e.data
+                messages, s["data"] = frames(s["data"])
+            for m in messages:
+                self.message(e.stream_id, s, m)
+        elif isinstance(e, h2.events.StreamEnded):
+            s = self.streams.get(e.stream_id)
+            if s is not None:
+                self.ended(e.stream_id, s)
+        elif isinstance(e, h2.events.StreamReset):
+            with self.lock:
+                self.streams.pop(e.stream_id, None)
+                self.lock.notify_all()
+        elif isinstance(e, (h2.events.WindowUpdated, h2.events.RemoteSettingsChanged)):
+            with self.lock:
+                self.lock.notify_all()
+
+    def message(self, stream_id, s, m):
+        path = s["path"]
+        if path == "hid":
+            hid(self.screen, parse(m))
+        elif path == "video_stream" and not s["started"]:
+            s["started"] = True
+            start = parse(first(parse(m), 1, b""))
+            fps = first(start, 2, 30) or 30
+            scale = first(start, 5, 1.0) or 1.0
+            threading.Thread(target=self.stream_video, args=(stream_id, fps, scale), daemon=True).start()
+        else:
+            s.setdefault("messages", []).append(m)
+
+    def ended(self, stream_id, s):
+        path = s["path"]
+        m = (s.get("messages") or [b""])[0]
+        screen = self.screen
+        if path == "describe":
+            dims = f_varint(1, int(W_PT * DENSITY)) + f_varint(2, int(H_PT * DENSITY)) + f_double(3, DENSITY) + f_varint(4, W_PT) + f_varint(5, H_PT)
+            target = f_str(1, self.udid) + f_str(2, screen.name) + f_bytes(3, dims) + f_str(4, "Booted") + f_str(6, "iOS 26.0")
+            self.unary(stream_id, f_bytes(1, target) + f_bytes(2, f_varint(13, 1)))
+        elif path == "screenshot":
+            self.unary(stream_id, f_bytes(1, screen.png()) + f_str(2, "png"))
+        elif path == "hid":
+            self.unary(stream_id, b"")
+        elif path == "accessibility_info":
+            self.unary(stream_id, f_str(1, json.dumps(screen.tree())))
+        elif path == "get_orientation":
+            self.unary(stream_id, f_varint(1, {0: 1, 1: 2, 2: 3, 3: 4}[screen.orientation]))
+        elif path == "set_orientation":
+            screen.orientation = first(parse(m), 1, 0)
+            screen.changed()
+            self.unary(stream_id, b"")
+        elif path == "crash_list":
+            self.unary(stream_id, b"")
+        elif path == "list_apps":
+            self.unary(stream_id, b"")
+        elif path == "video_stream":
+            # The client ended its side (or sent a stop): the stream thread sees the stream gone.
+            self.trailers(stream_id)
+        else:
+            self.headers(stream_id)
+            self.trailers(stream_id, 12, f"The fake companion has no {path}")
+
+    def stream_video(self, stream_id, fps, scale):
+        self.headers(stream_id)
+        header = bytes([1, 24]) + b"\x00" * 22
+        if not self.send(stream_id, frame(f_bytes(2, f_bytes(2, header)))):
+            return
+        seen = -1
+        while True:
+            with self.screen.lock:
+                if self.screen.version == seen:
+                    self.screen.lock.wait(1.0)
+                seen = self.screen.version
+            jpeg = self.screen.jpeg(scale)
+            chunk = struct.pack("<I", len(jpeg)) + jpeg
+            if not self.send(stream_id, frame(f_bytes(2, f_bytes(2, chunk)))):
+                return
+            time.sleep(1.0 / fps)
+
+
+def hid(screen, event):
+    press = first(event, 1)
+    if press is not None:
+        p = parse(press)
+        action = parse(first(p, 1, b""))
+        down = first(p, 2, 0) == 0
+        touch = first(action, 1)
+        if touch is not None:
+            point = parse(first(parse(touch), 1, b""))
+            screen.touch(first(point, 1, 0.0), first(point, 2, 0.0), down)
+        key = first(action, 3)
+        if key is not None and down:
+            code = first(parse(key), 1, 0)
+            if 4 <= code <= 29:
+                screen.type(chr(ord("a") + code - 4))
+            elif code == 44:
+                screen.type(" ")
+            elif code == 42 and screen.text:
+                screen.text = screen.text[:-1]
+                screen.changed()
+    text = first(event, 9)
+    if text is not None:
+        screen.type(first(parse(text), 1, b"").decode())
+    orientation = first(event, 5)
+    if orientation is not None:
+        screen.orientation = first(parse(orientation), 1, 0)
+        screen.changed()
+
+
+def main(argv):
+    args = dict(zip(argv[1::2], argv[2::2]))
+    udid = args.get("--udid")
+    path = args.get("--grpc-domain-sock")
+    if not udid or not path:
+        sys.stderr.write("usage: idb_companion --udid UDID --grpc-domain-sock PATH\n")
+        return 64
+    name = "iPhone"
+    state = os.environ.get("FAKE_IOS_STATE", "/tmp/fake-ios-simulators.json")
+    try:
+        with open(state) as f:
+            name = next(d["name"] for d in json.load(f)["devices"] if d["udid"] == udid).replace(" (Amethyst copy)", "")
+    except (OSError, StopIteration, ValueError, KeyError):
+        pass
+    screen = Screen(name)
+    if os.path.exists(path):
+        os.unlink(path)
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(path)
+    server.listen(8)
+    print(json.dumps({"grpc_path": path}), flush=True)
+    sys.stderr.write(f"fake idb_companion for {udid} on {path}\n")
+    while True:
+        sock, _ = server.accept()
+        threading.Thread(target=lambda s=sock: Connection(s, screen, udid).run(), daemon=True).start()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

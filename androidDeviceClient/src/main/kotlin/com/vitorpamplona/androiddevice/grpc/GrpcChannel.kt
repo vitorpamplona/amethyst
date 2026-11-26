@@ -34,12 +34,16 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import okio.BufferedSink
 import okio.BufferedSource
 import java.io.IOException
+import java.net.InetAddress
 import java.net.Proxy
 import java.util.concurrent.TimeUnit
+import javax.net.SocketFactory
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -61,8 +65,9 @@ class GrpcException(
 /**
  * gRPC over plain HTTP/2 (`h2c`, prior knowledge), the way the emulator serves it on localhost:
  * a POST per call, each message framed as one flag byte (uncompressed) and a big-endian length,
- * and the outcome in the `grpc-status` trailer (or header, for a trailers-only answer). Only the
- * call shapes the emulator needs: unary, and server streaming.
+ * and the outcome in the `grpc-status` trailer (or header, for a trailers-only answer). Unary,
+ * server streaming, a client stream sent whole ([clientStream]), and a stream kept open while its
+ * answers come ([openStream]): the emulator needs the first two, idb's companion all four.
  *
  * Never through a proxy: the endpoint is on this computer, and the app may send everything else
  * through Tor.
@@ -76,13 +81,23 @@ class GrpcChannel(
     private val callTimeoutMs: Long = 15_000,
     /** The whole `authorization` value for each call, instead of [token]: a signed JWT ([com.vitorpamplona.androiddevice.emulator.EmulatorJwtAuth]). */
     private val authorization: (() -> String)? = null,
+    /**
+     * Where the connection goes instead of [host]:[port], such as a Unix socket ([UnixSocketFactory]):
+     * [host] then only names the server in each call's URL, and is never looked up.
+     */
+    socketFactory: SocketFactory? = null,
 ) {
     private val client =
         baseClient
             .newBuilder()
             .protocols(listOf(Protocol.H2_PRIOR_KNOWLEDGE))
             .proxy(Proxy.NO_PROXY)
-            .connectTimeout(5, TimeUnit.SECONDS)
+            .apply {
+                if (socketFactory != null) {
+                    socketFactory(socketFactory)
+                    dns { listOf(InetAddress.getLoopbackAddress()) }
+                }
+            }.connectTimeout(5, TimeUnit.SECONDS)
             // A stream waits as long as the screen doesn't change; unary calls get their own timeout.
             .readTimeout(0, TimeUnit.MILLISECONDS)
             .writeTimeout(10, TimeUnit.SECONDS)
@@ -93,6 +108,11 @@ class GrpcChannel(
     private fun request(
         method: String,
         message: ByteArray,
+    ): Request = request(method, frame(message).toRequestBody(GRPC))
+
+    private fun request(
+        method: String,
+        body: RequestBody,
     ): Request =
         Request
             .Builder()
@@ -100,15 +120,35 @@ class GrpcChannel(
             .header("te", "trailers")
             .header("grpc-accept-encoding", "identity")
             .apply { (authorization?.invoke() ?: token?.let { "Bearer $it" })?.let { header("authorization", it) } }
-            .post(frame(message).toRequestBody(GRPC))
+            .post(body)
             .build()
 
     /** Calls [method] (`package.Service/method`) with one message and returns its one answer. */
     suspend fun unary(
         method: String,
         message: ByteArray,
+    ): ByteArray = answer(method, request(method, message))
+
+    /**
+     * A client-streaming call sent whole: [messages] one after the other, then the end of the
+     * stream, and the server's one answer. The server may act on each as it reads it (idb's HID
+     * stream does, delays included).
+     */
+    suspend fun clientStream(
+        method: String,
+        messages: List<ByteArray>,
     ): ByteArray {
-        val response = unaryClient.newCall(request(method, message)).await()
+        val body = ByteArray(messages.sumOf { 5 + it.size })
+        var at = 0
+        messages.forEach { m -> frame(m).copyInto(body, at).also { at += 5 + m.size } }
+        return answer(method, request(method, body.toRequestBody(GRPC)))
+    }
+
+    private suspend fun answer(
+        method: String,
+        request: Request,
+    ): ByteArray {
+        val response = unaryClient.newCall(request).await()
         // Reading the body blocks: never on the caller's thread, which may be the UI's.
         return withContext(Dispatchers.IO) {
             response.use {
@@ -154,8 +194,73 @@ class GrpcChannel(
             awaitClose { call.cancel() }
         }.buffer(1)
 
+    /**
+     * A bidirectional call that sends [first] and keeps its side open, emitting each message the
+     * server streams back: for a server that stops at the end of the client's stream (idb's video
+     * stream runs until it reads a stop, or the stream ends). Cancelling the collector resets the
+     * call; [onClose], when given, is written first, for a server that wants a goodbye.
+     */
+    fun openStream(
+        method: String,
+        first: ByteArray,
+        onClose: ByteArray? = null,
+    ): Flow<ByteArray> =
+        channelFlow {
+            val body = HeldOpenBody(frame(first))
+            val call = client.newCall(request(method, body))
+            launch(Dispatchers.IO) {
+                try {
+                    call.execute().use { response ->
+                        checkHeaders(response)
+                        val source = response.body.source()
+                        while (true) {
+                            val next = readMessage(source) ?: break
+                            send(next)
+                        }
+                        checkTrailers(response)
+                    }
+                    close()
+                } catch (e: IOException) {
+                    if (!call.isCanceled()) close(e) else close()
+                }
+            }
+            awaitClose {
+                onClose?.let { body.sendAndClose(frame(it)) }
+                call.cancel()
+            }
+        }.buffer(1)
+
+    /** A request body that writes its first frame and stays open until [sendAndClose]: a duplex HTTP/2 stream. */
+    private class HeldOpenBody(
+        private val first: ByteArray,
+    ) : RequestBody() {
+        @Volatile
+        private var sink: BufferedSink? = null
+
+        override fun contentType() = GRPC
+
+        override fun isDuplex() = true
+
+        override fun writeTo(sink: BufferedSink) {
+            sink.write(first)
+            sink.flush()
+            this.sink = sink
+        }
+
+        fun sendAndClose(last: ByteArray) {
+            val open = sink ?: return
+            sink = null
+            try {
+                open.write(last)
+                open.close()
+            } catch (_: IOException) {
+                // The call is going anyway.
+            }
+        }
+    }
+
     private fun checkHeaders(response: Response) {
-        if (response.code != 200) throw GrpcException(GrpcException.UNAVAILABLE, "HTTP ${response.code} from the emulator")
+        if (response.code != 200) throw GrpcException(GrpcException.UNAVAILABLE, "HTTP ${response.code} from $host")
         // A trailers-only answer (an error before any message) carries the status in its headers.
         response.header("grpc-status")?.toIntOrNull()?.let { status ->
             if (status != 0) throw GrpcException(status, response.header("grpc-message").orEmpty())

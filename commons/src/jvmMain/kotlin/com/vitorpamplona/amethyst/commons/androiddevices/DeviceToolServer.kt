@@ -48,17 +48,19 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.roundToInt
 
 /**
- * The Android devices, as tools for a coding agent: see the screen (a screenshot, or the UI tree as
- * text), touch, type, press keys, start an emulator, build and run the chat's app, read logcat. The
+ * The devices beside a coding chat, as tools for its agent: Android emulators and phones, and iOS
+ * simulators on a Mac. See the screen (a screenshot, or the UI tree as text), touch, type, press
+ * keys, start an emulator or a simulator, build and run the chat's app, read the device's log. The
  * device panel beside the chat shows the same screen, and where the agent touches.
  *
- * Every coordinate is in the pixels of the screenshots this server sends (see [DeviceConnection]).
- * Emulators are the agent's to use; a phone only once the user allows it in the panel, since its
- * screen may show their own messages.
+ * Every coordinate is in the pixels of the screenshots this server sends (see [DeviceDriver]).
+ * Emulators and simulators are the agent's to use; a phone only once the user allows it in the
+ * panel, since its screen may show their own messages.
  */
 class DeviceToolServer(
     private val devices: AndroidDevices,
     private val apps: AndroidAppRunner,
+    private val iosApps: IosAppRunner? = null,
     /**
      * Who the chat works for: its workstream, or the chat outside one. Its device pick, and the
      * emulator copies it starts, are kept under this key, so a workstream's chats share a device.
@@ -66,7 +68,7 @@ class DeviceToolServer(
     private val owner: () -> String?,
     /** What to call [owner] in the device picker: the workstream's title. */
     private val ownerLabel: () -> String? = { null },
-    /** The chat's folder: where `run_app` finds the build and `install_apk` the file. */
+    /** The chat's folder: where `run_app` finds the build and `install_app` the file. */
     private val folder: File,
 ) : HostToolServer {
     override val name = NAME
@@ -88,10 +90,10 @@ class DeviceToolServer(
         arguments: JsonObject,
     ): String? =
         when (tool) {
-            RUN_APP -> "Build ${arguments.str("module") ?: "the app"}${arguments.str("variant")?.let { " ($it)" } ?: ""} and install it on ${deviceLabel(arguments)}"
-            INSTALL_APK -> "Install ${arguments.str("path")} on ${deviceLabel(arguments)}"
+            RUN_APP -> "Build ${arguments.str("module") ?: arguments.str("scheme") ?: "the app"}${arguments.str("variant")?.let { " ($it)" } ?: ""} and install it on ${deviceLabel(arguments)}"
+            INSTALL_APP -> "Install ${arguments.str("path")} on ${deviceLabel(arguments)}"
             CLEAR_DATA -> "Erase all data of ${arguments.str("package")} on ${deviceLabel(arguments)}"
-            STOP_EMULATOR -> "Shut down ${deviceLabel(arguments)}"
+            STOP_DEVICE -> "Shut down ${deviceLabel(arguments)}"
             else -> null
         }
 
@@ -105,6 +107,7 @@ class DeviceToolServer(
             when (tool) {
                 LIST -> list()
                 START_EMULATOR -> startEmulator(arguments)
+                START_SIMULATOR -> startSimulator(arguments)
                 else -> {
                     val device = resolve(arguments.str("device"))
                     if (!device.agentAllowed) {
@@ -131,7 +134,7 @@ class DeviceToolServer(
         args: JsonObject,
     ): HostToolResult {
         val serial = device.serial
-        if (!device.isOnline && tool != STOP_EMULATOR) throw IOException("${device.name} is ${device.status.name.lowercase().replace('_', ' ')}, not ready")
+        if (!device.isOnline && tool != STOP_DEVICE) throw IOException("${device.name} is ${device.status.name.lowercase().replace('_', ' ')}, not ready")
         val chat = owner()
         if (chat != null) devices.select(chat, serial)
         if (tool in WITHOUT_CRASH_CHECK) return act(tool, device, args)
@@ -188,7 +191,7 @@ class DeviceToolServer(
         val pkg = openedApp[serial] ?: return null
         if (tool in STOPS_APP) return null
         return try {
-            devices.connection(serial).adb.pidOf(serial, pkg) != null
+            devices.connection(serial).isRunning(pkg)
         } catch (_: IOException) {
             null
         }
@@ -207,7 +210,7 @@ class DeviceToolServer(
         }
         if (alive != false) return null
         openedApp.remove(serial)
-        return "$pkg IS NO LONGER RUNNING, with nothing in the crash log (it was killed, or it exited). logcat with package shows its last lines."
+        return "$pkg IS NO LONGER RUNNING, with nothing in the crash log (it was killed, or it exited). $LOG with package shows its last lines."
     }
 
     private suspend fun act(
@@ -218,7 +221,7 @@ class DeviceToolServer(
         val serial = device.serial
         return when (tool) {
             SELECT -> HostToolResult("Working on ${device.name} ($serial) from now on; the panel shows it.")
-            STOP_EMULATOR -> {
+            STOP_DEVICE -> {
                 devices.stop(serial)
                 HostToolResult("${device.name} is shutting down.")
             }
@@ -232,48 +235,55 @@ class DeviceToolServer(
             WAIT_FOR -> waitFor(device, args)
             OPEN_URL -> {
                 val url = args.str("url") ?: throw IllegalArgumentException("url is required")
-                val out = devices.connection(serial).adb.openUrl(serial, url, args.str("package"))
+                val out = devices.connection(serial).openUrl(url, args.str("package"))
                 devices.report(DeviceActivity(serial, DeviceActivity.Kind.APP, label = url))
                 after(device, args, if (out.contains("Error", ignoreCase = true)) out else "Opened $url")
             }
-            INSTALL_APK -> {
-                val apk = args.str("path")?.let { p -> File(p).takeIf { it.isAbsolute } ?: File(folder, p) } ?: throw IllegalArgumentException("path is required")
-                if (!apk.isFile) throw IOException("No APK at ${apk.path}")
-                val out = devices.connection(serial).adb.install(serial, apk)
+            INSTALL_APP -> {
+                val file = args.str("path")?.let { p -> File(p).takeIf { it.isAbsolute } ?: File(folder, p) } ?: throw IllegalArgumentException("path is required")
+                val out =
+                    if (device.isIos) {
+                        if (!file.exists()) throw IOException("No app at ${file.path}")
+                        devices.connection(serial).install(file)
+                    } else {
+                        if (!file.isFile) throw IOException("No APK at ${file.path}")
+                        "Installed ${file.name} (${apps.packageName(file)}): " + devices.connection(serial).install(file)
+                    }
                 // Installing over a running app ends its process.
                 openedApp.remove(serial)
-                HostToolResult("Installed ${apk.name} (${apps.packageName(apk)}): $out")
+                HostToolResult(out)
             }
             LAUNCH_APP -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
-                devices.connection(serial).adb.launch(serial, pkg)
+                devices.connection(serial).launch(pkg)
                 openedApp[serial] = pkg
                 devices.report(DeviceActivity(serial, DeviceActivity.Kind.APP, label = pkg))
                 after(device, args, "Opened $pkg", defaultShot = true)
             }
             STOP_APP -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
-                devices.connection(serial).adb.forceStop(serial, pkg)
+                devices.connection(serial).stopApp(pkg)
                 openedApp.remove(serial, pkg)
                 HostToolResult("Stopped $pkg")
             }
             CLEAR_DATA -> {
                 val pkg = args.str("package") ?: throw IllegalArgumentException("package is required")
                 openedApp.remove(serial, pkg)
-                HostToolResult("pm clear $pkg: ${devices.connection(serial).adb.clearData(serial, pkg)}")
+                HostToolResult(devices.connection(serial).clearData(pkg))
             }
             RESET -> {
                 // Without asking only on this workstream's own copy: anything else may hold the user's
                 // unsaved state (the AVD itself, set up from the Devices screen; another workstream's copy).
                 if (device.owner == null || device.owner != owner()) {
-                    throw IOException("reset_device only resets this workstream's own emulator copy. ${device.name} isn't one: ask the user to reset it, or start_emulator for a copy of your own.")
+                    throw IOException("$RESET only resets this workstream's own copy. ${device.name} isn't one: ask the user to reset it, or ${if (device.isIos) START_SIMULATOR else START_EMULATOR} for a copy of your own.")
                 }
-                devices.reset(serial)
+                val fresh = devices.reset(serial)
                 openedApp.remove(serial)
-                after(device, args, "${device.name} is back to the state it started from", defaultShot = true)
+                val now = devices.device(fresh) ?: device
+                after(now, args, "${device.name} is back to the state it started from" + if (fresh != serial) " (it is $fresh now)" else "", defaultShot = true)
             }
             RUN_APP -> runApp(device, args)
-            LOGCAT -> logcat(device, args)
+            LOG -> log(device, args)
             else -> HostToolResult("No tool named $tool", isError = true)
         }
     }
@@ -281,7 +291,7 @@ class DeviceToolServer(
     private suspend fun list(): HostToolResult {
         devices.refresh()
         val state = devices.state.value
-        if (!state.adbFound) {
+        if (!state.adbFound && !state.ios.xcodeFound) {
             return HostToolResult(
                 "adb isn't installed on this computer${state.sdkDir?.let { " (Android SDK at ${it.path}, no platform-tools)" } ?: " (no Android SDK found; set ANDROID_HOME)"}.",
                 isError = true,
@@ -297,7 +307,13 @@ class DeviceToolServer(
                     state.devices.forEach { d ->
                         append("\n- ").append(d.serial)
                         if (d.name != d.serial) append(": ").append(d.name)
-                        append(" (").append(if (d.kind == DeviceKind.EMULATOR) "emulator" else "phone").append(", ").append(
+                        val what =
+                            when (d.kind) {
+                                DeviceKind.EMULATOR -> "Android emulator"
+                                DeviceKind.SIMULATOR -> "iOS simulator" + d.osVersion?.let { ", $it" }.orEmpty()
+                                DeviceKind.PHYSICAL -> "Android phone"
+                            }
+                        append(" (").append(what).append(", ").append(
                             d.status.name
                                 .lowercase()
                                 .replace('_', ' '),
@@ -313,7 +329,9 @@ class DeviceToolServer(
                     }
                 }
                 val stopped = state.avds.filter { avd -> state.devices.none { it.avdName == avd.name } }
-                if (stopped.isNotEmpty()) {
+                if (!state.adbFound) {
+                    append("\nadb isn't installed, so no Android devices.")
+                } else if (stopped.isNotEmpty()) {
                     append("\nVirtual devices that can be started with start_emulator:")
                     stopped.forEach { a ->
                         append("\n- ")
@@ -327,6 +345,25 @@ class DeviceToolServer(
                     append(if (state.emulatorFound) "\nNo virtual devices (AVDs) exist yet; one can be made with the SDK's avdmanager or Android Studio's Device Manager." else "\nThe Android emulator isn't installed.")
                 }
                 if (state.error != null) append("\nadb said: ").append(state.error)
+                if (state.ios.xcodeFound) {
+                    val sims = state.startableSimulators
+                    if (sims.isNotEmpty()) {
+                        append("\niOS simulators that can be started with $START_SIMULATOR:")
+                        sims.forEach { d ->
+                            append("\n- ")
+                                .append(d.name)
+                                .append(" (")
+                                .append(d.runtimeName)
+                                .append(", ")
+                                .append(d.udid)
+                                .append(')')
+                        }
+                    } else if (state.ios.simulators.isEmpty()) {
+                        append("\nNo iOS simulators exist yet; Xcode's Devices and Simulators window makes them.")
+                    }
+                    if (!state.ios.idbFound) append("\n").append(IosSimulators.IDB_MISSING)
+                    state.ios.error?.let { append("\nsimctl said: ").append(it) }
+                }
             }
         return HostToolResult(text)
     }
@@ -357,6 +394,37 @@ class DeviceToolServer(
         )
     }
 
+    private suspend fun startSimulator(args: JsonObject): HostToolResult {
+        devices.refresh()
+        val state = devices.state.value
+        if (!state.ios.xcodeFound) throw IOException("iOS simulators need a Mac with Xcode")
+        val wanted = args.str("simulator")
+        val all = state.ios.simulators.filter { !it.name.endsWith(IosSimulators.COPY_MARK) }
+        val sim =
+            when {
+                wanted != null ->
+                    all.firstOrNull { it.udid.equals(wanted, ignoreCase = true) }
+                        ?: all.filter { it.name.equals(wanted, ignoreCase = true) }.maxByOrNull { it.osVersion }
+                        ?: all.filter { it.name.contains(wanted, ignoreCase = true) }.maxByOrNull { it.osVersion }
+                        ?: throw IOException("No simulator named $wanted. There are: ${all.joinToString { "${it.name} (${it.runtimeName})" }.ifEmpty { "none" }}")
+                all.isEmpty() -> throw IOException("No iOS simulators exist yet: make one in Xcode's Devices and Simulators window")
+                // Without a name: the newest iPhone.
+                else -> all.filter { !it.isIpad }.ifEmpty { all }.maxBy { it.osVersion }
+            }
+        val mine = owner()
+        val udid = devices.startSimulator(sim.udid, owner = mine, ownerLabel = ownerLabel())
+        mine?.let { devices.select(it, udid) }
+        val copy = mine != null
+        return HostToolResult(
+            "${sim.name} (${sim.runtimeName}) is booted as $udid and shows in the device panel." +
+                if (copy) {
+                    " It is this workstream's own copy: it started with what ${sim.name} holds, other workstreams don't touch it, and it is deleted when it stops ($RESET goes back to that start)."
+                } else {
+                    ""
+                },
+        )
+    }
+
     /** [arg] (a serial or a name) or, without one, the chat's device: the one it picked, else the only one online. */
     private suspend fun resolve(arg: String?): DeviceInfo {
         // An agent acts in bursts (tap, look, tap): one adb listing serves the burst.
@@ -372,7 +440,7 @@ class DeviceToolServer(
         val online = all.filter { it.isOnline }
         throw IOException(
             when {
-                online.isEmpty() -> "No device is running for this chat. start_emulator starts its own copy of a virtual device; list_devices shows them."
+                online.isEmpty() -> "No device is running for this chat. $START_EMULATOR (Android) or $START_SIMULATOR (iOS) starts its own copy of a virtual device; $LIST shows them."
                 else -> "Several devices are online; pass device (one of ${online.joinToString { it.serial }}), or select_device."
             },
         )
@@ -419,7 +487,7 @@ class DeviceToolServer(
     private suspend fun target(
         device: DeviceInfo,
         args: JsonObject,
-        connection: DeviceConnection,
+        connection: DeviceDriver,
     ): Pair<Pair<Int, Int>, String> {
         args.int("element")?.let { id ->
             val node = (trees[device.serial] ?: connection.uiTree().also { trees[device.serial] = it }).node(id) ?: throw IllegalArgumentException("No element #$id in the last ui_tree: call ui_tree again")
@@ -439,7 +507,7 @@ class DeviceToolServer(
     private fun describe(node: UiNode) = "#${node.id} ${node.shortClass}" + (node.text.takeIf { it.isNotBlank() } ?: node.contentDescription.takeIf { it.isNotBlank() })?.let { " \"$it\"" }.orEmpty()
 
     private fun fraction(
-        connection: DeviceConnection,
+        connection: DeviceDriver,
         x: Int,
         y: Int,
     ): Pair<Float?, Float?> {
@@ -475,7 +543,7 @@ class DeviceToolServer(
                 // system takes as back and home gestures.
                 val area =
                     args.int("element")?.let { id -> trees[device.serial]?.node(id)?.bounds ?: throw IllegalArgumentException("No element #$id in the last ui_tree") }
-                        ?: (connection.lastShownSize ?: connection.size().logical).let { s -> Bounds(0, 0, s.width, s.height) }
+                        ?: (connection.lastShownSize ?: connection.screenSize()).let { s -> Bounds(0, 0, s.width, s.height) }
                 val w = area.right - area.left
                 val h = area.bottom - area.top
                 val cx = area.centerX
@@ -510,8 +578,8 @@ class DeviceToolServer(
             connection.tap(point.first, point.second)
             delay(FOCUS_MS)
         }
-        connection.screen().type(text)
-        if (args.bool("submit") == true) connection.screen().key(DeviceKey.ENTER)
+        connection.type(text)
+        if (args.bool("submit") == true) connection.press(DeviceKey.ENTER)
         devices.report(DeviceActivity(device.serial, DeviceActivity.Kind.TYPE, label = text.take(40)))
         return after(device, args, "Typed ${text.length} characters${if (args.bool("submit") == true) " and pressed Enter" else ""}")
     }
@@ -523,7 +591,7 @@ class DeviceToolServer(
         val name = args.str("key") ?: throw IllegalArgumentException("key is required")
         val key = DeviceKey.named(name) ?: throw IllegalArgumentException("No key $name. Keys: ${DeviceKey.entries.joinToString { it.name.lowercase() }}")
         val connection = devices.connection(device.serial)
-        if (args.bool("long_press") == true) connection.adb.key(device.serial, key, longPress = true) else connection.screen().key(key)
+        connection.press(key, longPress = args.bool("long_press") == true)
         devices.report(DeviceActivity(device.serial, DeviceActivity.Kind.KEY, label = key.name.lowercase()))
         return after(device, args, "Pressed ${key.name.lowercase()}")
     }
@@ -575,6 +643,7 @@ class DeviceToolServer(
         device: DeviceInfo,
         args: JsonObject,
     ): HostToolResult {
+        if (device.isIos) return runIosApp(device, args)
         val targets = AndroidAppTargets.find(folder)
         if (targets.isEmpty()) throw IOException("No Android app module in ${folder.path}: build it with Gradle and use install_apk")
         val module = args.str("module")
@@ -590,11 +659,25 @@ class DeviceToolServer(
         return after(device, args, "Built ${target.module} $variant, installed and opened $pkg on ${device.name}", defaultShot = true)
     }
 
-    private suspend fun logcat(
+    private suspend fun runIosApp(
         device: DeviceInfo,
         args: JsonObject,
     ): HostToolResult {
-        val adb = devices.connection(device.serial).adb
+        val runner = iosApps ?: throw IOException("iOS apps need a Mac with Xcode")
+        val targets = runner.targets(folder)
+        if (targets.isEmpty()) throw IOException("No Xcode project in ${folder.path}: build the app with xcodebuild and use $INSTALL_APP")
+        val wanted = args.str("scheme") ?: args.str("module")
+        val target = wanted?.let { w -> targets.firstOrNull { w in it.schemes } ?: targets.firstOrNull { it.label.equals(w, ignoreCase = true) } } ?: targets.first()
+        val scheme = wanted?.takeIf { it in target.schemes } ?: target.schemes.first()
+        val bundleId = runner.run(target, scheme, device.serial)
+        openedApp[device.serial] = bundleId
+        return after(device, args, "Built ${target.label} ($scheme), installed and opened $bundleId on ${device.name}", defaultShot = true)
+    }
+
+    private suspend fun log(
+        device: DeviceInfo,
+        args: JsonObject,
+    ): HostToolResult {
         val lines = (args.int("lines") ?: 200).coerceIn(10, 2_000)
         val level =
             args
@@ -602,26 +685,18 @@ class DeviceToolServer(
                 ?.firstOrNull()
                 ?.uppercaseChar()
                 ?.takeIf { it in "VDIWEF" } ?: 'V'
-        val pkg = args.str("package")
-        val crashes = args.bool("crashes_only") == true
-        val pid = if (pkg != null && !crashes) adb.pidOf(device.serial, pkg) else null
-        val log = adb.logcat(device.serial, lines, pid, level, if (crashes) "crash" else null).let { if (it.length > MAX_LOG_CHARS) "…" + it.takeLast(MAX_LOG_CHARS) else it }
-        val head =
-            when {
-                crashes -> "Crash log of ${device.name}"
-                pkg != null && pid == null -> "$pkg isn't running; the whole log of ${device.name}"
-                pkg != null -> "Log of $pkg (pid $pid)"
-                else -> "Log of ${device.name}"
-            }
-        return HostToolResult("$head, last $lines lines:\n" + log.ifBlank { "(empty)" })
+        val read = devices.connection(device.serial).log(lines, args.str("package"), level, args.bool("crashes_only") == true)
+        val log = read.text.let { if (it.length > MAX_LOG_CHARS) "…" + it.takeLast(MAX_LOG_CHARS) else it }
+        return HostToolResult("${read.head} of ${device.name}, last $lines lines:\n" + log.ifBlank { "(empty)" })
     }
 
     companion object {
-        const val NAME = "android-device"
+        const val NAME = "device"
 
         const val LIST = "list_devices"
         const val START_EMULATOR = "start_emulator"
-        const val STOP_EMULATOR = "stop_emulator"
+        const val START_SIMULATOR = "start_simulator"
+        const val STOP_DEVICE = "stop_device"
         const val SELECT = "select_device"
         const val SCREENSHOT = "screenshot"
         const val UI_TREE = "ui_tree"
@@ -632,19 +707,19 @@ class DeviceToolServer(
         const val ROTATE = "rotate"
         const val WAIT_FOR = "wait_for"
         const val OPEN_URL = "open_url"
-        const val INSTALL_APK = "install_apk"
+        const val INSTALL_APP = "install_app"
         const val LAUNCH_APP = "launch_app"
         const val STOP_APP = "stop_app"
         const val CLEAR_DATA = "clear_app_data"
         const val RUN_APP = "run_app"
-        const val LOGCAT = "logcat"
+        const val LOG = "device_log"
         const val RESET = "reset_device"
 
         /** The tools a crash check would only slow down: they don't touch the app. */
-        private val WITHOUT_CRASH_CHECK = setOf(SELECT, STOP_EMULATOR, LOGCAT)
+        private val WITHOUT_CRASH_CHECK = setOf(SELECT, STOP_DEVICE, LOG)
 
         /** The tools that end the app on purpose: its process going is no news. */
-        private val STOPS_APP = setOf(STOP_APP, CLEAR_DATA, INSTALL_APK, RESET, RUN_APP)
+        private val STOPS_APP = setOf(STOP_APP, CLEAR_DATA, INSTALL_APP, RESET, RUN_APP)
 
         private const val TAG = "DeviceToolServer"
 
@@ -657,15 +732,15 @@ class DeviceToolServer(
         private const val MAX_LOG_CHARS = 24_000
 
         /** What runs without asking: looking, touching, typing on the device the user gave the chat. Building, installing, erasing and shutting down ask. */
-        val PRE_APPROVED = listOf(LIST, START_EMULATOR, SELECT, SCREENSHOT, UI_TREE, TAP, SWIPE, TYPE, KEY, ROTATE, WAIT_FOR, OPEN_URL, LAUNCH_APP, STOP_APP, LOGCAT, RESET)
+        val PRE_APPROVED = listOf(LIST, START_EMULATOR, START_SIMULATOR, SELECT, SCREENSHOT, UI_TREE, TAP, SWIPE, TYPE, KEY, ROTATE, WAIT_FOR, OPEN_URL, LAUNCH_APP, STOP_APP, LOG, RESET)
 
         /** How the brief tells a coding agent about the device. */
         const val BRIEF =
-            "An Android device panel sits beside this chat. The android-device tools (list_devices, start_emulator, run_app, screenshot, ui_tree, tap, " +
-                "type_text, swipe, press_key, wait_for, logcat) drive the emulator or phone it shows, and the user watches what you do there. " +
-                "To check an Android change: run_app (or build with Gradle and install_apk), then look with ui_tree or screenshot, and act. " +
+            "A device panel sits beside this chat. The $NAME tools ($LIST, $START_EMULATOR, $START_SIMULATOR, $RUN_APP, $SCREENSHOT, $UI_TREE, $TAP, " +
+                "$TYPE, $SWIPE, $KEY, $WAIT_FOR, $LOG) drive the Android emulator or phone, or the iOS simulator, it shows, and the user watches what you do there. " +
+                "To check a change: $RUN_APP (Gradle for Android, xcodebuild for iOS; or build yourself and $INSTALL_APP), then look with $UI_TREE or $SCREENSHOT, and act. " +
                 "Every device tool's result starts with any crash or ANR since your last one, so a clean result means no app crashed. " +
-                "An emulator you start is this workstream's own copy; reset_device puts it back to where it started."
+                "An emulator or simulator you start is this workstream's own copy; $RESET puts it back to where it started."
 
         private fun schema(json: String) = Json.parseToJsonElement(json).jsonObject
 
@@ -674,7 +749,11 @@ class DeviceToolServer(
 
         val TOOLS =
             listOf(
-                HostTool(LIST, "Lists the Android devices: running emulators, connected phones, and the virtual devices (AVDs) start_emulator can start.", schema("""{"type":"object","properties":{}}""")),
+                HostTool(
+                    LIST,
+                    "Lists the devices: running Android emulators, connected phones and booted iOS simulators, then the Android virtual devices (AVDs) $START_EMULATOR can start and the iOS simulators $START_SIMULATOR can.",
+                    schema("""{"type":"object","properties":{}}"""),
+                ),
                 HostTool(
                     START_EMULATOR,
                     "Starts this workstream's own copy of an Android emulator (an AVD) in the device panel and waits until Android has booted (up to a few minutes): " +
@@ -683,10 +762,17 @@ class DeviceToolServer(
                 ),
                 HostTool(
                     RESET,
-                    "Puts this workstream's own emulator copy back to the state its AVD last saved, as it was when the copy started: logged-in accounts, installed apps and data as they were then. Only works on the copy start_emulator gave this workstream. Returns a screenshot.",
+                    "Puts this workstream's own emulator or simulator copy back to where it started: an emulator to the state its AVD last saved, a simulator to a fresh copy of the one it copies (logged-in accounts, installed apps and data as they were then). " +
+                        "Only works on the copy $START_EMULATOR or $START_SIMULATOR gave this workstream. Returns a screenshot.",
                     schema("""{"type":"object","properties":{$DEVICE,$SHOT}}"""),
                 ),
-                HostTool(STOP_EMULATOR, "Shuts an emulator down.", schema("""{"type":"object","properties":{$DEVICE}}""")),
+                HostTool(
+                    START_SIMULATOR,
+                    "Boots this workstream's own copy of an iOS simulator (macOS with Xcode) in the device panel, without a Simulator.app window, and waits until it is ready: " +
+                        "it starts with what that simulator holds and is deleted when it stops; one already running for this workstream is reused. Without simulator, the newest iPhone.",
+                    schema("""{"type":"object","properties":{"simulator":{"type":"string","description":"Name or udid from list_devices"}}}"""),
+                ),
+                HostTool(STOP_DEVICE, "Shuts an emulator or a simulator down; a workstream's copy goes with its changes.", schema("""{"type":"object","properties":{$DEVICE}}""")),
                 HostTool(SELECT, "Makes a device this chat's device: the panel shows it, and the other tools use it when no device is given.", schema("""{"type":"object","properties":{$DEVICE},"required":["device"]}""")),
                 HostTool(
                     SCREENSHOT,
@@ -696,7 +782,7 @@ class DeviceToolServer(
                 HostTool(
                     UI_TREE,
                     "The screen as text: each view that shows text, has a description or can be tapped, scrolled or typed in, numbered, with its bounds in screenshot pixels. " +
-                        "Cheaper and more exact than a screenshot for finding what to tap; Compose screens show their text and content descriptions.",
+                        "Cheaper and more exact than a screenshot for finding what to tap; Compose screens show their text and content descriptions, iOS screens their accessibility labels, values and identifiers.",
                     schema("""{"type":"object","properties":{$DEVICE}}"""),
                 ),
                 HostTool(
@@ -715,19 +801,20 @@ class DeviceToolServer(
                 ),
                 HostTool(
                     TYPE,
-                    "Types text into the focused field, or first taps the field given by element or into (a text it shows). Any text on an emulator; ASCII only on a phone.",
+                    "Types text into the focused field, or first taps the field given by element or into (a text it shows). Any text on an emulator or a simulator; ASCII only on a phone.",
                     schema(
                         """{"type":"object","properties":{"text":{"type":"string"},"element":{"type":"integer"},"into":{"type":"string"},"submit":{"type":"boolean","description":"Press Enter after"},$DEVICE,$SHOT},"required":["text"]}""",
                     ),
                 ),
                 HostTool(
                     KEY,
-                    "Presses a key: back, home, recents, power, volume_up, volume_down, enter, backspace, delete, tab, escape, up, down, left, right, page_up, page_down, paste, wake.",
+                    "Presses a key: back, home, recents, power, volume_up, volume_down, enter, backspace, delete, tab, escape, up, down, left, right, page_up, page_down, paste, wake. " +
+                        "On iOS, back is a swipe in from the left edge, recents is two presses of home, and power is the side button.",
                     schema("""{"type":"object","properties":{"key":{"type":"string"},"long_press":{"type":"boolean"},$DEVICE,$SHOT},"required":["key"]}"""),
                 ),
                 HostTool(
                     ROTATE,
-                    "Turns the device. An emulator turns as its own rotate button turns it (apps locked to portrait stay so); a phone gets the rotation locked.",
+                    "Turns the device. An emulator or a simulator turns as its own rotate button turns it (apps locked to portrait stay so); a phone gets the rotation locked.",
                     schema("""{"type":"object","properties":{"orientation":{"type":"string","enum":["portrait","landscape","reverse_portrait","reverse_landscape"]},$DEVICE,$SHOT},"required":["orientation"]}"""),
                 ),
                 HostTool(
@@ -737,22 +824,35 @@ class DeviceToolServer(
                 ),
                 HostTool(
                     OPEN_URL,
-                    "Opens a URL or deep link on the device (https:, nostr:, an app's own scheme), optionally in one package.",
+                    "Opens a URL or deep link on the device (https:, nostr:, an app's own scheme), optionally in one Android package.",
                     schema("""{"type":"object","properties":{"url":{"type":"string"},"package":{"type":"string"},$DEVICE,$SHOT},"required":["url"]}"""),
                 ),
-                HostTool(INSTALL_APK, "Installs (or updates) an APK on the device. A relative path is from this chat's folder.", schema("""{"type":"object","properties":{"path":{"type":"string"},$DEVICE},"required":["path"]}""")),
-                HostTool(LAUNCH_APP, "Opens an installed app by package name and returns a screenshot.", schema("""{"type":"object","properties":{"package":{"type":"string"},$DEVICE,$SHOT},"required":["package"]}""")),
-                HostTool(STOP_APP, "Force-stops an app.", schema("""{"type":"object","properties":{"package":{"type":"string"},$DEVICE},"required":["package"]}""")),
-                HostTool(CLEAR_DATA, "Erases an app's data on the device, as a fresh install would have it.", schema("""{"type":"object","properties":{"package":{"type":"string"},$DEVICE},"required":["package"]}""")),
                 HostTool(
-                    RUN_APP,
-                    "Builds the debug variant of this chat's Android app with its Gradle wrapper, installs it on the device and opens it, like Android Studio's Run; returns a screenshot. " +
-                        "Takes minutes on a first build. Without module/variant, the first app module and its first debug variant.",
-                    schema("""{"type":"object","properties":{"module":{"type":"string","description":"Gradle path, e.g. :amethyst"},"variant":{"type":"string","description":"e.g. playDebug"},$DEVICE,$SHOT}}"""),
+                    INSTALL_APP,
+                    "Installs (or updates) an app: an APK on Android, a simulator build's .app on iOS. A relative path is from this chat's folder.",
+                    schema("""{"type":"object","properties":{"path":{"type":"string"},$DEVICE},"required":["path"]}"""),
+                ),
+                HostTool(LAUNCH_APP, "Opens an installed app by its package name (Android) or bundle id (iOS) and returns a screenshot.", schema("""{"type":"object","properties":{"package":{"type":"string","description":"Package name or bundle id"},$DEVICE,$SHOT},"required":["package"]}""")),
+                HostTool(STOP_APP, "Force-stops an app.", schema("""{"type":"object","properties":{"package":{"type":"string","description":"Package name or bundle id"},$DEVICE},"required":["package"]}""")),
+                HostTool(
+                    CLEAR_DATA,
+                    "Erases an app's data on the device, as a fresh install would have it (on iOS it is reinstalled from its own bundle; keychain items stay).",
+                    schema("""{"type":"object","properties":{"package":{"type":"string","description":"Package name or bundle id"},$DEVICE},"required":["package"]}"""),
                 ),
                 HostTool(
-                    LOGCAT,
-                    "Reads the device log: the last lines, of one app's process when package is given, at level and above (V, D, I, W, E, F); crashes_only reads just the stack traces of apps that crashed.",
+                    RUN_APP,
+                    "Builds this chat's app for the device, installs it and opens it, like Android Studio's or Xcode's Run; returns a screenshot. " +
+                        "Android: the debug variant, with the build's Gradle wrapper (without module/variant, the first app module and its first debug variant). " +
+                        "iOS simulator: the Debug configuration of an Xcode project or workspace in the folder (an iosApp/ of a Kotlin Multiplatform build too), with xcodebuild (without scheme, its first shared scheme). " +
+                        "Takes minutes on a first build.",
+                    schema(
+                        """{"type":"object","properties":{"module":{"type":"string","description":"Android: Gradle path, e.g. :amethyst"},"variant":{"type":"string","description":"Android: e.g. playDebug"},"scheme":{"type":"string","description":"iOS: the Xcode scheme"},$DEVICE,$SHOT}}""",
+                    ),
+                ),
+                HostTool(
+                    LOG,
+                    "Reads the device log (Android's logcat; an iOS simulator's unified log of the last minutes): the last lines, of one app's process when package (or bundle id) is given, at level and above (V, D, I, W, E, F); " +
+                        "crashes_only reads just the stack traces of apps that crashed (on iOS, the latest crash reports).",
                     schema(
                         """{"type":"object","properties":{"package":{"type":"string"},"lines":{"type":"integer"},"level":{"type":"string"},"crashes_only":{"type":"boolean"},$DEVICE}}""",
                     ),

@@ -78,7 +78,7 @@ class RealDeviceToolsTest {
             call(DeviceToolServer.SWIPE, """{"direction":"up"}""")
             call(DeviceToolServer.ROTATE, """{"orientation":"landscape","screenshot":true}""")
             call(DeviceToolServer.ROTATE, """{"orientation":"portrait"}""")
-            call(DeviceToolServer.LOGCAT, """{"lines":5}""")
+            call(DeviceToolServer.LOG, """{"lines":5}""")
         } finally {
             scope.cancel()
         }
@@ -112,11 +112,11 @@ class RealDeviceToolsTest {
                 }
                 // A change on one copy, then its reset: back to the saved state, the other untouched.
                 val first = serials[0]
-                devices.connection(first).adb.shell(first, "settings", "put", "system", "screen_off_timeout", "123456")
+                devices.androidConnection(first).adb.shell(first, "settings", "put", "system", "screen_off_timeout", "123456")
                 devices.reset(first)
                 val after =
                     devices
-                        .connection(first)
+                        .androidConnection(first)
                         .adb
                         .shell(first, "settings", "get", "system", "screen_off_timeout")
                         .trim()

@@ -34,7 +34,8 @@ data class DeviceCrash(
     /** The trace: the exception's frames and causes, a native backtrace, or the ANR's lines. */
     val details: List<String>,
 ) {
-    enum class Kind { JAVA, NATIVE, ANR }
+    /** [IOS] is an iOS app's crash report (an `.ips`), whatever stopped it: a signal, an exception, a Swift trap. */
+    enum class Kind { JAVA, NATIVE, ANR, IOS }
 
     /** The crash in a few lines: what, where, and the top of the trace. */
     fun summary(maxLines: Int = 14): String {
@@ -43,6 +44,7 @@ data class DeviceCrash(
                 Kind.JAVA -> "crashed"
                 Kind.NATIVE -> "crashed in native code"
                 Kind.ANR -> "stopped responding (ANR)"
+                Kind.IOS -> "crashed"
             }
         val head = "${packageName ?: "pid $pid"} $what at $time: $headline"
         val trace = details.take(maxLines).joinToString("\n") { "  $it" }

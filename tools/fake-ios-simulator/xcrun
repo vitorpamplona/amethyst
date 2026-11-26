@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+# A stand-in for `xcrun simctl` (and `xcrun xcodebuild`), for exercising the device panel's iOS
+# simulators on a computer without Xcode. Point the app at it with AMETHYST_XCRUN. Its simulators
+# live in a JSON file (FAKE_IOS_STATE, default /tmp/fake-ios-simulators.json); see README.md.
+import json, os, sys, time, uuid
+
+STATE = os.environ.get("FAKE_IOS_STATE", "/tmp/fake-ios-simulators.json")
+RUNTIME = "com.apple.CoreSimulator.SimRuntime.iOS-26-0"
+
+
+def load():
+    if not os.path.exists(STATE):
+        devices = [
+            {"udid": "9F3B5D2A-1C4E-4F6A-8B7C-0D1E2F3A4B5C", "name": "iPhone 17 Pro", "state": "Shutdown",
+             "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro"},
+            {"udid": "11111111-2222-3333-4444-555555555555", "name": "iPad Air 13-inch (M3)", "state": "Shutdown",
+             "deviceTypeIdentifier": "com.apple.CoreSimulator.SimDeviceType.iPad-Air-13-inch-M3"},
+        ]
+        save({"devices": devices, "apps": {}})
+    with open(STATE) as f:
+        return json.load(f)
+
+
+def save(state):
+    tmp = STATE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(state, f, indent=1)
+    os.replace(tmp, STATE)
+
+
+def device(state, udid):
+    for d in state["devices"]:
+        if d["udid"] == udid or (udid == "booted" and d["state"] == "Booted"):
+            return d
+    fail(f"Invalid device: {udid}")
+
+
+def fail(message, code=1):
+    sys.stderr.write(f"An error was encountered processing the command (domain=com.apple.CoreSimulator.SimError, code=405):\n{message}\n")
+    sys.exit(code)
+
+
+def simctl(args):
+    state = load()
+    cmd = args[0] if args else "help"
+    if cmd == "list":
+        out = {
+            "runtimes": [{"identifier": RUNTIME, "name": "iOS 26.0", "version": "26.0", "isAvailable": True, "platform": "iOS"}],
+            "devices": {RUNTIME: [dict(d, isAvailable=True) for d in state["devices"]]},
+            "devicetypes": [],
+            "pairs": {},
+        }
+        print(json.dumps(out, indent=2))
+    elif cmd in ("boot", "bootstatus"):
+        d = device(state, args[1])
+        if cmd == "boot" and d["state"] == "Booted":
+            fail("Unable to boot device in current state: Booted", 149)
+        if d["state"] != "Booted":
+            d["state"] = "Booted"
+            save(state)
+            time.sleep(1.5)
+        if cmd == "bootstatus":
+            print("Monitoring boot status for %s (%s).\nDevice already booted, nothing to do." % (d["name"], d["udid"]))
+    elif cmd == "shutdown":
+        d = device(state, args[1])
+        if d["state"] == "Shutdown":
+            fail("Unable to shutdown device in current state: Shutdown", 149)
+        d["state"] = "Shutdown"
+        save(state)
+    elif cmd == "clone":
+        d = device(state, args[1])
+        if d["state"] != "Shutdown":
+            fail("Unable to clone device in current state: Booted", 405)
+        copy = dict(d, udid=str(uuid.uuid4()).upper(), name=args[2], state="Shutdown")
+        state["devices"].append(copy)
+        state["apps"][copy["udid"]] = list(state["apps"].get(d["udid"], []))
+        save(state)
+        print(copy["udid"])
+    elif cmd == "delete":
+        state["devices"] = [d for d in state["devices"] if d["udid"] != args[1]]
+        save(state)
+    elif cmd == "erase":
+        d = device(state, args[1])
+        state["apps"][d["udid"]] = []
+        save(state)
+    elif cmd == "install":
+        d = device(state, args[1])
+        apps = state["apps"].setdefault(d["udid"], [])
+        name = os.path.basename(args[2].rstrip("/"))
+        bundle = "com.example." + name.split(".")[0].lower()
+        if bundle not in apps:
+            apps.append(bundle)
+        save(state)
+    elif cmd == "uninstall":
+        d = device(state, args[1])
+        state["apps"][d["udid"]] = [a for a in state["apps"].get(d["udid"], []) if a != args[2]]
+        save(state)
+    elif cmd == "launch":
+        rest = [a for a in args[1:] if not a.startswith("--")]
+        d = device(state, rest[0])
+        state.setdefault("running", {}).setdefault(d["udid"], {})[rest[1]] = 4000 + len(rest[1])
+        save(state)
+        print(f"{rest[1]}: {4000 + len(rest[1])}")
+    elif cmd == "terminate":
+        d = device(state, args[1])
+        running = state.setdefault("running", {}).setdefault(d["udid"], {})
+        if args[2] not in running:
+            fail("found nothing to terminate", 3)
+        del running[args[2]]
+        save(state)
+    elif cmd == "openurl":
+        device(state, args[1])
+    elif cmd == "get_app_container":
+        d = device(state, args[1])
+        if args[2] not in state["apps"].get(d["udid"], []):
+            fail("No such file or directory", 2)
+        print(f"/tmp/fake-ios-apps/{args[2]}.app")
+    elif cmd == "spawn":
+        d = device(state, args[1])
+        if args[2] == "launchctl":
+            print("PID\tStatus\tLabel")
+            for bundle, pid in state.get("running", {}).get(d["udid"], {}).items():
+                print(f"{pid}\t0\tUIKitApplication:{bundle}[1a2b][rb-legacy]")
+        elif args[2] == "log":
+            print("Timestamp               Ty Process[PID:TID]")
+            now = time.strftime("%Y-%m-%d %H:%M:%S")
+            print(f"{now}.101 Df SpringBoard[52:1a3] [com.apple.SpringBoard:Icon] Showing the home screen")
+            print(f"{now}.204 E  FakeApp[4007:2b4] [com.example.fake:net] The relay didn't answer")
+            print(f"{now}.305 I  FakeApp[4007:2b4] Tapped the button")
+    elif cmd == "io":
+        # `simctl io <udid> screenshot --type=png <file>`: a plain picture.
+        from PIL import Image
+        Image.new("RGB", (750, 1334), (240, 240, 245)).save(args[-1], "PNG")
+    else:
+        fail(f"Unknown subcommand {cmd}")
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "simctl":
+        simctl(sys.argv[2:])
+    elif len(sys.argv) > 1 and sys.argv[1] == "xcodebuild":
+        sys.stderr.write("xcodebuild: error: the fake xcrun builds nothing\n")
+        sys.exit(65)
+    else:
+        sys.stderr.write("usage: xcrun simctl ...\n")
+        sys.exit(64)

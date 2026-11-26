@@ -22,6 +22,7 @@ The desktop app uses it for the device panel beside a coding chat and for the ag
 | One live-view interface over both (frames + pointer + keys) | `device/DeviceScreen`: `EmulatorScreen`, `AdbScreen` |
 | Crashes and ANRs in the device log (`crash` buffer, `ActivityManager` ANRs) | `adb/CrashLog`, `Adb.crashes` |
 | Back to the AVD's saved state (`default_boot`) | `EmulatorController.loadSnapshot` (`SnapshotService`) |
+| gRPC over a Unix socket; a client stream sent whole; a stream held open while answers come (idb's companion, for `iosSimulatorClient`) | `grpc/UnixSocketFactory`, `GrpcChannel.clientStream`, `GrpcChannel.openStream` |
 
 ## The emulator's gRPC endpoint, as observed
 

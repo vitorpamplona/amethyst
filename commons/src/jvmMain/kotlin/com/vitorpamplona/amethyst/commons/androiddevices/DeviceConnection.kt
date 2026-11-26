@@ -21,6 +21,8 @@
 package com.vitorpamplona.amethyst.commons.androiddevices
 
 import com.vitorpamplona.androiddevice.adb.Adb
+import com.vitorpamplona.androiddevice.adb.DeviceCrash
+import com.vitorpamplona.androiddevice.adb.DeviceKey
 import com.vitorpamplona.androiddevice.adb.ScreenSize
 import com.vitorpamplona.androiddevice.adb.WmSize
 import com.vitorpamplona.androiddevice.device.AdbScreen
@@ -37,6 +39,7 @@ import kotlinx.coroutines.withContext
 import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.IOException
 import javax.imageio.ImageIO
 import kotlin.math.max
@@ -61,10 +64,12 @@ class AgentShot(
  * itself. The UI tree's bounds and the taps it asks for are in that space too.
  */
 class DeviceConnection(
-    val serial: String,
+    override val serial: String,
     val adb: Adb,
     val emulator: EmulatorController?,
-) {
+) : DeviceDriver {
+    override val platform = DevicePlatform.ANDROID
+
     @Volatile
     private var size: Pair<WmSize, Long>? = null
 
@@ -73,7 +78,7 @@ class DeviceConnection(
      * was: where an agent's tap lands as a fraction of the picture, for the panel to show it.
      */
     @Volatile
-    var lastShownSize: ScreenSize? = null
+    override var lastShownSize: ScreenSize? = null
         private set
 
     suspend fun size(): WmSize {
@@ -82,7 +87,9 @@ class DeviceConnection(
     }
 
     /** From the device's pixels to the agent's ([AgentShot] pixels). Turning the screen keeps it. */
-    suspend fun scale(): Double = agentScale(size().logical)
+    override suspend fun scale(): Double = agentScale(size().logical)
+
+    override suspend fun screenSize(): ScreenSize = size().logical
 
     @Volatile
     private var cachedScreen: DeviceScreen? = null
@@ -109,7 +116,7 @@ class DeviceConnection(
     }
 
     /** How the screen is turned now, in quarter turns from portrait. */
-    suspend fun rotation(): Int {
+    override suspend fun rotation(): Int {
         emulator?.let { emu ->
             try {
                 return emu.rotation()
@@ -126,7 +133,7 @@ class DeviceConnection(
      * Anything else (a phone, or an emulator whose port refuses) gets Android's rotation locked to
      * it through adb, which a phone shows as it is but an emulator's stream doesn't know about.
      */
-    suspend fun rotate(quarterTurns: Int) {
+    override suspend fun rotate(quarterTurns: Int) {
         emulator?.let { emu ->
             try {
                 // The sensor turns the screen only with auto-rotate on, which an adb turn switches off.
@@ -146,25 +153,25 @@ class DeviceConnection(
      * The live view: the emulator's stream when it can be opened, else adb screenshots. One per
      * connection, so a key press from the panel doesn't build a new one (and ask adb its size).
      */
-    suspend fun screen(): DeviceScreen = cachedScreen ?: (emulator?.let { EmulatorScreen(it, adb, serial, size().physical) } ?: AdbScreen(adb, serial)).also { cachedScreen = it }
+    override suspend fun screen(): DeviceScreen = cachedScreen ?: (emulator?.let { EmulatorScreen(it, adb, serial, size().physical) } ?: AdbScreen(adb, serial)).also { cachedScreen = it }
 
     /**
      * Agent input, in the device's own (logical, turned) pixels. On an emulator whose gRPC endpoint
      * answers, a touch is a millisecond-scale call; `adb shell input` starts a JVM on the device for
      * each one (half a second or more), so it is only the fallback.
      */
-    suspend fun tap(
+    override suspend fun tap(
         x: Int,
         y: Int,
     ) = gesture(listOf(x to y), holdMs = TAP_HOLD_MS) { adb.tap(serial, x, y) }
 
-    suspend fun longPress(
+    override suspend fun longPress(
         x: Int,
         y: Int,
         holdMs: Int,
     ) = gesture(listOf(x to y), holdMs = holdMs.toLong()) { adb.swipe(serial, x, y, x, y, holdMs) }
 
-    suspend fun swipe(
+    override suspend fun swipe(
         x1: Int,
         y1: Int,
         x2: Int,
@@ -211,7 +218,7 @@ class DeviceConnection(
     }
 
     /** A picture of the screen at the agent's scale, as PNG. */
-    suspend fun agentShot(): AgentShot {
+    override suspend fun agentShot(): AgentShot {
         val scale = scale()
         val logical = size().logical
         val longEdge = (max(logical.width, logical.height) * scale).roundToInt()
@@ -234,7 +241,7 @@ class DeviceConnection(
         return withContext(Dispatchers.Default) { scaledPng(png, scale) }
     }
 
-    suspend fun uiTree(): UiTree {
+    override suspend fun uiTree(): UiTree {
         val tree = withContext(Dispatchers.Default) { UiTree.parse(adb.uiDump(serial)) }
         // The first node spans the screen, turned as it is.
         tree.nodes
@@ -243,6 +250,50 @@ class DeviceConnection(
             ?.let { if (!it.isEmpty) lastShownSize = ScreenSize(it.right, it.bottom) }
         return tree
     }
+
+    override suspend fun press(
+        key: DeviceKey,
+        longPress: Boolean,
+    ) {
+        if (longPress) adb.key(serial, key, longPress = true) else screen().key(key)
+    }
+
+    override suspend fun screenshotPng(): ByteArray = adb.screencapPng(serial)
+
+    override suspend fun openUrl(
+        url: String,
+        app: String?,
+    ): String = adb.openUrl(serial, url, app)
+
+    override suspend fun install(file: File): String = adb.install(serial, file)
+
+    override suspend fun launch(app: String) = adb.launch(serial, app)
+
+    override suspend fun stopApp(app: String) = adb.forceStop(serial, app)
+
+    override suspend fun clearData(app: String): String = "pm clear $app: " + adb.clearData(serial, app)
+
+    override suspend fun isRunning(app: String): Boolean = adb.pidOf(serial, app) != null
+
+    override suspend fun log(
+        lines: Int,
+        app: String?,
+        level: Char,
+        crashesOnly: Boolean,
+    ): DeviceLog {
+        val pid = if (app != null && !crashesOnly) adb.pidOf(serial, app) else null
+        val text = adb.logcat(serial, lines, pid, level, if (crashesOnly) "crash" else null)
+        val head =
+            when {
+                crashesOnly -> "Crash log"
+                app != null && pid == null -> "$app isn't running; the whole log"
+                app != null -> "Log of $app (pid $pid)"
+                else -> "Log"
+            }
+        return DeviceLog(head, text)
+    }
+
+    override suspend fun crashes(): List<DeviceCrash> = adb.crashes(serial)
 
     companion object {
         private const val TAG = "DeviceConnection"

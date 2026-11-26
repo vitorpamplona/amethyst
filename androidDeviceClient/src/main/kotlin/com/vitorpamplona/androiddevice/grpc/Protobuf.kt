@@ -91,6 +91,18 @@ class ProtoWriter {
         build: ProtoWriter.() -> Unit,
     ) = bytes(field, ProtoWriter().apply(build).bytes())
 
+    /** A `double`: fixed64, little-endian, as protobuf lays it out. */
+    fun double(
+        field: Int,
+        value: Double,
+    ): ProtoWriter {
+        if (value == 0.0) return this
+        tag(field, FIXED64)
+        val bits = value.toRawBits()
+        repeat(8) { i -> out.write(((bits ushr (8 * i)) and 0xff).toInt()) }
+        return this
+    }
+
     fun packedFloats(
         field: Int,
         values: FloatArray,
@@ -189,6 +201,9 @@ object ProtoReader {
 }
 
 fun List<ProtoField>.varint(number: Int): Long = (lastOrNull { it.number == number } as? ProtoField.Varint)?.value ?: 0L
+
+/** A `double` field, or 0 when it isn't there (proto3's default). */
+fun List<ProtoField>.double(number: Int): Double = (lastOrNull { it.number == number } as? ProtoField.Fixed64)?.value?.let { Double.fromBits(it) } ?: 0.0
 
 fun List<ProtoField>.string(number: Int): String = (lastOrNull { it.number == number } as? ProtoField.Length)?.string ?: ""
 
