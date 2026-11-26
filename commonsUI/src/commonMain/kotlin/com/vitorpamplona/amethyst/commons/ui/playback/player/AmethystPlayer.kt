@@ -242,9 +242,10 @@ data class PlayerFailure(
     /** A live stream fell behind its window: rejoin the live edge rather than give up. */
     val isBehindLiveWindow: Boolean = false,
     /**
-     * The settings route this media through Tor and this player cannot (iOS plays HLS with
-     * AVFoundation's own networking, which takes no proxy), so it refused to play rather than go
-     * direct. Neither a retry nor a browser helps; the Tor settings do.
+     * The settings route this media through Tor and this player cannot carry it there (on iOS,
+     * where AVFoundation takes no proxy and streams go through a loopback relay: a URL that is not
+     * http(s), a playlist naming a FairPlay `skd://` key, or a relay that could not listen), so it
+     * refused to play rather than go direct. Neither a retry nor a browser helps; the Tor settings do.
      */
     val isTorRefusal: Boolean = false,
     /**

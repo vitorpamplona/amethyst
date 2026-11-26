@@ -68,7 +68,7 @@ private const val HEAD_BYTES = 16
  *
  * A failure finishes the request with an NSURLErrorDomain error, which the player reports as a
  * network problem. A URL that is not a plain file (a playlist, no length) is redirected to its
- * plain URL.
+ * plain URL, or to the loopback relay's address of it when it must go through Tor.
  */
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class VideoResourceLoader(
@@ -130,9 +130,16 @@ class VideoResourceLoader(
         } catch (e: NotCacheableException) {
             IosVideoCache.refuse(url)
             // The plain URL is AVFoundation's own fetch, which no proxy covers: a video that must
-            // go through Tor stops here instead (plans/2026-11-25-ios-tor.md, B12e).
+            // go through Tor goes to the loopback relay instead, which fetches it over Tor, and
+            // stops here if the relay cannot listen (plans/2026-11-25-ios-tor.md, B12e).
             if (!request.isCancelled()) {
-                if (IosVideoCache.mustUseTor(url)) request.finishLoadingWithError(IosVideoCache.torRefusalError(url)) else redirect(request, url)
+                if (IosVideoCache.mustUseTor(url)) {
+                    val relayed = IosVideoCache.torStreamFor(url)
+                    if (request.isCancelled()) return
+                    if (relayed != null) redirect(request, relayed.url) else request.finishLoadingWithError(IosVideoCache.torRefusalError(url))
+                } else {
+                    redirect(request, url)
+                }
             }
         } catch (e: Exception) {
             Log.w(TAG, "Could not load $url", e)
@@ -140,14 +147,14 @@ class VideoResourceLoader(
         }
     }
 
-    /** Sends AVFoundation to the plain URL, which it loads itself. */
+    /** Sends AVFoundation to [url] (the plain URL, or the relay's address of it), which it loads itself. */
     private fun redirect(
         request: AVAssetResourceLoadingRequest,
         url: String,
     ) {
-        val plain = NSURL.URLWithString(url) ?: return request.finishLoadingWithError(errorOf(NotCacheableException(url), url))
-        request.redirect = NSURLRequest.requestWithURL(plain)
-        request.response = NSHTTPURLResponse(uRL = plain, statusCode = 302, HTTPVersion = null, headerFields = mapOf<Any?, Any?>("Location" to url))
+        val target = NSURL.URLWithString(url) ?: return request.finishLoadingWithError(errorOf(NotCacheableException(url), url))
+        request.redirect = NSURLRequest.requestWithURL(target)
+        request.response = NSHTTPURLResponse(uRL = target, statusCode = 302, HTTPVersion = null, headerFields = mapOf<Any?, Any?>("Location" to url))
         request.finishLoading()
     }
 

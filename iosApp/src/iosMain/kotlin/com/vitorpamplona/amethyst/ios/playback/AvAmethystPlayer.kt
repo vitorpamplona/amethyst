@@ -26,6 +26,8 @@ import com.vitorpamplona.amethyst.commons.ui.playback.player.PlayerFailure
 import com.vitorpamplona.amethyst.commons.ui.playback.player.TextTrack
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoSize
 import com.vitorpamplona.amethyst.commons.ui.playback.player.VideoTrack
+import com.vitorpamplona.amethyst.commons.video.hls.RelayFailure
+import com.vitorpamplona.amethyst.commons.video.hls.VideoRoute
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -109,7 +111,8 @@ import platform.darwin.dispatch_get_main_queue
  * stream (HLS subtitles) are the legible media-selection group; side-loaded ones are
  * [SideLoadedCaptions], fed by [setSideLoadedCaptions].
  *
- * A [cacheable] file reads through the disk cache ([IosVideoCache]); HLS and live streams do not.
+ * A [cacheable] file reads through the disk cache ([IosVideoCache]); HLS and live streams do not,
+ * and play from their URL, or through the loopback relay when they must go through Tor.
  */
 @OptIn(ExperimentalForeignApi::class)
 class AvAmethystPlayer(
@@ -132,6 +135,12 @@ class AvAmethystPlayer(
     private var cachedLegibleGroup: AVMediaSelectionGroup? = null
     private var ended = false
     private var failure: PlayerFailure? = null
+
+    // Counts prepare() calls, so a relay address that arrives late is dropped if another came since.
+    private var prepareCount = 0
+
+    // The loopback relay's stream this item plays through, when it plays through Tor that way.
+    private var relayStream: String? = null
     private var wantsToPlay = false
     private var speed = 1f
     private var sideLoaded: SideLoadedCaptions? = null
@@ -258,14 +267,42 @@ class AvAmethystPlayer(
         clearNotifications()
         failure = null
         ended = false
-        // AVFoundation would fetch this one itself, outside Tor, although the settings route it
-        // through Tor (HLS, a live stream): refuse it rather than leak (plans/2026-11-25-ios-tor.md, B12e).
-        if (IosVideoCache.wouldBypassTor(url, cacheable)) {
-            item = null
-            avPlayer.replaceCurrentItemWithPlayerItem(null)
-            return fail(PlayerFailure.torRefusal(url))
+        relayStream = null
+        val attempt = ++prepareCount
+        when (IosVideoCache.routeFor(url, cacheable)) {
+            VideoRoute.CACHE, VideoRoute.PLAIN -> {
+                load(IosVideoCache.assetFor(nsUrl, cacheable))
+            }
+
+            // AVFoundation would fetch this one itself, outside Tor, although the settings route it
+            // through Tor (HLS, a live stream, a server the cache refused): the loopback relay
+            // fetches every playlist, segment and key of it over Tor instead. If the relay cannot
+            // listen it is refused, never played direct (plans/2026-11-25-ios-tor.md, B12e).
+            VideoRoute.TOR_RELAY -> {
+                unload()
+                scope.launch {
+                    val relayed = IosVideoCache.torStreamFor(url)
+                    // A newer prepare (a retry) or a release took over meanwhile.
+                    if (attempt != prepareCount) return@launch
+                    val relayedUrl = relayed?.let { NSURL.URLWithString(it.url) } ?: return@launch fail(PlayerFailure.torRefusal(url))
+                    relayStream = relayed.stream
+                    load(AVURLAsset(uRL = relayedUrl, options = null))
+                }
+            }
+
+            VideoRoute.REFUSED -> {
+                unload()
+                fail(PlayerFailure.torRefusal(url))
+            }
         }
-        val asset = IosVideoCache.assetFor(nsUrl, cacheable)
+    }
+
+    private fun unload() {
+        item = null
+        avPlayer.replaceCurrentItemWithPlayerItem(null)
+    }
+
+    private fun load(asset: AVURLAsset) {
         val newItem = AVPlayerItem(asset = asset)
         item = newItem
         assetLoaded = false
@@ -494,7 +531,7 @@ class AvAmethystPlayer(
         notificationTokens +=
             center.addObserverForName(AVPlayerItemFailedToPlayToEndTimeNotification, observed, NSOperationQueue.mainQueue) { note: NSNotification? ->
                 val nsError = note?.userInfo?.get(AVPlayerItemFailedToPlayToEndTimeErrorKey) as? NSError
-                fail(failureOf(nsError))
+                fail(failureOfItem(nsError))
             }
     }
 
@@ -510,11 +547,17 @@ class AvAmethystPlayer(
         tick()
     }
 
+    /** [nsError] explained, by the relay's own account when the item plays through the relay. */
+    private fun failureOfItem(nsError: NSError?): PlayerFailure {
+        val relayed = relayStream?.let { IosVideoCache.relayFailure(it) }
+        return if (relayed != null) failureOf(relayed, nsError) else failureOf(nsError)
+    }
+
     /** Compares the player with what the listeners last heard and tells them what changed. */
     private fun tick() {
         val current = item
         if (current != null && failure == null && current.status == AVPlayerItemStatusFailed) {
-            fail(failureOf(current.error))
+            fail(failureOfItem(current.error))
             return
         }
         val snapshot = listeners.toList()
@@ -574,6 +617,20 @@ class AvAmethystPlayer(
 
         // AVFoundation's errors for media it cannot read or decode.
         private val DECODER_CODES = setOf(-11828L, -11829L, -11833L, -11821L, -11832L, -11834L, -11849L)
+
+        /** A relayed stream's failure: what the relay saw upstream, which AVFoundation reports as a bare 502. */
+        fun failureOf(
+            relayed: RelayFailure,
+            nsError: NSError?,
+        ): PlayerFailure {
+            val diagnostic = nsError?.let { "${it.domain}(${it.code}) ${it.localizedDescription}" }
+            return when (relayed) {
+                is RelayFailure.Unroutable -> PlayerFailure.torRefusal(relayed.url).copy(diagnostic = diagnostic)
+                is RelayFailure.TorUnavailable -> PlayerFailure("Tor is not connected yet: ${relayed.url}", "TOR_UNAVAILABLE", isNetworkProblem = true, diagnostic = diagnostic)
+                is RelayFailure.Http -> PlayerFailure("HTTP ${relayed.status} through Tor: ${relayed.url}", "TOR_RELAY_HTTP(${relayed.status})", isNetworkProblem = true, diagnostic = diagnostic)
+                is RelayFailure.Network -> PlayerFailure("${relayed.message} through Tor: ${relayed.url}", "TOR_RELAY_NETWORK", isNetworkProblem = true, diagnostic = diagnostic)
+            }
+        }
 
         fun failureOf(nsError: NSError?): PlayerFailure {
             if (nsError == null) return PlayerFailure("Unknown playback error", "UNKNOWN")

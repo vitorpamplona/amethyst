@@ -42,6 +42,15 @@ class RoleBasedKtorClients(
 
     override fun ktorClientForVideo(url: String): HttpClient = clients.get(shouldUseTorForVideo(url))
 
+    /**
+     * Every request of a video stream whose own URL must go through Tor ([shouldUseTorForVideo]):
+     * its playlists, segments and keys, whatever host each one is on. Android's player proxies a
+     * whole stream by its first URL too, so a clearnet CDN behind an onion playlist never sees the
+     * phone's address. The loopback HLS relay fetches with this.
+     */
+    @Suppress("UNUSED_PARAMETER")
+    fun ktorClientForTorVideoStream(url: String): HttpClient = clients.get(useTor = true)
+
     override fun ktorClientForMoney(url: String): HttpClient = clients.get(torRouting.shouldUseTorForMoneyOperations(url))
 
     override fun ktorClientForNip05(url: String): HttpClient = clients.get(torRouting.shouldUseTorForNIP05(url))

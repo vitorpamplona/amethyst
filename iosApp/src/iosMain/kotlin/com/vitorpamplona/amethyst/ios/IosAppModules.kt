@@ -254,6 +254,7 @@ class IosAppModules(
         IosVideoCache.install(
             httpClient = roleBasedHttpClientBuilder::ktorClientForVideo,
             requiresTor = roleBasedHttpClientBuilder::shouldUseTorForVideo,
+            torStreamClient = roleBasedHttpClientBuilder::ktorClientForTorVideoStream,
         )
         IosPlaybackPlatform(download = ::downloadVideoBytes, keyCache = keyCache)
     }

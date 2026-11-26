@@ -28,6 +28,9 @@ import com.vitorpamplona.amethyst.commons.video.cache.NotCacheableException
 import com.vitorpamplona.amethyst.commons.video.cache.SparseVideoCache
 import com.vitorpamplona.amethyst.commons.video.cache.VideoCacheBudget
 import com.vitorpamplona.amethyst.commons.video.cache.VideoHeadPrefetcher
+import com.vitorpamplona.amethyst.commons.video.hls.LoopbackMediaRelay
+import com.vitorpamplona.amethyst.commons.video.hls.RelayFailure
+import com.vitorpamplona.amethyst.commons.video.hls.VideoRoute
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.TimeUtils
@@ -62,14 +65,16 @@ import platform.darwin.dispatch_queue_create
  * which serves them from a [SparseVideoCache] and fetches the gaps with range requests. Feeds
  * download the head of the videos below the screen into the same cache ([prefetch]).
  *
- * Kept off the cache, on the plain URL: HLS (a playlist names other files, a live one changes),
- * live streams, and anything not http(s). A URL whose server turns out to send a playlist, or no
- * length, is redirected to its plain URL and stays off the cache from then on.
+ * Kept off the cache: HLS (a playlist names other files, a live one changes), live streams, and
+ * anything not http(s). A URL whose server turns out to send a playlist, or no length, is
+ * redirected and stays off the cache from then on.
  *
- * Tor: the cache fetches every byte through the video role's client, so a cached video follows
- * the Tor settings. AVFoundation fetching a plain URL itself does not (AVURLAsset takes no proxy),
- * so a video that must go through Tor and would play off the cache is refused instead
- * ([wouldBypassTor]) until HLS gets its own route (plans/2026-11-25-ios-tor.md, B12e).
+ * Tor ([routeFor]): the cache fetches every byte through the video role's client, so a cached
+ * video follows the Tor settings. AVFoundation fetching a URL itself does not (AVURLAsset takes no
+ * proxy), so a video off the cache that must go through Tor plays through the loopback relay
+ * ([relay], [LoopbackMediaRelay]) instead, which fetches its playlists, segments and keys over
+ * Tor; only one the relay cannot carry (not http(s)) is refused (plans/2026-11-25-ios-tor.md, B12e).
+ * Off the cache and not through Tor, AVFoundation opens the plain URL, as before.
  *
  * The files live in `Caches/videos` (iOS may purge them when the disk fills), sized by Android's
  * rule ([VideoCacheBudget]): a fifth of the free space, 256 MB to 4 GB. Nothing here touches the
@@ -90,6 +95,7 @@ object IosVideoCache {
     private val lock = KmpLock()
     private var client: ((url: String) -> HttpClient)? = null
     private var requiresTor: (url: String) -> Boolean = { false }
+    private var relay: LoopbackMediaRelay? = null
     private val declaredTypes = LinkedHashMap<String, String>()
     private val refused = LinkedHashMap<String, Unit>()
 
@@ -113,41 +119,55 @@ object IosVideoCache {
 
     /**
      * Starts caching, each URL's bytes over the client [httpClient] picks for it. Until then every
-     * video plays from its plain URL. [requiresTor] says which URLs must go through Tor.
+     * video plays from its plain URL. [requiresTor] says which URLs must go through Tor, and
+     * [torStreamClient] is what the relay fetches such a stream's files with.
      */
     fun install(
         httpClient: (url: String) -> HttpClient,
         requiresTor: (url: String) -> Boolean,
+        torStreamClient: (url: String) -> HttpClient,
     ) {
-        lock.withLock {
-            client = httpClient
-            this.requiresTor = requiresTor
-        }
+        val newRelay = LoopbackMediaRelay(torStreamClient)
+        val old =
+            lock.withLock {
+                client = httpClient
+                this.requiresTor = requiresTor
+                relay.also { relay = newRelay }
+            }
+        old?.close()
     }
 
     private fun isInstalled() = lock.withLock { client != null }
 
     /**
-     * Whether playing [url] would have AVFoundation fetch it directly although it must go through
-     * Tor: an http(s) URL that is off the cache (HLS, a live stream, a server the cache refused).
-     * The player refuses those rather than let them leave outside Tor. A local file never leaves.
+     * How [url] reaches AVFoundation: through the cache when [cacheable] and the cache takes it;
+     * else, when the Tor settings route it through Tor, through the loopback relay (refused when
+     * not http(s)); else the plain URL, which AVFoundation fetches itself. A local file never leaves.
      */
-    fun wouldBypassTor(
+    fun routeFor(
         url: String,
         cacheable: Boolean,
-    ): Boolean {
-        if (!url.startsWith("https://", ignoreCase = true) && !url.startsWith("http://", ignoreCase = true)) return false
-        val (mustUseTor, viaCache) = lock.withLock { requiresTor(url) to (cacheable && client != null && url !in refused) }
-        return mustUseTor && !viaCache
+    ): VideoRoute {
+        val (torRule, viaCache) = lock.withLock { requiresTor to (cacheable && client != null && url !in refused) }
+        return VideoRoute.of(url, viaCache = viaCache, mustUseTor = torRule(url))
     }
 
     /** Whether [url] must go through Tor under the current settings. */
     internal fun mustUseTor(url: String): Boolean = lock.withLock { requiresTor }(url)
 
+    /**
+     * A relay address that plays [url] through Tor, in a stream of its own, or null when the relay
+     * is not installed or cannot listen. Opens the relay's socket the first time.
+     */
+    suspend fun torStreamFor(url: String): LoopbackMediaRelay.Stream? = lock.withLock { relay }?.open(url)
+
+    /** What last failed in a relayed [stream], for the player's error. */
+    fun relayFailure(stream: String): RelayFailure? = lock.withLock { relay }?.failureOf(stream)
+
     /** The NSError domain of a video refused because it would have left outside Tor. */
     const val TOR_REFUSAL_DOMAIN = "com.vitorpamplona.amethyst.TorRefusal"
 
-    /** What a loading request for a Tor-routed video AVFoundation would fetch itself ends with. */
+    /** What a loading request for a Tor-routed video nothing here can carry ends with. */
     internal fun torRefusalError(url: String): NSError =
         NSError.errorWithDomain(
             TOR_REFUSAL_DOMAIN,
@@ -198,7 +218,8 @@ object IosVideoCache {
 
     /**
      * The asset to play [url] with: reading through the cache when [cacheable] and the cache is
-     * installed, the plain URL otherwise. Cheap: safe on the main thread.
+     * installed, the plain URL otherwise. Cheap: safe on the main thread. A video [routeFor] sends
+     * through the relay gets a plain asset on the relay's address instead.
      */
     fun assetFor(
         url: NSURL,
