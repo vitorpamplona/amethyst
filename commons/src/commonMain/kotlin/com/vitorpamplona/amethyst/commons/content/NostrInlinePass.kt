@@ -22,8 +22,11 @@ package com.vitorpamplona.amethyst.commons.content
 
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
+import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
+import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 
 /**
  * Finds what Nostr text carries in a run of plain text: `nostr:` references, hashtags, custom
@@ -72,8 +75,8 @@ class NostrInlinePass(
                 if (word.segmentText.isNotEmpty()) {
                     if (!first) pending.append(' ')
                     first = false
-                    if (word is RegularTextSegment) {
-                        pending.append(word.segmentText)
+                    if (word is RegularTextSegment || word.isGuessedMedia(words)) {
+                        pending.append(word.segmentText.removePrefix(GUESSED_SCHEME))
                     } else {
                         flush()
                         out.add(NostrInline(word))
@@ -87,7 +90,15 @@ class NostrInlinePass(
         return out
     }
 
+    /**
+     * The parser reads a scheme-less word that ends like a media file (`Scarlet_Witch.jpg`) as a URL
+     * and adds `https://`. Prose names files often, and a guessed host is a broken image, so media
+     * counts only when its URL is in the text as written.
+     */
+    private fun Segment.isGuessedMedia(text: String): Boolean = (this is ImageSegment || this is VideoSegment) && segmentText.startsWith(GUESSED_SCHEME) && !text.contains(segmentText)
+
     companion object {
+        private const val GUESSED_SCHEME = "https://"
         private val WHITESPACE = Regex("[ \\t\\r\\n]+")
 
         /** No event around the text: no custom emoji, no `imeta`. */

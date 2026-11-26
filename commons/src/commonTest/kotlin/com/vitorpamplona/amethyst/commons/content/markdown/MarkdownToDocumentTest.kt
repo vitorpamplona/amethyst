@@ -107,6 +107,44 @@ class MarkdownToDocumentTest {
     }
 
     @Test
+    fun linkedImages() {
+        // A picture that links somewhere, with plain and with angle-bracketed destinations.
+        assertEquals(
+            """
+            P[link(https://go.example.com/x)[img(https://example.com/a.png)"View"]]
+            P[link(https://go.example.com/y)[img(https://example.com/a b.jpg)"Pic."]]
+            """.trimIndent(),
+            dump("[![View](https://example.com/a.png)](https://go.example.com/x)\n\n[![Pic\\.](<https://example.com/a b.jpg>)](<https://go.example.com/y>)"),
+        )
+    }
+
+    @Test
+    fun linkTextIsNotDetectedAgain() {
+        // A link's own text is text: its URL, a hashtag or a mention in it are not links of their own.
+        assertEquals(
+            """
+            P[link(https://dev.to/x)["https://dev.to/x"] " " link(https://a.com)["see " em["#tag"]]]
+            """.trimIndent(),
+            dump("[https://dev.to/x](https://dev.to/x) [see *#tag*](https://a.com)"),
+        )
+    }
+
+    @Test
+    fun emailAutolinks() {
+        assertEquals(
+            """
+            P["write to " link(mailto:me@example.com)["me@example.com"] "."]
+            """.trimIndent(),
+            dump("write to <me@example.com>."),
+        )
+    }
+
+    @Test
+    fun windowsLineEndings() {
+        assertEquals("P[\"one\"]\nP[\"two\" SB \"three\"]", dump("one\r\n\r\ntwo\r\nthree"))
+    }
+
+    @Test
     fun nostrTextIsFoundAsInNotes() {
         assertEquals(
             """
@@ -114,6 +152,17 @@ class MarkdownToDocumentTest {
             P[nostr:ImageSegment("https://example.com/photo.jpg")]
             """.trimIndent(),
             dump("See nostr:npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m and #tag at https://bare.link\n\nhttps://example.com/photo.jpg"),
+        )
+    }
+
+    @Test
+    fun fileNamesAreNotMedia() {
+        // A file named in prose is not an image at a guessed host; a full URL to one is.
+        assertEquals(
+            """
+            P["Open Scarlet_Witch.jpg or " nostr:ImageSegment("https://example.com/b.png")]
+            """.trimIndent(),
+            dump("Open Scarlet\\_Witch.jpg or https://example.com/b.png"),
         )
     }
 

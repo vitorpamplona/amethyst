@@ -67,8 +67,11 @@ class MarkdownToDocument(
     private val nostr: NostrInlinePass = NostrInlinePass.NONE,
 ) {
     fun parse(markdown: String): Document {
-        val root = parser.buildMarkdownTreeFromString(markdown)
-        val context = Context(markdown, linkDefinitions(markdown, root))
+        // CommonMark ends a line at \r\n and \r too; this parser only at \n, so a document written
+        // with Windows line endings would be one paragraph.
+        val src = if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown
+        val root = parser.buildMarkdownTreeFromString(src)
+        val context = Context(src, linkDefinitions(src, root))
         return Document(context.blocks(root.children))
     }
 
@@ -237,22 +240,39 @@ class MarkdownToDocument(
 
         // ---- Inlines ----------------------------------------------------------------------------
 
-        fun inlines(nodes: List<ASTNode>): List<Inline> {
+        /**
+         * [inLink] is true inside a link's text: it is already a link, so nothing in it is detected
+         * again (a URL, a mention or a hashtag there is text).
+         */
+        fun inlines(
+            nodes: List<ASTNode>,
+            inLink: Boolean = false,
+        ): List<Inline> {
             val out = ArrayList<Inline>()
             val pending = StringBuilder()
 
             fun flush() {
                 if (pending.isNotEmpty()) {
-                    out.addAll(nostr.inlines(pending.toString()))
+                    if (inLink) {
+                        out.add(Text(WHITESPACE.replace(pending.toString(), " ")))
+                    } else {
+                        out.addAll(nostr.inlines(pending.toString()))
+                    }
                     pending.setLength(0)
                 }
             }
 
             // At the start of a continuation line, its indentation and a quote's `>` are not text.
             var lineStart = false
+            // `<me@example.com>` comes as `<`, the address and `>`: the brackets are not text.
+            var closingBracket = false
             for (node in nodes) {
                 if (lineStart && (node.type == MarkdownTokenTypes.WHITE_SPACE || node.type == MarkdownTokenTypes.BLOCK_QUOTE)) continue
                 lineStart = false
+                if (closingBracket) {
+                    closingBracket = false
+                    if (node.type == MarkdownTokenTypes.GT) continue
+                }
                 when (node.type) {
                     MarkdownTokenTypes.TEXT -> pending.append(decode(text(node)))
                     MarkdownTokenTypes.WHITE_SPACE -> pending.append(' ')
@@ -282,19 +302,19 @@ class MarkdownToDocument(
                     }
                     MarkdownElementTypes.EMPH -> {
                         flush()
-                        out.add(Emphasis(inlines(node.children.withoutDelimiters(MarkdownTokenTypes.EMPH))))
+                        out.add(Emphasis(inlines(node.children.withoutDelimiters(MarkdownTokenTypes.EMPH), inLink)))
                     }
                     MarkdownElementTypes.STRONG -> {
                         flush()
-                        out.add(Strong(inlines(node.children.withoutDelimiters(MarkdownTokenTypes.EMPH))))
+                        out.add(Strong(inlines(node.children.withoutDelimiters(MarkdownTokenTypes.EMPH), inLink)))
                     }
                     GFMElementTypes.STRIKETHROUGH -> {
                         flush()
-                        out.add(Strikethrough(inlines(node.children.withoutDelimiters(GFMTokenTypes.TILDE))))
+                        out.add(Strikethrough(inlines(node.children.withoutDelimiters(GFMTokenTypes.TILDE), inLink)))
                     }
                     GFMElementTypes.HIGHLIGHT -> {
                         flush()
-                        out.add(Highlight(inlines(node.children.withoutDelimiters(GFMTokenTypes.EQUALS))))
+                        out.add(Highlight(inlines(node.children.withoutDelimiters(GFMTokenTypes.EQUALS), inLink)))
                     }
                     MarkdownElementTypes.CODE_SPAN -> {
                         flush()
@@ -314,11 +334,15 @@ class MarkdownToDocument(
                             pending.append(decode(text(node)))
                         }
                     }
-                    MarkdownElementTypes.AUTOLINK -> {
+                    MarkdownElementTypes.AUTOLINK, MarkdownTokenTypes.EMAIL_AUTOLINK -> {
+                        if (node.type == MarkdownTokenTypes.EMAIL_AUTOLINK && pending.endsWith('<')) {
+                            pending.setLength(pending.length - 1)
+                            closingBracket = true
+                        }
                         flush()
                         val url = text(node).removePrefix("<").removeSuffix(">")
                         val destination = if (url.contains('@') && !url.contains("://") && !url.startsWith("mailto:")) "mailto:$url" else url
-                        out.add(Link(destination, listOf(Text(url))))
+                        if (inLink) out.add(Text(url)) else out.add(Link(destination, listOf(Text(url))))
                     }
                     MarkdownElementTypes.IMAGE -> {
                         flush()
@@ -331,13 +355,16 @@ class MarkdownToDocument(
                         } else {
                             // A node this mapper does not know: its children, so no text is lost.
                             flush()
-                            out.addAll(inlines(node.children))
+                            out.addAll(inlines(node.children, inLink))
                         }
                 }
             }
             flush()
             return out
         }
+
+        /** A link's destination: `(url)` parses as one, `(<url>)` as an autolink in its place. */
+        private fun List<ASTNode>.destinationNode(): ASTNode? = firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION || it.type == MarkdownElementTypes.AUTOLINK }
 
         private fun List<ASTNode>.withoutDelimiters(delimiter: IElementType): List<ASTNode> {
             var from = 0
@@ -362,7 +389,7 @@ class MarkdownToDocument(
         private fun linkText(node: ASTNode?): List<Inline> {
             if (node == null) return emptyList()
             val inner = node.children.withoutBrackets()
-            return inlines(inner)
+            return inlines(inner, inLink = true)
         }
 
         private fun List<ASTNode>.withoutBrackets(): List<ASTNode> {
@@ -374,7 +401,7 @@ class MarkdownToDocument(
         }
 
         private fun inlineLink(node: ASTNode): Inline {
-            val destination = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION }?.let { destination(text(it)) } ?: ""
+            val destination = node.children.destinationNode()?.let { destination(text(it)) } ?: ""
             val title = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_TITLE }?.let { title(text(it)) }
             val label = linkText(node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_TEXT })
             return Link(destination, label, title)
@@ -396,7 +423,7 @@ class MarkdownToDocument(
                     ?: ""
             return when (link.type) {
                 MarkdownElementTypes.INLINE_LINK -> {
-                    val url = link.children.firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION }?.let { destination(text(it)) } ?: return null
+                    val url = link.children.destinationNode()?.let { destination(text(it)) } ?: return null
                     val title = link.children.firstOrNull { it.type == MarkdownElementTypes.LINK_TITLE }?.let { title(text(it)) }
                     Image(url, alt, title)
                 }
@@ -442,6 +469,7 @@ class MarkdownToDocument(
 
     companion object {
         private val parser = MarkdownParser(GFMFlavourDescriptor())
+        private val WHITESPACE = Regex("[ \\t\\r\\n]+")
 
         private fun atxLevel(type: IElementType): Int =
             when (type) {
