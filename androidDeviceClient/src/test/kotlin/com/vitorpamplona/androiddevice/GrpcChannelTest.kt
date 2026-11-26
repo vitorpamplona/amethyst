@@ -21,13 +21,14 @@
 package com.vitorpamplona.androiddevice
 
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
-import com.vitorpamplona.androiddevice.emulator.PixelFormat
-import com.vitorpamplona.androiddevice.grpc.GrpcChannel
-import com.vitorpamplona.androiddevice.grpc.GrpcException
-import com.vitorpamplona.androiddevice.grpc.ProtoReader
-import com.vitorpamplona.androiddevice.grpc.ProtoWriter
-import com.vitorpamplona.androiddevice.grpc.message
-import com.vitorpamplona.androiddevice.grpc.varint
+import com.vitorpamplona.androiddevice.emulator.wire
+import com.vitorpamplona.devicecore.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.grpc.GrpcException
+import com.vitorpamplona.devicecore.grpc.ProtoReader
+import com.vitorpamplona.devicecore.grpc.ProtoWriter
+import com.vitorpamplona.devicecore.grpc.message
+import com.vitorpamplona.devicecore.grpc.varint
+import com.vitorpamplona.devicecore.screen.PixelFormat
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse

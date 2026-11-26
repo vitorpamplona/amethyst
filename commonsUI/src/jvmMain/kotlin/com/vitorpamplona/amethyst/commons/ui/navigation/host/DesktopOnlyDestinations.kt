@@ -20,7 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.AndroidDevicesScreen
+import com.vitorpamplona.amethyst.commons.devices.ui.DevicesScreen
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeChangesScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.claudecode.ClaudeCodeChatScreen
@@ -43,7 +43,7 @@ fun NavDestinations.desktopOnlyDestinations(accountViewModel: AccountViewModel) 
     composableFromEndArgs<Route.ClaudeCodeChanges>(capWidth = false) { ClaudeCodeChangesScreen(it.key, nav, it.repo) }
     composableFromEndArgs<Route.ClaudeCodePropose>(capWidth = false) { ClaudeCodeProposeScreen(it.key, accountViewModel, nav, it.repo) }
     composableFromEndArgs<Route.ClaudeCodePullRequests>(capWidth = false) { ClaudeCodePullRequestsScreen(it.key, nav) }
-    composableFromEndArgs<Route.AndroidDevices>(capWidth = false) { AndroidDevicesScreen(it.chatKey, nav) }
+    composableFromEndArgs<Route.Devices>(capWidth = false) { DevicesScreen(it.chatKey, nav) }
     composableFromEndArgs<Route.ClaudeCodeStart>(capWidth = false) { ClaudeCodeStartScreen(it, accountViewModel, nav) }
     composableFromEndArgs<Route.ClaudeCodeSettingsAssistant>(capWidth = false) { ClaudeCodeSettingsAssistantScreen(it.question, accountViewModel, nav) }
 }
