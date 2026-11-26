@@ -1,8 +1,10 @@
 # iOS napplets and nSites (NIP-5D, NIP-5A) on WKWebView, with Tor
 
-Status: N0–N6 done, 2026-11-26: N4.5 is the shared session core with Desktop moved onto it, N5
-runs NIP-5D napplets on iOS, and N6 runs NIP-5A nSites (on Tor or the open web) and webxdc apps
-(what changed from §5 while doing them: §5.7; the core: §7b; N5 as built: §7c; N6 as built: §7d).
+Status: N0–N7 done, 2026-11-26: N4.5 is the shared session core with Desktop moved onto it, N5
+runs NIP-5D napplets on iOS, N6 runs NIP-5A nSites (on Tor or the open web) and webxdc apps, and N7
+runs them inside notes, shows the front page, adds files, uploads, the report menu and a SOCKS router
+per store (what changed from §5 while doing them: §5.7; the core: §7b; N5: §7c; N6: §7d; N7: §7e).
+What is left is Android's move onto the core, on its own branch (host-core review §8).
 Branch `feat/ios-napplets`.
 Builds on `commons/plans/2026-10-09-ios-app.md` §B9 and `commons/plans/2026-11-25-ios-tor.md`.
 Security baseline: `commons/plans/2026-10-31-embed-security-review.md`,
@@ -740,7 +742,7 @@ Deviations from the review's §3, and why, are in `2026-11-26-napplet-host-core.
 - **Webxdc.** `WebxdcFiles` is commonMain now and serves a `WebxdcBundleSource`: the JVM's
   `WebxdcBundles` (unchanged) or `OkioWebxdcBundles` (iOS: `NappletHttp` on the launch's route, hash
   checked, unpacked with okio's zip reader under the shared `WebxdcArchiveRules` limits, into Caches).
-  Differences from the JVM: the archive comes in whole (in memory, up to 256 MB), progress shows once,
+  Differences from the JVM: the archive comes in whole (in memory, up to 256 MB; streamed to disk since N7), progress shows once,
   nothing trims (Caches is purgeable), and an entry climbing out (`../x`) lands inside the app as `x`
   instead of being skipped. PAPER's files are supported by the session; nothing launches a paper on
   iOS yet (inline surfaces are N7).
@@ -770,7 +772,7 @@ Deviations from the review's §3, and why, are in `2026-11-26-napplet-host-core.
   (`localtest.me` → 127.0.0.1 reached the loopback listener from a direct store before mixed content
   was blocked; over https it still would). On Tor the name goes to the exit by name (the CONNECT
   carried the host name), which can't reach the user's LAN. Closing that gap on direct stores needs
-  Desktop's approach: a small in-process SOCKS router for direct stores too.
+  Desktop's approach: a small in-process SOCKS router for direct stores too. (Done in N7, §7e.)
 - **20, DNS prefetch.** A Tor store's `<link rel=preconnect>` went to the SOCKS listener (a CONNECT
   for `preconnect-probe.torproject.org:443`), so speculative connections follow the store's proxy.
   `<link rel=dns-prefetch>` produced nothing observable; WebKit's DNS prefetching is on only for
@@ -806,6 +808,82 @@ showed:
   simulator test covers it.
 - Webxdc "Dino" (kind 1063, `3df305c8…`) downloaded, unpacked and ran offline; no onion switch.
 - No `publishMarmotKeyPackage`/`30443` line in any run's log; nothing was signed.
+
+### 7e. As built: N7, inline runs, the front page, files, reports and the router (2026-11-26)
+
+- **Inline surfaces.** `IosAppPlatform` runs napplets inline (`runsNappletsInline = true`, so
+  `showsPapersInline` too): `InlineNappletSurface`, `InlineWebxdcSurface` and `InlinePaperSurface`
+  draw `IosInlineNappletPane`, the session's WKWebView in the note on the same core and engine as a
+  screen. `IosNappletHost.openInline`/`openInlineWebxdc`/`openInlinePaper` mirror Desktop's: the
+  launch is `NappletLaunch.inline` (the broker never asks), the sessions close with the note, and
+  with the account that left. In a feed the interop is cooperative (the feed keeps vertical drags);
+  the front page takes touches at once. Attended while composed with the app in front. No JS dialogs
+  (answered at once, as Android's embedded runs), no NAP-FS, and no `<input type=file>` picker:
+  `NappletWebContract.FILE_PICKER_REFUSAL_JS` in every frame, since WebKit on iOS has no chooser
+  callback. The status is the shared `inlineStatusOf` (Desktop's pane calls it too); "painted" is the
+  shell's `didFinishNavigation`. No poster frame is kept, as on Android.
+- **The front page (PAPER).** `IosHeldPaperSession` holds the page per back-stack entry, as Desktop's
+  `HeldPaperSession`, so a tab switch keeps its scroll. Its art follows the site Tor rule
+  (`useTorFor(PAPER, …)`), through the account store's route. The web view keeps JavaScript on: the
+  shell is script, and the paper's own frame runs none by `PAPER_CSP` (`default-src 'none'`), as on
+  Android and Desktop. (N6's `allowsContentJavaScript = runsScripts` would have stopped the shell.)
+- **Prefetch.** `PrefetchNappletFiles` warms the blob cache through the shared `NappletBlobPrefetch`
+  on `NappletHttp` (public addresses only; Tor whenever it has a port; nothing while Tor is on without
+  one; not when images don't load by themselves), as Desktop does. The JVM path is unchanged:
+  `NappletBlobPrefetcher` is its OkHttp entry on the same core.
+- **Files (row 11).** On a screen, `<input type=file>` opens WebKit's own picker (photo library,
+  camera, files). The photo library is the system's out-of-process picker and needs no usage text;
+  the camera does, so `project.yml` now has `NSCameraUsageDescription`. Nothing else gets the camera
+  (getUserMedia stays denied). NAP-FS goes through `IosNappletFilePort` (one per session): the system
+  document picker (`asCopy = false`), reads and writes inside the picked URL's security scope, saves
+  into a folder the user picks; handles are random ids. NAP-UPLOAD is `KtorNappletUploadGateway`
+  (commons, on the shared `AccountNappletBlossomGateway`): the account's Blossom servers, the uploads
+  role's clients (Tor as the settings say for uploads), as the app's own media.
+- **Report and block (4.7).** The screen's top bar has the app's note menu (`MoreOptionsButton`, the
+  feed's ⋮ with Block / Report and the rest): the napplet's or nSite's event, or the post a webxdc app
+  came in. Android and Desktop offer the same menu on the app's card; nothing new in moderation.
+- **Links.** Android's sandbox hands an http(s) link to the system browser (`ACTION_VIEW`), not to
+  an in-app browser. iOS does the same (Safari, on a link activation); a front page's nostr: links open
+  in the app. Nothing to change.
+- **Row 19, closed.** Every store a site claims is proxied to its own loopback router,
+  `IosNappletSocksRouter` (commons iosMain), Desktop's `DesktopSocksRouter` design on the shared
+  `NappletSocks5` codec and `NappletSocksPolicy` (commonMain): Blocked refuses everything (no more
+  dead-port proxy), Tor hands each name to Arti unresolved, Direct resolves the name with
+  `getaddrinfo`, keeps public addresses only and connects by the address it checked, so neither a
+  public name that resolves to this device or its network (`localtest.me`) nor DNS rebinding gets
+  through. The app's `napplet.local` names never leave. A route change cuts the open tunnels; a
+  router whose socket iOS reclaimed while suspended listens again on return (and the store follows).
+  Android does not enforce this for open-web nSites at all; iOS now matches Desktop. Not done: the
+  router has no SOCKS authentication, so another app on the device could use it as an open proxy to
+  the public internet (the same exposure Arti's SOCKS port already has); WebKit's `nw_proxy_config`
+  can carry a username and password, which would close it, untested.
+- **Cleanup at start.** `removePendingStores` and the rule-list sweep run at every app start
+  (`IosAppModules`), not when the napplet host is first built.
+- **Webxdc streaming.** `NappletHttp.download` streams a body into a sink (`KtorNappletHttp` under the
+  cap); `OkioWebxdcBundles` hashes the archive on its way to disk, with live progress.
+
+**Tests.** `IosNappletWebEngineTest` +2 (the inline picker refusal with a control; the escape
+attempts), `IosNappletSiteTest` +1 (another app's origin) and the direct-site test now asserts the
+rebind name reaches nothing; commons `IosNappletSocksRouterTest` (4, real sockets),
+`NappletSocks5Test` (7) and `NappletBlobPrefetchTest` (3), commonTest so on the JVM too.
+
+**By hand** ("Napplet Test", iOS 27.0, the throwaway read-only npub; screenshots in
+`/private/tmp/claude-501/n7/`). Taps still can't be driven (idb's HID connection is invalidated), so a
+temporary, uncommitted launch-argument driver opened each surface:
+- The Napplets feed shows "Run here" on the Fokus card now (seen in a first screenshot, since
+  overwritten); the driver
+  drew `InlineNappletSurface` for Fokus: LOADING, then SHOWING, the timer running in the note
+  (`01-inline.png`).
+- `InlinePaperSurface` with a sample front page: SHOWING, script-free, its https art loaded through
+  the account store's router on the open web (`02-paper.png`; the router bound, the store's proxy
+  pointed at it, route Direct). One earlier run went on Tor (the site choice not loaded yet, which
+  falls back to Tor) and an upload.wikimedia.org picture did not load there; not looked into further.
+- The Fokus screen's top bar has the note menu ⋮ (`03-screen-topbar.png`); the menu it opens
+  (`04-report-menu.png`) is the feed's Note Actions, with Block / Report further down the list.
+- `IosNappletFilePort.pickOpen` presented the system document picker (`05-file-picker.png`); the app
+  was then terminated, nothing picked or uploaded. WebKit's own `<input type=file>` menu needs a real
+  tap (a scripted click has no user activation), so it was not opened here.
+- No `publishMarmotKeyPackage`/`30443` line in any run; nothing was signed or published.
 
 ## 8. Phases
 
@@ -852,6 +930,8 @@ Each phase is testable on its own and lands as its own PR.
   action (4.7), link handoff to the in-app browser, the file picker for uploads (`<input
   type=file>` works in WKWebView; make sure it is limited to the picker), and logout cleanup
   of the stores.
+- **N7 (done 2026-11-26, §7e).** As planned, plus prefetch, NAP-FS and NAP-UPLOAD, webxdc streaming
+  and a SOCKS router per store (row 19). Links go to Safari, as Android's go to the system browser.
 
 ## 9. Test plan (beyond the per-phase checks)
 
@@ -867,6 +947,21 @@ Each phase is testable on its own and lands as its own PR.
   a no-cors fetch of the shell, a WebRTC constructor saved before the guard (impossible:
   document start), and a `Worker` or `SharedWorker` re-creating `RTCPeerConnection` (workers
   don't expose it; confirm).
+  - **Done 2026-11-26 (N7), on the simulator (iOS 27.0), headless tests unless said:**
+
+    | Attack | Result | Where |
+    |---|---|---|
+    | A frame navigates the top (`top.location` to the web, and to another of our own pages) | Refused: the top frame still holds the shell URL and the napplet still runs. The srcdoc's sandbox has no `allow-top-navigation`, and the engine lets the top frame hold only the shell | `IosNappletWebEngineTest.aFrameCantNavigateTheTopNorOpenWindows` |
+    | `window.open` loop (50, no gesture) | No window (the UI delegate returns nil) and nothing handed to Safari (the gesture rule) | same test |
+    | A napplet reloads itself for a second hello | The shell drops the frame; the second document never reaches the bridge | `aSecondDocumentInTheFrameLosesTheChannel` (N5) |
+    | A site/frame posts to the bridge | No page world sees the handler (`undefined` in the napplet, its nested frame and the shell); the relay's DOM event fired on the frame's own document went nowhere, and `parent.document` throws | `aNappletLoadsOver…` (N5), `aFrameCantNavigate…` (N7) |
+    | A site frames or loads another app's subdomain | Not served: the scheme handler answers only this launch's host (the same picture loads from the site's own origin, errors from another app's), and the other origin's request never reaches the files | `IosNappletSiteTest.aSiteCantFrameOrLoadAnotherAppsOrigin` |
+    | A no-cors fetch of the shell | Refused by the napplet's CSP, and the handler serves the shell only to the navigation that loaded it (404 otherwise) | `aNappletLoadsOver…` (N5) |
+    | A site's frame leaves its origin and says hello | No channel (the shell checks the hello's origin) | `aSitesFrameThatLeavesItsOriginCantSayHello` (N6) |
+    | WebRTC constructor saved before the guard | Not possible: the guard is a document-start user script in every frame (spike Q3) | — |
+    | A `Worker` / `SharedWorker` re-creating `RTCPeerConnection` | Neither can be made: a blob: `Worker` and `SharedWorker` both fail to start in a napplet's frame (`error`, its CSP), so no worker context exists to look for WebRTC in. Not checked: a worker in an nSite (no CSP of ours), where WebKit's workers have no `RTCPeerConnection` anyway (unmeasured) | `aFrameCantNavigate…` |
+    | An inline run opens the file picker | Cancelled every way (click, label, a closed shadow root made open, `showPicker`, a nested frame); a screen's app clicks normally | `aRunInsideANoteCantOpenTheFilePicker` |
+    | A public name that resolves to loopback (`localtest.me`) from a direct site | Refused by the store's router; the loopback listener saw no connection | `aSiteOnTheOpenWebNeverTouchesTheSocksListener`, `IosNappletSocksRouterTest` |
 - Regression: Android `:nappletHost` and Desktop napplet screens after N1–N4, opened by hand.
 - Logs: during every on-device check, watch for `publishMarmotKeyPackage` / `signed kind
   30443` after a logged-in launch, and never sign or publish from a test.

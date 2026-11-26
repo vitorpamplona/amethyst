@@ -245,5 +245,45 @@ Detail and measurements: `2026-11-26-ios-napplets.md` §7d.
 Shared now (commons/commonsUI): `NappletRouteArbiter` (Desktop's routes run on it), the request
 filter's mixed-content and LAN rules, `WebxdcFiles` and `OkioWebxdcBundles`, `NappletOnionSwitch`
 (Desktop's toolbar draws it), `LocalAppNav`. Still open on iOS: row 11 (N7), row 19's
-name-resolves-to-LAN gap, row 1 (WebKit's isolation).
+name-resolves-to-LAN gap, row 1 (WebKit's isolation). Rows 11 and 19 closed in N7 (§8).
 
+
+## 8. N7 (2026-11-26): inline runs, the front page, files, reports, the router
+
+Detail: `2026-11-26-ios-napplets.md` §7e.
+
+| Row | Now | How |
+|---|---|---|
+| 11 | Covered | Screens: WebKit's own `<input type=file>` picker (photos, camera, files; `NSCameraUsageDescription` in `project.yml`), NAP-FS through `IosNappletFilePort` (the system document picker, security-scoped URLs, one port per session), NAP-UPLOAD through `KtorNappletUploadGateway`. Inline runs: no FS session, and `FILE_PICKER_REFUSAL_JS` in every frame cancels every pick (measured: click, label, closed shadow root, `showPicker`, a nested frame) |
+| 15 | Inline too | An inline run has no dialog presenter, so `alert`/`confirm`/`prompt` answer at once (cancel), as Android's embedded runs |
+| 19 | Covered | Every claimed store's proxy is its own loopback router (`IosNappletSocksRouter`, on the shared `NappletSocks5`/`NappletSocksPolicy`): Direct resolves here and refuses any name that lands on this device or its network (measured: `https://localtest.me:<port>` reached nothing; it did before), Tor hands names to Arti unresolved, Blocked refuses. Stricter than Android, which doesn't enforce this for open-web nSites; the same as Desktop |
+| 24 | Inline too | Attended while the note is composed and the app in front |
+
+**Every row, iOS, after N7.** Covered: 2-25 and 27-30. Parity "none": 26 (screenshots, as on Android
+and Desktop). Platform: 1 (process isolation is WebKit's own out-of-process, sandboxed WebContent; the
+broker stays in the app, as on Desktop). Nothing open.
+
+**What Android needs to run on the shared core** (its own branch, merged after a device test):
+
+1. `WebViewNappletEngine`: a `NappletWebEngine` over the `:napplet` process's WebView, shared by
+   `NappletHostActivity` and `NappletHostService`: `installGuard` = `addDocumentStartJavaScript`
+   (false when `DOCUMENT_START_SCRIPT` is unsupported), `loadShell`, `evaluateInShell` = the
+   `WebMessagePort` post, `close`. Its `shouldInterceptRequest` calls `core.classifyRequest` and
+   `core.serve(…, mainFrameNavigation = request.isForMainFrame)`; `shouldOverrideUrlLoading` calls
+   `core.onNavigation` with `frameOf(isMain, …)` and `hasGesture()`; `onRenderProcessGone` calls
+   `core.onRendererGone`. The duplicated hardening block becomes one function.
+2. The split: `NappletPageBridge` stays in `:napplet` (held requests and attendance already work that
+   way), `NappletSessionRouting` moves into `NappletBrokerService`, keyed by the launch token, with
+   the IPC as the transport between them. `fire-N` ids stay in the IPC (§5).
+3. `NappletRoutePort` over `NappletProxyClaims` + `WebViewProxyPolicy` (Android's one process-wide
+   proxy): `claim` files the claim and waits for the override, `release` drops it. Optionally route
+   the WebView's proxy through a loopback `NappletSocksPolicy` router as iOS now does, to close row 19
+   on Android too (it would need a JVM transport for the shared codec; Desktop's
+   `DesktopSocksRouter` is one and could move onto `NappletSocks5` at the same time).
+4. `NappletLaunchPlan.of(…, sharedStorageJar = false)` in place of `NappletLauncher`'s useTor and the
+   Activity's precheck; `NsiteNetworkRegistry` is already `NsiteNetworkChoices`.
+5. Inline runs (`InlineNappletView`/`EmbeddedNostrAppController`) take `inlineStatusOf` and the same
+   core; the file chooser refusal stays `onShowFileChooser`.
+6. Consent: `NappletConsentCoordinator` onto `NappletPromptQueues` (review §3.5), optional.
+7. Prefetch and uploads are already on the shared `NappletBlobPrefetch` and
+   `AccountNappletBlossomGateway`; nothing to change.
