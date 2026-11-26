@@ -247,7 +247,9 @@ setup_wrapper() {
     mkdir -p "$wrapper_dir/src"
 
     cp "$SCRIPT_DIR/Cargo.toml" "$wrapper_dir/Cargo.toml"
-    cp "$SCRIPT_DIR/src/lib.rs" "$wrapper_dir/src/lib.rs"
+    # Every source file, not just lib.rs. src/ffi.rs is the iOS C ABI: without `--features ffi`
+    # (never set here) its `mod` is compiled out and the file is not even read.
+    cp "$SCRIPT_DIR"/src/*.rs "$wrapper_dir/src/"
 
     # Reproducibility: build against the committed lockfile so transitive
     # dependency versions are identical for everyone. `cargo --locked` (in

@@ -254,9 +254,15 @@ tools/arti-build/
 ├── repro-env.sh         # Deterministic build env (path remapping, epoch) — sourced by both scripts
 ├── build-arti.sh        # Build script (Android targets, shipped in APK)
 ├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
+├── build-arti-ios.sh    # Build script (iOS static libraries, C ABI) — see "iOS"
+├── IOS_XCODE_VERSION    # Xcode the iOS archives were measured with (warn-only)
 ├── verify-reproducible.sh # Builds twice + diffs to prove byte-for-byte reproducibility
+├── include/
+│   └── arti_ffi.h       # C header of the iOS ABI (hand-written, checked by build-arti-ios.sh)
+├── out/                 # build-arti-ios.sh output, git-ignored
 └── src/
-    └── lib.rs           # JNI bridge (Rust → Kotlin)
+    ├── lib.rs           # JNI bridge (Rust → Kotlin)
+    └── ffi.rs           # C ABI for iOS, only with `--features ffi`
 
 # The Arti source is cloned into the canonical build path
 # (/tmp/amethyst-arti-build/.arti-source), not under this dir — see
@@ -316,6 +322,109 @@ The Rust wrapper (`src/lib.rs`) exposes these JNI functions to Kotlin:
 - **SOCKS5 is implemented in Rust** using `tokio::net::TcpListener`, not delegated to Arti's
   built-in proxy. This gives us full control over the listener lifecycle.
 - **Bidirectional forwarding** uses `tokio::io::copy` with `tokio::select!` for efficiency.
+
+## iOS: C ABI and static libraries
+
+iOS runs the same crate, `lib.rs`, `Cargo.lock`, toolchain and Arti clone as Android
+(`commons/plans/2026-11-25-ios-tor.md`, B12a). Kotlin/Native cannot load a JNI library, so
+`src/ffi.rs` adds a plain C face next to the JNI one:
+
+| C function (`include/arti_ffi.h`) | Kotlin (`iosApp/src/iosArtiMain/…/ios/tor/ArtiNative.kt`) | Same as JNI |
+|---|---|---|
+| `arti_version()` | `ArtiNative.version` | `getVersion` |
+| `arti_set_log_callback(cb)` | `setLogCallback { line -> }` | `setLogCallback` (also forwards Rust panic messages) |
+| `arti_initialize(data_dir)` | `initialize(dir)` | `initialize` |
+| `arti_is_bootstrapped()` | `isBootstrapped()` | `isBootstrapped` |
+| `arti_bootstrap_progress_permille()` | `bootstrapProgressPermille()` | `bootstrapProgressPermille` |
+| `arti_start_socks_proxy(port)` | `startSocksProxy(port)` | `startSocksProxy`, but waits for a replaced listener to close, so a restart on the same port binds |
+| `arti_stop_socks_proxy()` | `stopSocksProxy()` | `stopSocksProxy`, same wait |
+| `arti_destroy()` | `destroy()` | `destroy` |
+| `arti_socks_accepted_count()` | `socksAcceptedCount()` | none: a test hook proving traffic used the proxy |
+
+**Android's `.so` does not change.** The C face is behind the `ffi` Cargo feature, which only
+`build-arti-ios.sh` enables. `lib.rs` gained two things, placed so no existing line moves (rustc
+bakes the line and column of every `unwrap()` into the binary): `mod ffi;` at the very end, and
+the log hook on the line `send_log_to_java` already had. That is also why `ffi.rs` repeats the
+JNI bodies instead of sharing helpers with them; fold the two the next time the `.so` is rebuilt
+anyway. Checked on macOS: all four ABIs built from the unchanged sources and from these hash the
+same, and `verify-reproducible.sh` passes on the changed ones (results in the plan's B12a).
+
+> **Host OS matters for the `.so` bytes.** The committed libraries were built on Linux: their
+> `.comment` names the Linux NDK's LLD. A macOS rebuild with the same pinned NDK reproduces
+> itself byte for byte but not the committed file (arm64-v8a: `9e0b1a9f…` on macOS against the
+> committed `069a0cd5…`), because the macOS NDK prebuilts are different binaries (the darwin LLD,
+> and an extra clang stamp). Verify the committed `.so` on Linux.
+
+### Building
+
+```bash
+cd tools/arti-build
+./build-arti-ios.sh                              # device + simulator
+./build-arti-ios.sh --target=aarch64-apple-ios-sim
+```
+
+You rarely run it by hand: `:iosApp:buildArtiIos` runs it before any executable that links Arti
+(today the simulator tests) and is up to date while its inputs (`src/`, `include/`, `Cargo.*`,
+`ARTI_VERSION`, the toolchain and the script) are unchanged. It needs macOS, Xcode and rustup;
+the two iOS targets are added on first use. The first build takes about 2.5 minutes for both
+targets, then about 35 seconds per target after a change to `src/`.
+
+Output goes to `out/ios/`, which git ignores:
+
+```
+out/ios/
+├── aarch64-apple-ios/libarti.a       # device, ~18 MB unlinked
+├── aarch64-apple-ios-sim/libarti.a   # simulator, ~18 MB unlinked
+├── Arti.xcframework                  # both slices + header, for an Xcode target (B12d)
+├── include/arti_ffi.h
+└── BUILD_INFO                        # rustc, Xcode, sha256 per slice, native-static-libs
+```
+
+Why not committed, unlike Android's `.so`: about 36 MB per Arti bump (both slices, unlinked
+objects), against about 5 MB linked. Committing them would want Git LFS or a release asset
+checked by SHA-256; building them where the iOS app is built needs only rustup. That is a
+maintainer call, recorded in the plan.
+
+How the iOS build finds them:
+
+- **Compiling** `:iosApp` needs only `include/arti_ffi.h` (committed): the cinterop
+  (`iosApp/src/nativeInterop/cinterop/arti.def`) names the header, not the library. The cinterop
+  and `src/iosArtiMain` are set up on a macOS host only (cinterop needs the Apple SDK).
+- **Test executables** link `out/ios/<triple>/libarti.a` with `-larti -liconv`
+  (`iosApp/build.gradle.kts`); the link task depends on `buildArtiIos` and takes the archive as
+  an input, so a rebuilt archive relinks.
+- **The app** (B12d): `AmethystKit` is a static framework, so Kotlin/Native does not link it;
+  Xcode does. The Xcode target will need `out/ios/Arti.xcframework` (or `LIBRARY_SEARCH_PATHS` +
+  `-larti -liconv`) and a pre-build step that runs `buildArtiIos`. Not wired yet: nothing in the
+  app calls Arti, and Kotlin/Native drops the unreferenced wrapper from the framework.
+
+Differences from the Android build:
+
+- `panic = "unwind"` (`CARGO_PROFILE_RELEASE_PANIC`), so the `catch_unwind` around every C
+  export is live and a panic in an Arti task ends that task, not the app. Android keeps "abort".
+  Measured cost: linked into a stripped device binary Arti adds 5.01 MB with unwind, 4.21 MB
+  with abort.
+- `IPHONEOS_DEPLOYMENT_TARGET=16.0`, matching `iosApp/xcode/project.yml`.
+- `fs-mistrust` is off (`dangerously_trust_everyone`), as on every non-Android target: the iOS
+  app container is OS-sandboxed, and the simulator's container sits under the developer's home.
+- Reproducibility is not claimed yet. Xcode's clang compiles `ring`, `zstd-sys` and
+  `libsqlite3-sys`, so it is an input like the NDK; `IOS_XCODE_VERSION` records the Xcode the
+  archives were measured with and the script only warns on a mismatch. One data point: two builds
+  from fresh Arti clones at the canonical path, on the same Mac, gave the same archive sha256s.
+- Xcode's `nm` cannot read the `compiler_builtins` members (they carry bitcode from Rust's
+  newer LLVM) and exits 1; the script ignores that. The linker is unaffected.
+
+### Tests
+
+```bash
+./gradlew :iosApp:iosSimulatorArm64Test                               # lifecycle, no network needed
+./gradlew :iosApp:iosSimulatorArm64Test -Pamethyst.arti.network=true  # + the Tor routing spike
+```
+
+`ArtiNativeLifecycleTest` drives initialize, SOCKS (a raw SOCKS5 greeting), restart, stop,
+destroy and re-initialize on the simulator. `TorNetworkSpikeTest` bootstraps Tor and checks what
+NSURLSession sends through the SOCKS port; it only reads (check.torproject.org, one relay REQ up
+to EOSE, an onion site) and is excluded unless the property is set.
 
 ## Cargo.toml features
 
