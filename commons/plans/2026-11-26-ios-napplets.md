@@ -37,8 +37,10 @@ is built, so no account loaded and nothing was signed or published. It used:
 
 Environment: Xcode 27.1, simulator "iPhone 18 Pro" (F3961A2A-…), Kotlin 2.4.21. Runtimes on the
 machine: iOS 17.4, 17.5, 18.0, 18.6, 26.2, 26.4, 26.5, 27.0, 27.1 (`xcrun simctl list runtimes`).
-The runs used that simulator's runtime, **iOS 27.0**. **The runs were not repeated on the 17.x
-runtimes**; see the N1 test plan.
+The first two runs used that simulator's runtime, **iOS 27.0**. The same harness was then run
+on **iOS 17.4**, the new floor (simulator "iPhone 15 Pro", CA14C3C7-…, fresh, no account), from
+a separate worktree at 4fe484ed804. Every Q1–Q5 result below holds on both runtimes unless a
+row says otherwise; §2.3 lists the differences.
 
 Two Kotlin/Native traps the harness hit, which the real code must avoid:
 - `NSLog("…%@", kotlinString)` segfaults (`objc_opt_respondsToSelector` inside
@@ -67,7 +69,7 @@ and `napplet://ndef.napplet.local/site` in `sandbox="allow-scripts allow-same-or
 | `crypto.subtle` + a SHA-256 digest | ok | ok | ok |
 | `parent.document` | n/a | SecurityError | SecurityError |
 | localStorage | n/a | SecurityError (opaque origin, as in Chrome) | A writes `secret`, B reads `null` |
-| IndexedDB | n/a | SecurityError | A lists `[spike-cspHeader, spike-siteA]` (both nabc), B lists only `[spike-siteB]` |
+| IndexedDB | n/a | SecurityError | 27.0: A lists `[spike-cspHeader, spike-siteA]` (both nabc), B lists only `[spike-siteB]`. 17.4: `indexedDB.databases()` returns `[]` everywhere, so a record probe was used instead: A wrote `k` into a new `shared-probe` db, the same-origin cspHeader page found it existing (no upgrade), and B got a fresh db (upgrade fired) with no record |
 | MessageChannel hello → ping → pong | n/a | ok | ok |
 
 - So each subdomain of a custom scheme is its own origin, with its own storage, and a secure
@@ -133,8 +135,8 @@ klib as a typed `var proxyConfigurations: List<*>?`, so no KVC is needed.
 
 | Store | Top-level GET `https://check.torproject.org/api/ip` | SOCKS connections |
 |---|---|---|
-| `dataStoreForIdentifier(uuid)` + SOCKS proxy | `IsTor=true` | +2 |
-| `nonPersistentDataStore()` + SOCKS proxy | `IsTor=true` | +2 |
+| `dataStoreForIdentifier(uuid)` + SOCKS proxy | `IsTor=true` | +2 (17.4: +1) |
+| `nonPersistentDataStore()` + SOCKS proxy | `IsTor=true` | +2 (17.4: +1) |
 | `nonPersistentDataStore()`, no proxy | `IsTor=false` | +0 |
 
 These were three WKWebViews in one process, each with its own store, so **the proxy is per
@@ -170,6 +172,9 @@ stayed at +0. The nw proxy config has no failover unless it is asked for.
 The scheme-served page itself loaded in the proxied store without touching the proxy (the
 handler logged it, and no SOCKS connection was counted before the first step).
 
+Both runtimes behaved the same for every sub-resource row, the dead port (`-1004`, +0) and the
+re-pointed live store (`IsTor=true`).
+
 Cleanup: `removeDataStoreForIdentifier` failed with "Data store is in use" while a WKWebView on
 it was still alive. Deleting a per-account store (logout, "clear site data") must first tear
 down every WKWebView on it.
@@ -179,6 +184,35 @@ reached the handler (`scheme-request …`), proxied store or not, and none of th
 SOCKS counter. WebKit has no other path for them: the bytes the page gets are the bytes the
 handler hands it. So blob fetching stays ours (Ktor, with Tor chosen per launch, §6),
 exactly as on Android, where `shouldInterceptRequest` plays that role.
+
+### 2.3 iOS 17.4 vs iOS 27.0
+
+Same harness, same checks; only the simulator runtime differs.
+
+| Question | 17.4 vs 27.0 | Evidence on 17.4 |
+|---|---|---|
+| Q1 secure context, `crypto.subtle` | same | `secure:true`, digest `ok` in the shell, srcdoc and sites |
+| Q1 origins per subdomain | same | `napplet://nabc…`, `napplet://ndef…`, srcdoc `null` |
+| Q1 localStorage isolation | same | A `lsWrite=siteA`, B `lsRead=null`; srcdoc SecurityError |
+| Q1 IndexedDB isolation | same result, different probe | `indexedDB.databases()` returns `[]` on 17.4 (it listed names on 27.0); the record probe shows isolation (A `fresh:true wrote`, same-origin `fresh:false`, B `fresh:true value:none`) |
+| Q1 header CSP / meta CSP / `'self'` / `frame-src` | same | cspHeader: https + shell blocked, self `ok basic`; srcdoc: all blocked; `frame-src napplet://nzzz…` violation and no handler request for nzzz |
+| Q1 MessageChannel | same | `pong ping` from srcdoc, A, B, cspHeader |
+| Q2 bridge (reply, native→page, page vs named world, `frameInfo`) | same | `replyValue=echo-reply`, `nativeToPage pong-from-native`, `iso` undefined in every page world, `event detail=from-page-world`, children seen as `main=false` with their origins |
+| Q3 WebRTC guard in every frame | same | `rtc:"undefined", guard:1` in the shell, srcdoc, sites, nested about:blank/srcdoc/same-origin, and `selfNested-*` inside the opaque srcdoc |
+| Q4 proxy per store, IsTor | same (SOCKS +1 instead of +2 for the top-level check) | `IsTor=true` for the persistent and non-persistent proxied stores, `IsTor=false` direct |
+| Q4 fetch / img / WebSocket / media / onion | same | proxied +1 each, direct +0 each |
+| Q4 dead proxy, re-point | same | `-1004`, +0; re-pointed `IsTor=true` |
+| Q5 scheme loads stay local | same | every `napplet://` request reached the handler, and the counter did not move for them |
+
+The extra connection on 27.0's top-level check is not a routing difference: the direct store
+was +0 on both. It is probably a second connection (a favicon, or a speculative preconnect) that
+17.4 does not open.
+
+**O2 answered (17.4).** WKWebView runs inside the bare `iosSimulatorArm64Test` executable
+when the test runs on a booted simulator (`-Pamethyst.ios.testSimulator=<udid>`, so
+`standalone=false`): `loadHTMLString` + `evaluateJavaScript` returned `"42"` after 1.2 s, with the test
+pumping `NSRunLoop.mainRunLoop` on the main thread (`isMainThread=true`). A custom scheme
+handler and the message bridge were not tried in the test executable.
 
 ## 3. Decisions
 
@@ -506,6 +540,34 @@ mini-apps plus a way to report content.
 - **Code from the network.** Napplets are interpreted web content running in WebKit, which
   4.7 / 2.5.2 accepts. Nothing downloads native code.
 
+## 7a. Host review and the shared session core (decided 2026-11-26)
+
+`2026-11-26-napplet-host-core.md` reviews Android's and Desktop's hosts against this plan: a
+security-layer checklist with the iOS counterpart of each protection, the engine-independent
+logic the two hosts duplicate, and a `NappletSessionCore` + `NappletWebEngine` port proposal.
+Decisions taken from it:
+
+- **Order:** after N4, extract the shared policies and `NappletSessionCore` (commonTest with a
+  fake engine, JVM + simulator), move **Desktop** onto it first (checked by hand), write the
+  iOS host (N5-N7) against the core from day one, and move **Android** last, on its own branch,
+  merged only after a device test.
+- **Off-origin requests on iOS** never reach the scheme handler, so the CSP alone is not
+  enough: install a per-profile `WKContentRuleList` built from the shared request policy, the
+  counterpart of Android's 404 and Desktop's cancel handler.
+- **WebRTC guard** wherever Android's `NappletWebRtcGuard.isNeeded` says (napplets, webxdc and a
+  WEBSITE on Tor), plus Desktop's in-shell refusal to run without it.
+- **Hello origin:** the shared `shell.html` checks `e.origin` against the app origin for sites
+  and webxdc, not just `e.source` (defence in depth: the shell's `frame-src` already keeps a
+  foreign page out of the frame on Chromium); a site's own frame may not navigate off-origin.
+- **Attendance:** requests that act for the user are held while the napplet is unattended, as
+  Android does; the core owns this for every host.
+- **Proxy:** iOS proxies per data store, so `NappletProxyClaims` (one route per process) is not
+  used there; §6 is read with that correction.
+- **Storage:** split per account, as Android, not per account and network.
+- Also from the review: JS dialogs, the web-content-process crash path, back through the page's
+  history first, session-grant lifetime, refusing local-network addresses for open-web sites,
+  DNS prefetch off, and `NSCameraUsageDescription` for the file picker.
+
 ## 8. Phases
 
 Each phase is testable on its own and lands as its own PR.
@@ -532,8 +594,8 @@ Each phase is testable on its own and lands as its own PR.
   Check its hello/round trip, that `RTCPeerConnection` is undefined in its frame, a consent
   card shown and answered, and that no network leaves the web view (empty Tor/SOCKS counters
   and a CSP violation for a test fetch). Add an `iosSimulatorArm64Test` that drives the
-  session headless if WKWebView can run in the test executable; it is unknown whether it
-  can, so check that first.
+  session headless. WKWebView runs in the test executable (O2, §2.3); pump
+  `NSRunLoop.mainRunLoop` while waiting.
 - **N6. nSites + Tor.** WEBSITE and WEBXDC profiles, per-account/per-network data stores,
   `NsiteNetworkChoices`, proxied stores, fail-closed states and re-point/close on port
   change. Test: an nSite with Tor on shows `IsTor=true` for a page fetch to
@@ -547,10 +609,10 @@ Each phase is testable on its own and lands as its own PR.
 
 ## 9. Test plan (beyond the per-phase checks)
 
-- Repeat the spike's Q1–Q4 checks on the **iOS 17.4/17.5 runtimes**, the new floor (a fresh
-  simulator with no account; the `-AmethystNappletSpike` hook pattern, debug-only). The
-  spike ran only on the default runtime, and `proxyConfigurations` behaviour is what could
-  differ between versions.
+- Done 2026-11-26: Q1–Q5 repeated on **iOS 17.4**, the floor, with no differences that matter
+  (§2.3). Repeat the Tor rows on the floor for each release, because `proxyConfigurations` is
+  the most version-sensitive piece. Don't rely on `indexedDB.databases()` for storage checks:
+  it returns `[]` on 17.4.
 - Run a device check of the Tor rows on real hardware before release: the simulator
   shares the Mac's network stack.
 - Run the security review's attack list from `2026-10-31-embed-security-review.md` against the
@@ -568,8 +630,10 @@ Each phase is testable on its own and lands as its own PR.
 - O1. Is there a WKWebView-level way to turn WebRTC off outright, rather than relying on the
   JS guard? The guard is proven in every frame kind tested. There is no public
   `WKPreferences` switch.
-- O2. Does WKWebView run inside an `iosSimulatorArm64Test` executable (no UIApplication)? It
-  decides whether N5's tests can be headless.
+- O2. **Answered: yes** on a booted simulator (§2.3). WKWebView loads and evaluates JS inside
+  the `iosSimulatorArm64Test` executable if the test pumps the main run loop. N5's session
+  tests can run headless. They still have to confirm that a `WKURLSchemeHandler` and the
+  message bridge work there too.
 - O3. `http://*.onion` sub-resources from a secure (`napplet://`) page: are they upgraded or
   blocked? This affects nSites that call onion APIs. Android has the same mixed-content
   question.
