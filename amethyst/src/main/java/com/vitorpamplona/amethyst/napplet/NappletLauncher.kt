@@ -28,6 +28,7 @@ import android.widget.Toast
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.commons.model.ThemeType
 import com.vitorpamplona.amethyst.commons.napplet.NappletLaunch
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletLaunchPlan
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
@@ -220,16 +221,25 @@ object NappletLauncher {
                 .orEmpty()
         val launchToken = NappletLaunchRegistry.register(identity, declared, launchAccountPubKey)
 
-        // Resolve the per-site network choice. An nSite follows the user's choice for it, else the Tor
-        // settings' "Applets and Websites" switch; a locked napplet's blob fetches follow that switch.
+        // The route, as every host decides it (NappletLaunchPlan): a site's own traffic follows the user's
+        // choice for it, else the Tor settings' "Applets and Websites" switch; a locked napplet's blob
+        // fetches follow that switch. Whether Tor is ON, not whether its port is known yet: with Tor on and
+        // no port the host refuses to fetch anything (fails closed) instead of going out directly while
+        // Tor is still starting. The sandbox gets the one flag that applies: the plan's blob route, which
+        // for a site is its own route.
         NsiteNetworkRegistry.preload()
-        // Whether Tor is ON, not whether its port is known yet: with Tor on and no port the host refuses to
-        // fetch anything (fails closed) instead of going out directly while Tor is still starting.
         val torPrefs = Amethyst.instance.torPrefs
         val torEnabled = torPrefs.torType.value != TorType.OFF
-        val useTor =
-            torEnabled &&
-                if (profile.exposesNetwork) NsiteNetworkRegistry.useTor(identity.coordinate) else torPrefs.value.appletsAndWebsitesViaTor.value
+        val plan =
+            NappletLaunchPlan.of(
+                launch = launch,
+                accountPubKey = launchAccountPubKey,
+                useTor = NappletLaunchPlan.useTorFor(profile, torEnabled) { NsiteNetworkRegistry.useTor(identity.coordinate) },
+                appletBlobsUseTor = torEnabled && torPrefs.value.appletsAndWebsitesViaTor.value,
+                // The WebView splits storage per account itself (NappletWebViewProfiles).
+                sharedStorageJar = false,
+            )
+        val useTor = plan.blobsUseTor
 
         // Resolve capability labels here (the app has the resources) so the sandbox module needs none.
         val capLabels = declared.map { stringRes(context, it.labelResId()) }
