@@ -2251,7 +2251,6 @@
     <string name="kind_comments">コメント</string>
     <string name="kind_community_def">コミュニティ定義</string>
     <string name="kind_community_list">コミュニティリスト</string>
-    <string name="kind_community_post">コミュニティ投稿</string>
     <string name="kind_contact_card">連絡先カード</string>
     <string name="kind_day_appointment">日次予定</string>
     <string name="kind_deletions">削除</string>

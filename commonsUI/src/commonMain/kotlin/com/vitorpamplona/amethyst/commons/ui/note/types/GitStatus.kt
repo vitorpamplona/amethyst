@@ -42,10 +42,13 @@ import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictColor
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.git_proposed_explanation
+import com.vitorpamplona.amethyst.commons.resources.git_status_applied_as_commits
+import com.vitorpamplona.amethyst.commons.resources.git_status_merge_commit
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_reviewed
 import com.vitorpamplona.amethyst.commons.resources.git_timeline_set_status
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GitStatusPill
+import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -53,13 +56,15 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip34Git.issue.GitIssueEvent
 import com.vitorpamplona.quartz.nip34Git.review.GitReviewEvent
+import com.vitorpamplona.quartz.nip34Git.status.GitStatusAppliedEvent
 import com.vitorpamplona.quartz.nip34Git.status.GitStatusEvent
 
 /**
  * Renders a NIP-34 status event (kinds 1630-1633). These usually carry an
  * empty `content`, so the text fallback drew a blank note: show the new
- * status as a pill, the optional comment, and the issue/patch/PR it
- * targets (linked through the event's marked-`root` `e` tag) quoted below.
+ * status as a pill, the optional markdown comment, the commits a 1631 names,
+ * and the issue/patch/PR it targets (the `e` marked `root`, read by Quartz's
+ * rootEventId) below.
  */
 @Composable
 fun RenderGitStatusEvent(
@@ -93,17 +98,46 @@ fun RenderGitStatusEvent(
         )
     }
 
+    // NIP-34: the content is "<markdown text>", drawn as a note's text is (links, mentions,
+    // markdown), within the row's quote budget.
     if (event.content.isNotBlank()) {
         Spacer(modifier = StdVertSpacer)
-        Text(
-            text = event.content,
-            style = MaterialTheme.typography.bodyMedium,
-        )
+        KindCardText(note, event.content, backgroundColor, accountViewModel, nav, quotesLeft)
+    }
+
+    if (event is GitStatusAppliedEvent) {
+        GitAppliedCommits(event)
     }
 
     if (note.replyTo?.lastOrNull() != null) {
         Spacer(modifier = StdVertSpacer)
         GitActivityTarget(note, quotesLeft, backgroundColor, accountViewModel, nav)
+    }
+}
+
+private const val SHORT_COMMIT = 7
+
+/**
+ * What a kind-1631 status says was merged or applied: the `merge-commit` when merged, the
+ * `applied-as-commits` (commits on the default branch) when applied, as short hashes.
+ */
+@Composable
+private fun GitAppliedCommits(event: GitStatusAppliedEvent) {
+    val merge = remember(event) { event.mergeCommit()?.trim()?.ifBlank { null } }
+    val applied =
+        remember(event) {
+            event
+                .appliedAsCommits()
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+        }
+    if (merge == null && applied.isEmpty()) return
+    Spacer(modifier = StdVertSpacer)
+    KindCardField(stringRes(Res.string.git_status_merge_commit), merge?.take(SHORT_COMMIT), monospace = true, maxLines = 1)
+    if (applied.isNotEmpty()) {
+        KindCardSection(pluralStringRes(Res.plurals.git_status_applied_as_commits, applied.size, applied.size))
+        KindCardChips(applied.map { it.take(SHORT_COMMIT) })
     }
 }
 

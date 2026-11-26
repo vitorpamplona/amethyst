@@ -95,7 +95,6 @@ import com.vitorpamplona.amethyst.commons.relayClient.event.observeCommunityAppr
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteModifications
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.channel.observeChannelPicture
-import com.vitorpamplona.amethyst.commons.rendering.unknown.isUnknownKind
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.approve
 import com.vitorpamplona.amethyst.commons.resources.draft
@@ -187,6 +186,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorProficienc
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAttestorRecommendation
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrack
+import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAudioTrackHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderAuthoredPodcasts
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBadgeAward
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderBallot
@@ -295,7 +295,6 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenance
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssProvenanceFolder
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssReadWriteLists
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDrssShow
-import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmContentDiscoveryResponse
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmHeartbeat
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmRequest
 import com.vitorpamplona.amethyst.commons.ui.note.types.RenderDvmResult
@@ -473,6 +472,8 @@ import com.vitorpamplona.amethyst.commons.ui.note.types.ReplyRenderType
 import com.vitorpamplona.amethyst.commons.ui.note.types.VideoDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListHeader
 import com.vitorpamplona.amethyst.commons.ui.note.types.dlists.RenderDListItem
+import com.vitorpamplona.amethyst.commons.ui.note.types.hasTextCard
+import com.vitorpamplona.amethyst.commons.ui.note.types.isTitledTrack
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderAppCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderArticleCurationSet
 import com.vitorpamplona.amethyst.commons.ui.note.types.lists.RenderBookmarkList
@@ -939,7 +940,6 @@ import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.nip89AppHandlers.recommendation.AppRecommendationEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmRequestEvent
 import com.vitorpamplona.quartz.nip90Dvms.DvmResponseEvent
-import com.vitorpamplona.quartz.nip90Dvms.contentDiscoveryResponse.DvmContentDiscoveryResponseEvent
 import com.vitorpamplona.quartz.nip90Dvms.dvmHeartbeat.DvmHeartbeatEvent
 import com.vitorpamplona.quartz.nip90Dvms.status.DvmStatusEvent
 import com.vitorpamplona.quartz.nip94FileMetadata.FileMetadataEvent
@@ -1728,7 +1728,7 @@ internal fun RenderNoteRow(
             }
 
             is SoftwareApplicationEvent -> {
-                RenderSoftwareApplication(baseNote, accountViewModel, nav, backgroundColor)
+                RenderSoftwareApplication(baseNote, canPreview && !makeItShort, quotesLeft, accountViewModel, nav, backgroundColor)
             }
 
             is SoftwareAssetEvent -> {
@@ -1740,52 +1740,62 @@ internal fun RenderNoteRow(
                 // The EventFactory always materializes the NIP-51 class; dispatch to NIP-82 when the
                 // tag signature matches.
                 if (noteEvent.isNip82SoftwareRelease()) {
-                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav)
+                    RenderSoftwareRelease(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
-                    RenderReleaseArtifactSet(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                    RenderReleaseArtifactSet(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is AttestationEvent -> {
-                RenderAttestation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestation(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestationRequestEvent -> {
-                RenderAttestationRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestationRequest(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestorRecommendationEvent -> {
-                RenderAttestorRecommendation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestorRecommendation(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AttestorProficiencyEvent -> {
-                RenderAttestorProficiency(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderAttestorProficiency(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             // Kind 31337 is borrowed (AntennaPod's ad-skip data, game state, sync indexes): only an
-            // event with an audio file to play is a track. The rest fall through to the text card.
+            // event with an audio file to play is a track. The rest are other apps' records.
             is AudioTrackEvent if noteEvent.hasPlayableAudio() -> {
                 RenderAudioTrack(baseNote, ContentScale.FillWidth, accountViewModel, nav)
             }
 
+            // A titled track whose file is missing or unplayable keeps its header (title, cover,
+            // participants), without the player.
+            is AudioTrackEvent if noteEvent.isTitledTrack() -> {
+                RenderAudioTrackHeader(baseNote, accountViewModel, nav)
+            }
+
+            is AudioTrackEvent -> {
+                RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+            }
+
             is AudioHeaderEvent -> {
-                RenderAudioHeader(baseNote, ContentScale.FillWidth, accountViewModel, nav)
+                RenderAudioHeader(baseNote, canPreview && !makeItShort, quotesLeft, ContentScale.FillWidth, accountViewModel, nav)
             }
 
             is MusicTrackEvent -> {
-                RenderMusicTrack(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderMusicTrack(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is MusicPlaylistEvent -> {
-                RenderMusicPlaylist(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderMusicPlaylist(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is PodcastEpisodeEvent -> {
-                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is Podcasting20EpisodeEvent -> {
-                RenderPodcastEpisode(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastEpisode(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is Podcasting20TrailerEvent -> {
@@ -1793,32 +1803,22 @@ internal fun RenderNoteRow(
             }
 
             is PodcastMetadataEvent -> {
-                RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                RenderPodcastMetadata(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is AppSpecificDataEvent -> {
                 // kind:30078 is overloaded; only the Podcasting-2.0 show-metadata variant renders as a
-                // podcast card. Anything else (e.g. a client's own settings) keeps the text fallback.
+                // podcast card. NIP-78 lets any other app put anything in `content` (a client's own
+                // settings, often JSON or ciphertext), so the rest get the unknown-kind card.
                 if (noteEvent.dTag() == Podcasting20PodcastMetadata.PODCAST_METADATA_D_TAG) {
-                    RenderPodcastMetadata(baseNote, makeItShort, canPreview, backgroundColor, accountViewModel, nav)
+                    RenderPodcastMetadata(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
-                    RenderTextEvent(
-                        baseNote,
-                        makeItShort,
-                        canPreview,
-                        quotesLeft,
-                        unPackReply,
-                        backgroundColor,
-                        editState,
-                        accountViewModel,
-                        nav,
-                        isBoostedNote = isBoostedNote,
-                    )
+                    RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 }
             }
 
             is DraftWrapEvent -> {
-                RenderDraft(baseNote, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
+                RenderDraft(baseNote, makeItShort, canPreview, quotesLeft, unPackReply, backgroundColor, accountViewModel, nav)
             }
 
             is ReactionEvent -> {
@@ -1838,7 +1838,7 @@ internal fun RenderNoteRow(
             }
 
             is ReportEvent -> {
-                RenderReport(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
+                RenderReport(baseNote, canPreview && !makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is LongFormContentEvent -> {
@@ -2228,14 +2228,16 @@ internal fun RenderNoteRow(
             }
 
             // Other apps' formats on those shared kinds (an encrypted planner's tasks, Fieldbook
-            // memberships, Paygress revocations...). EventCache never stores them, so this only
-            // guards the fall-through below, which would print their raw content.
+            // memberships, Paygress revocations, Shopstr's encrypted carts (30405) and escrow
+            // records (30406)...): the unknown-kind card, like the other apps' events on drss.io's
+            // kinds below. EventCache never stores them, so this only keeps them off the text path.
             is UnrecognizedKind30301Event,
             is UnrecognizedKind30302Event,
             is UnrecognizedKind38385Event,
-            // Shopstr's encrypted carts (30405) and escrow records (30406): ciphertext, nothing to draw.
             is UnrecognizedKind30405Event,
             is UnrecognizedKind30406Event,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
+
             // drss.io's reader: listening progress, generated shows, list folders, lists and
             // provenance notes, drawn the way drss draws them (types/Drss.kt).
             is DrssListenProgressAppDataEvent,
@@ -2268,18 +2270,6 @@ internal fun RenderNoteRow(
             is UnrecognizedKind31985Event,
             -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
-            // llama.garden's model torrents, model, seeder and client releases: typed by Quartz
-            // 2.20.0, but Amethyst has no card for them yet, so they keep the unknown-kind card they
-            // had before they were typed. (NIP-FC Maven releases and snapshots have their own card:
-            // RenderMavenPublication, below.)
-            is ModelTorrentEvent,
-            is UnrecognizedKind30099Event,
-            is ClientReleaseEvent,
-            is SeederRequestEvent,
-            is ModelRequestEvent,
-            is UnrecognizedKind30103Event,
-            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
-
             is PredictionMarketEvent -> {
                 RenderPredictionMarket(baseNote, makeItShort, accountViewModel)
             }
@@ -2310,8 +2300,9 @@ internal fun RenderNoteRow(
                 RenderProductReview(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
-            // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) fall through to the
-            // text card below, as they always did.
+            // NIP-15. Other apps' records on 30017-30020 (no name, no merchants) and bids or
+            // confirmations that name no auction or bid get the unknown-kind card after these: NIP-15
+            // content is JSON (a bid's is a number), never prose for the text card.
             is StallEvent if noteEvent.isWellFormed() -> {
                 RenderStall(baseNote, makeItShort, accountViewModel, nav)
             }
@@ -2335,6 +2326,14 @@ internal fun RenderNoteRow(
             is BidConfirmationEvent if noteEvent.isWellFormed() -> {
                 RenderBidConfirmation(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             }
+
+            is StallEvent,
+            is ProductEvent,
+            is MarketplaceEvent,
+            is AuctionEvent,
+            is BidEvent,
+            is BidConfirmationEvent,
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             is CalendarTimeSlotEvent -> {
                 RenderCalendarTimeSlotEvent(baseNote, accountViewModel, nav)
@@ -2412,24 +2411,8 @@ internal fun RenderNoteRow(
                 )
             }
 
-            is DvmContentDiscoveryResponseEvent -> {
-                RenderDvmContentDiscoveryResponse(
-                    baseNote,
-                    makeItShort,
-                    canPreview,
-                    quotesLeft,
-                    backgroundColor,
-                    accountViewModel,
-                    nav,
-                )
-            }
-
             is DvmStatusEvent -> {
-                RenderDvmStatus(
-                    baseNote,
-                    accountViewModel,
-                    nav,
-                )
+                RenderDvmStatus(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             }
 
             is ZapPollEvent -> {
@@ -2512,7 +2495,7 @@ internal fun RenderNoteRow(
             // so new video subtypes render automatically instead of falling through to text.
             is VideoEvent -> {
                 ProvideMediaBleed(mediaBleed) {
-                    VideoDisplay(baseNote, makeItShort, canPreview, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
+                    VideoDisplay(baseNote, makeItShort, canPreview, quotesLeft, backgroundColor, ContentScale.FillWidth, accountViewModel, nav)
                 }
             }
 
@@ -2908,13 +2891,14 @@ internal fun RenderNoteRow(
             is VideoViewEvent -> RenderVideoView(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is WorkoutTemplateEvent -> RenderWorkoutTemplate(baseNote, backgroundColor, accountViewModel, nav)
             // Other apps' formats on the RoboSats (31986), mint-recommendation (38000) and Mostro
-            // rating/dispute (38384/38386) kinds: nothing to draw, and their raw content must not
-            // reach the text path (EventCache keeps 38000 junk only so it supersedes older versions).
+            // rating/dispute (38384/38386) kinds: the unknown-kind card, never the text path, which
+            // would print their raw content (EventCache keeps 38000 junk only so it supersedes older
+            // versions).
             is UnrecognizedKind31986Event,
             is UnrecognizedKind38000Event,
             is UnrecognizedKind38384Event,
             is UnrecognizedKind38386Event,
-            -> {}
+            -> RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
 
             // Buzz chat, huddle, job, forum, moderation and archival events.
             is ArchiveRequestEvent -> RenderBuzzArchiveRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -3063,8 +3047,9 @@ internal fun RenderNoteRow(
             is EncryptionKeyTransferEvent -> RenderPrivateKindCard(baseNote, MaterialSymbols.Key)
 
             // NIP-90 job requests and results. After the DVM kinds above that keep their own cards.
-            // Base-class branches: they must stay AFTER the existing `is DvmContentDiscoveryResponseEvent` and
-            // `is DvmStatusEvent` branches (both DvmResponseEvent subclasses), which keep their own renderers.
+            // Base-class branches: they must stay AFTER the `is DvmStatusEvent` branch (a
+            // DvmResponseEvent subclass), which keeps its own renderer. Content discovery results
+            // (6300) are drawn here, as the notes their tag list names.
             is DvmRequestEvent -> RenderDvmRequest(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is DvmResponseEvent -> RenderDvmResult(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
             is DvmHeartbeatEvent -> RenderDvmHeartbeat(baseNote, quotesLeft, backgroundColor, accountViewModel, nav)
@@ -3119,9 +3104,10 @@ internal fun RenderNoteRow(
             is PushLeaseEvent -> RenderPushLease(baseNote)
 
             else -> {
-                if (noteEvent != null && isUnknownKind(noteEvent)) {
-                    // A kind quartz has no class for: its content may be JSON or ciphertext, and its
-                    // tags carry what it is about, so it gets the fallback card, not the text path.
+                if (noteEvent != null && !hasTextCard(noteEvent)) {
+                    // A kind quartz has no class for, or a typed kind with no branch above: its
+                    // content may be JSON or ciphertext, and its tags carry what it is about, so it
+                    // gets the fallback card, not the text path.
                     RenderUnknownKind(baseNote, makeItShort, quotesLeft, backgroundColor, accountViewModel, nav)
                 } else {
                     ProvideMediaBleed(mediaBleed) {
@@ -3164,6 +3150,8 @@ fun ObserveDraftEvent(
 @Composable
 fun RenderDraft(
     note: Note,
+    makeItShort: Boolean,
+    canPreview: Boolean,
     quotesLeft: Int,
     unPackReply: ReplyRenderType,
     backgroundColor: MutableState<Color>,
@@ -3176,8 +3164,8 @@ fun RenderDraft(
         RenderNoteRow(
             baseNote = it,
             backgroundColor = backgroundColor,
-            makeItShort = false,
-            canPreview = true,
+            makeItShort = makeItShort,
+            canPreview = canPreview,
             editState = edits,
             quotesLeft = quotesLeft,
             unPackReply = unPackReply,
