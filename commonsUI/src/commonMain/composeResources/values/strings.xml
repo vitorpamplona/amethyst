@@ -10901,4 +10901,14 @@
     </plurals>
     <string name="wiki_topic_redirects">Redirects</string>
     <string name="wiki_topic_empty">Nobody has written this article yet.</string>
+    <string name="wiki_all_versions">All versions</string>
+    <string name="wiki_action_edit">Edit</string>
+    <string name="wiki_write_your_version">Write your version</string>
+    <string name="wiki_edit_your_version">Edit your version</string>
+    <string name="wiki_editor_new">New wiki article</string>
+    <string name="wiki_editor_edit">Edit wiki article</string>
+    <string name="wiki_editor_fork">Fork wiki article</string>
+    <string name="wiki_edit_tab">Write</string>
+    <string name="wiki_body_placeholder">Write in Djot: _emphasis_, *strong*, `code`, and [Another topic][] to link to it.</string>
+    <string name="wiki_preview_empty">Nothing to preview yet.</string>
 </resources>

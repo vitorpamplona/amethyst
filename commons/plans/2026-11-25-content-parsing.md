@@ -204,6 +204,12 @@ Finishing touches found by running the app (2026-11-26):
   author's version of the slug, the linking author's first, then follows, trust rank and newest,
   with the topic's redirects below. `WikiTopics`, `WikiTopicFeedFilter` and `WikiFilterAssembler`
   (kinds 30818 and 30819, `#d`, on the discovery relays and the known authors' outboxes).
+- **A wiki editor** (`Route.WikiPost`, `WikiPostScreen`): title, slug, summary and a Djot body
+  with a Preview tab that draws it through `RenderDocument`, wikilinks included. Opened from a
+  topic ("Write your version" / "Edit your version") and from an article ("Edit" for the
+  account's own, "Fork" for anyone else's: NIP-54's `a` and `e` tags marked `fork`).
+- **The long-form preview** draws the title and summary above the body, and passes the draft's
+  custom emoji and attached files' `imeta`, so the body renders as it will be published.
 - **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
   dropped.
 - **Markdown footnotes** (GitHub's `[^label]` and `[^label]: text`), which both the old renderer
@@ -266,4 +272,18 @@ Finishing touches found by running the app (2026-11-26):
 
 ## Open
 
-1. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).
+1. **Kind-1 layout: measured, stays.** Notes' plain paragraphs on the document renderer (one text
+   per paragraph instead of one `Text` per word in a `FlowRow`) were tried behind a flag and
+   scroll-benchmarked on 2026-11-26 (`tools/desktop-run/scroll-bench.sh`, 3 boots + 1 warm-up
+   each, live home feed, software Skia):
+
+   | pass | word flow fps / gap p99 / jank | document fps / gap p99 / jank |
+   |---|---|---|
+   | down | 34.1 / 95 ms / 34.4% | 33.6 / 144 ms / 29.2% |
+   | up | 57.4 / 40 ms / 2.7% | 54.5 / 51 ms / 8.1% |
+   | down-again | 58.5 / 44 ms / 3.8% | 58.6 / 33 ms / 3.8% |
+
+   No gain warm, a little worse cold and scrolling back, and a link with no preview yet would
+   leave its sentence for a line of its own (a document reserves a full-width block for the card;
+   the word flow keeps the URL inline). Decision 8 holds: notes keep the word flow. The flag path
+   is commit `2d0c31ef41` on `claude/kind1-document`, removed in the next one, to measure again.

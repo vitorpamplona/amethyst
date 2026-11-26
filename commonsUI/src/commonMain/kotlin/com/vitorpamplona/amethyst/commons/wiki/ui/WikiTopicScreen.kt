@@ -34,6 +34,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -42,14 +43,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
+import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.Note
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.ui.feedNotes
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.LifecycleAwareKeyDataSourceSubscription
 import com.vitorpamplona.amethyst.commons.relayClient.wiki.WikiTopicQueryState
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.wiki_edit_your_version
 import com.vitorpamplona.amethyst.commons.resources.wiki_topic_empty
 import com.vitorpamplona.amethyst.commons.resources.wiki_topic_redirects
 import com.vitorpamplona.amethyst.commons.resources.wiki_topic_versions
+import com.vitorpamplona.amethyst.commons.resources.wiki_write_your_version
 import com.vitorpamplona.amethyst.commons.ui.components.rememberViewModel
 import com.vitorpamplona.amethyst.commons.ui.feeds.WatchLifecycleAndUpdateModel
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
@@ -88,7 +93,17 @@ fun WikiTopicScreen(
 
     Scaffold(topBar = { TopBarWithBackButton(title, nav) }) { padding ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(padding)) {
-            item(key = "header") { TopicHeader(title, articles.size, loading) }
+            item(key = "header") {
+                TopicHeader(title, articles.size, loading) {
+                    if (accountViewModel.isWriteable()) {
+                        val me = accountViewModel.account.signer.pubKey
+                        val own = articles.firstOrNull { it.author?.pubkeyHex == me } as? AddressableNote
+                        TextButton(onClick = { nav.nav(Route.WikiPost(topic = slug, base = own?.address?.toValue())) }) {
+                            Text(stringRes(if (own != null) Res.string.wiki_edit_your_version else Res.string.wiki_write_your_version))
+                        }
+                    }
+                }
+            }
             if (articles.isEmpty() && redirects.isEmpty() && !loading) {
                 item(key = "empty") {
                     Text(
@@ -134,6 +149,7 @@ private fun TopicHeader(
     title: String,
     versions: Int,
     loading: Boolean,
+    actions: @Composable () -> Unit,
 ) {
     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(text = title, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold)
@@ -146,6 +162,7 @@ private fun TopicHeader(
             )
             if (loading) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
         }
+        actions()
     }
     HorizontalDivider(thickness = 0.5.dp)
 }

@@ -976,6 +976,15 @@ sealed class Route {
         val from: String? = null,
     ) : Route()
 
+    /**
+     * The wiki editor. [topic] fixes a new article's slug; [base] is the address of the version to
+     * start from: the account's own to edit it, anyone else's to fork it.
+     */
+    @Serializable data class WikiPost(
+        val topic: String? = null,
+        val base: String? = null,
+    ) : Route()
+
     @Serializable data class Geohash(
         val geohash: String,
     ) : Route()
