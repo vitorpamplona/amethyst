@@ -21,7 +21,7 @@
 package com.vitorpamplona.androiddevice
 
 import com.vitorpamplona.androiddevice.adb.CrashLog
-import com.vitorpamplona.androiddevice.adb.DeviceCrash
+import com.vitorpamplona.devicecore.crash.DeviceCrash
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
