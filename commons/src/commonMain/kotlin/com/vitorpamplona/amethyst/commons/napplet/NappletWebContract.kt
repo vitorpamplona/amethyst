@@ -313,6 +313,21 @@ object NappletWebContract {
             "'RTCRtpSender','RTCRtpReceiver','RTCRtpTransceiver','RTCCertificate'];" +
             "for(var i=0;i<n.length;i++){try{Object.defineProperty(window,n[i],{value:undefined,writable:true,configurable:true});}catch(e){}}})();"
 
+    /** What [WEBRTC_CHECK] logs when it refuses to start an app: the host then fails the launch. */
+    const val WEBRTC_PRESENT = "napplet-guard: WebRTC is present"
+
+    /**
+     * The shell's own refusal to run without the WebRTC guard: put first in the shell's head, it
+     * stops the shell before it starts the app when the host's [WEBRTC_GUARD_JS] did not reach the
+     * shell (a guard that is missing in the shell is missing in the app's frames too).
+     */
+    const val WEBRTC_CHECK: String =
+        "<script>if(typeof RTCPeerConnection!=='undefined'||typeof webkitRTCPeerConnection!=='undefined'){" +
+            "window.stop();console.error('$WEBRTC_PRESENT');throw new Error('$WEBRTC_PRESENT');}</script>"
+
+    /** Run in the shell: removes the app's frame, ending everything the app had running. */
+    const val DROP_APP_FRAME_JS = "var f=document.getElementById('app');if(f)f.remove();"
+
     /**
      * Takes cookies away from the frame it runs in, before any page script. Every app here lives under
      * one site, `napplet.local` (`.local` is not a public suffix), so a cookie an app sets on that
