@@ -93,6 +93,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavTransitionTier
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavigationHost
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.sharedDestinations
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalAppNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.RegisterOnScreen
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.openInBackgroundOnModifiedClick
@@ -368,6 +369,7 @@ private fun AppNavigation(
         LocalScreenLayout provides screenLayout,
         LocalDockController provides dock,
         LocalNavDestinations provides destinations,
+        LocalAppNav provides nav,
         LocalTabReselectCoordinator provides tabReselectCoordinator,
         // The finders shared composables reach for through the no-arg observeUser* /
         // EventFinderFilterAssemblerSubscription(note) overloads; they error() when unprovided.

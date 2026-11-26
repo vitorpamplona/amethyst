@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletLaunchPlan
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcBundles
 import com.vitorpamplona.amethyst.commons.tor.TorType
@@ -188,6 +189,9 @@ class DesktopNappletHost(
 
     private fun torEnabled(): Boolean = modules.torPrefs.torType.value != TorType.OFF
 
+    /** Whether [launch]'s own traffic goes through Tor: Android's rule, shared ([NappletLaunchPlan.useTorFor]). */
+    private fun siteUsesTor(launch: NappletLaunch): Boolean = NappletLaunchPlan.useTorFor(launch.profile, torEnabled()) { networkChoices.useTor(launch.identity.coordinate) }
+
     private fun appletsAndWebsitesViaTor(): Boolean = modules.torPrefs.value.appletsAndWebsitesViaTor.value
 
     /** Validates [manifest] and opens it in a new window, or says why it can't. */
@@ -204,7 +208,7 @@ class DesktopNappletHost(
     fun openSite(event: Event): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open sites"))
         return NappletLaunch.fromSite(event).map { launch ->
-            open(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate))
+            open(launch, account, useTor = siteUsesTor(launch))
         }
     }
 
@@ -427,7 +431,7 @@ class DesktopNappletHost(
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your Observer"))
         val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
-        return runCatching { startInline(launch, account, useTor = torEnabled() && networkChoices.useTor(launch.identity.coordinate)) }
+        return runCatching { startInline(launch, account, useTor = siteUsesTor(launch)) }
     }
 
     private fun startInline(
@@ -481,7 +485,7 @@ class DesktopNappletHost(
     ): Result<CefNappletSession> {
         val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to open apps"))
         return launchOf(event).map { launch ->
-            val useTor = launch.profile.exposesNetwork && torEnabled() && networkChoices.useTor(launch.identity.coordinate)
+            val useTor = siteUsesTor(launch)
             startScreen(launch, account, useTor, routeId)
         }
     }

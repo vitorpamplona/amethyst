@@ -107,8 +107,11 @@ object NappletRequestPolicy {
      * order, the last match winning:
      * - A launch with no network blocks everything, then lets through the shell's host, its own
      *   origin and the documents a page makes itself.
-     * - One with a network (a site, a front page) blocks only the internal names over http(s): they
-     *   don't exist on the network, and looking them up would tell a resolver which app runs.
+     * - One with a network (a site, a front page) blocks the internal names over http(s): they
+     *   don't exist on the network, and looking them up would tell a resolver which app runs. It also
+     *   blocks plain `http`/`ws` except to `.onion` names (mixed content), and the local network
+     *   ([privateNetworkFilters]), which Desktop's SOCKS router refuses on every route: a page on the
+     *   open web must not reach the user's router or another app on the device.
      */
     fun contentRules(
         profile: HostProfile,
@@ -116,7 +119,18 @@ object NappletRequestPolicy {
         origins: NappletOrigins,
     ): List<NappletContentRule> {
         val internalWeb = NappletContentRule("^https?://([^/:]*\\.)?" + escape(NappletWebContract.HOST) + "[:/]", block = true)
-        if (profile.exposesNetwork) return listOf(internalWeb)
+        if (profile.exposesNetwork) {
+            return buildList {
+                add(internalWeb)
+                // Mixed content, as Android's MIXED_CONTENT_NEVER_ALLOW: no plain http or ws from a page
+                // served on our secure scheme, which WebKit itself does not treat as mixed (measured).
+                // An onion service is the exception: its transport is encrypted and authenticated.
+                add(NappletContentRule("^http://", block = true))
+                add(NappletContentRule("^ws://", block = true))
+                add(NappletContentRule(HOST_START + "[^/:@]*\\.onion" + HOST_END, block = false))
+                privateNetworkFilters.forEach { add(NappletContentRule(it, block = true)) }
+            }
+        }
         return buildList {
             add(NappletContentRule(".*", block = true))
             add(NappletContentRule("^" + escape(origins.origin) + "[:/]", block = false))
@@ -126,6 +140,54 @@ object NappletRequestPolicy {
             add(NappletContentRule("^blob:", block = false))
         }
     }
+
+    // The web's schemes (http, https, ws, wss: the content-rule dialect has no alternation, so any
+    // scheme starting with h or w), past any user info, at the start of the host. Never our own
+    // scheme: napplet.local is itself a `.local` name.
+    private const val HOST_START = "^[hw][a-z]*://([^/@]*@)?"
+    private const val OCTET = "[0-9]+"
+    private const val HOST_END = "[:/]"
+
+    /**
+     * The local network as URL filters a browser can apply before a request leaves: IP literals of
+     * loopback, `0.0.0.0/8`, RFC 1918, link-local, CGNAT (`100.64.0.0/10`), IPv6 loopback, ULA,
+     * link-local and IPv4-mapped addresses, and the names that only mean something on a LAN
+     * (`localhost`, `.local`, `.lan`, `.internal`, `.home.arpa`). A public name that resolves to a
+     * private address is not caught here: only a resolver can see that (Desktop's router; over Tor the
+     * exit resolves it, and can't reach the user's LAN).
+     */
+    val privateNetworkFilters: List<String> =
+        buildList {
+            fun v4(prefix: String) = add(HOST_START + prefix + HOST_END)
+            v4("127\\.$OCTET\\.$OCTET\\.$OCTET")
+            v4("0\\.$OCTET\\.$OCTET\\.$OCTET")
+            v4("10\\.$OCTET\\.$OCTET\\.$OCTET")
+            v4("192\\.168\\.$OCTET\\.$OCTET")
+            v4("172\\.1[6-9]\\.$OCTET\\.$OCTET")
+            v4("172\\.2[0-9]\\.$OCTET\\.$OCTET")
+            v4("172\\.3[01]\\.$OCTET\\.$OCTET")
+            v4("169\\.254\\.$OCTET\\.$OCTET")
+            v4("100\\.6[4-9]\\.$OCTET\\.$OCTET")
+            v4("100\\.[7-9][0-9]\\.$OCTET\\.$OCTET")
+            v4("100\\.1[01][0-9]\\.$OCTET\\.$OCTET")
+            v4("100\\.12[0-7]\\.$OCTET\\.$OCTET")
+            // IPv6 literals: unspecified and loopback, ULA (fc00::/7), link-local (fe80::/10), IPv4-mapped.
+            add(HOST_START + "\\[::1?\\]")
+            add(HOST_START + "\\[f[cd][0-9a-f]*:")
+            add(HOST_START + "\\[fe[89ab][0-9a-f]*:")
+            add(HOST_START + "\\[::ffff:")
+            add(HOST_START + "localhost" + HOST_END)
+            for (suffix in listOf("localhost", "local", "lan", "internal", "home\\.arpa")) add(HOST_START + "[^/:@]*\\." + suffix + HOST_END)
+        }
+
+    /**
+     * Whether [rules] let [url] through, read as WebKit reads a content rule list: the last rule that
+     * matches decides, and none matching lets it through. For tests and for hosts that filter in code.
+     */
+    fun allows(
+        rules: List<NappletContentRule>,
+        url: String,
+    ): Boolean = rules.lastOrNull { Regex(it.urlFilter, RegexOption.IGNORE_CASE).containsMatchIn(url) }?.block != true
 
     /** [rules] as a WebKit content rule list (`WKContentRuleListStore.compileContentRuleList`). */
     fun contentRuleListJson(rules: List<NappletContentRule>): String =

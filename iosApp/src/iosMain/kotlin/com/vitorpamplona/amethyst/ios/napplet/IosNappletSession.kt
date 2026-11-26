@@ -30,11 +30,15 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletLaunchPlan
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletLinkOpener
-import com.vitorpamplona.amethyst.commons.napplet.session.NappletRoutePort
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletRoute
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionCore
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.OkioWebxdcBundles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
@@ -44,14 +48,18 @@ import platform.WebKit.WKWebView
 import kotlin.concurrent.Volatile
 
 /**
- * One open napplet on iOS: the shared [NappletSessionCore] driven through [IosNappletWebEngine], the
- * counterpart of the desktop's `CefNappletSession` and Android's `NappletHostActivity`.
+ * One open napplet, nSite or webxdc app on iOS: the shared [NappletSessionCore] driven through
+ * [IosNappletWebEngine], the counterpart of the desktop's `CefNappletSession` and Android's
+ * `NappletHostActivity`.
  *
  * - Its storage is the launching account's own data store ([IosNappletHost.dataStoreFor]), as
  *   Android gives every account its own WebView profile; the origin carries no account.
- * - A napplet has no network of its own: only its files are fetched, through Tor when "Applets and
- *   Websites" says so, and nothing is fetched until Tor runs. Its frames reach nothing else (CSP,
- *   then the engine's request filter).
+ * - A napplet or a webxdc app has no network of its own: only its files are fetched, through Tor when
+ *   "Applets and Websites" says so, and nothing is fetched until Tor runs. Its frames reach nothing
+ *   else (CSP, then the engine's request filter).
+ * - An nSite reaches the web through its store's route ([IosNappletStores]): on Tor when [useTor], and
+ *   then nothing at all leaves (not its files, not a page) until Tor has a port; a Tor that goes away
+ *   under it blocks its loads, never sends them direct.
  * - Requests that act for the user wait while it isn't on screen: the screen says when it is
  *   ([setAttended]).
  */
@@ -59,6 +67,8 @@ class IosNappletSession(
     val launch: NappletLaunch,
     /** The account that opened it: it keeps signing as this account, whoever is active later. */
     val accountPubKey: HexKey,
+    /** Whether an nSite's own traffic goes through Tor ([NappletLaunchPlan.useTorFor]); false for the others. */
+    val useTor: Boolean,
     account: Account?,
     broker: NappletBroker,
     private val host: IosNappletHost,
@@ -69,7 +79,7 @@ class IosNappletSession(
         NappletLaunchPlan.of(
             launch,
             accountPubKey,
-            useTor = false,
+            useTor = useTor,
             appletBlobsUseTor = host.nappletBlobsUseTor(),
             sharedStorageJar = false,
             origins = NappletWebContract.NAPPLET_SCHEME,
@@ -90,7 +100,7 @@ class IosNappletSession(
             account = account,
             broker = broker,
             services = host.services,
-            route = Route(),
+            route = IosNappletStoreRoute(host.stores, accountPubKey, plan.usesNetwork, host::torPort, host::awaitTorPort, host::torRunning, host::awaitTor),
             files = ::filesFor,
             shellHtml = { NappletWebResources.shellHtml() },
             shimJs = { NappletWebResources.shimJs().decodeToString() },
@@ -134,31 +144,27 @@ class IosNappletSession(
 
     fun close() = core.close()
 
-    private fun filesFor(plan: NappletLaunchPlan): NappletFiles =
-        NappletBlobStore(
+    /** Whether the site goes through Tor right now though it chose the open web: another open site of its account wants Tor. */
+    fun routedOverTor(): Boolean = !useTor && host.stores.routeOf(accountPubKey) is NappletRoute.Tor
+
+    private fun filesFor(plan: NappletLaunchPlan): NappletFiles {
+        launch.paper?.let { return PaperFiles(it) }
+        launch.webxdc?.let { app ->
+            return WebxdcFiles(
+                OkioWebxdcBundles(host.webxdcRoot, host.http, viaTor = plan.blobsUseTor),
+                app.url,
+                app.hash,
+                launch.servers,
+                WebxdcRuntime.script(app.selfAddr, app.selfName, app.isAppSender),
+            )
+        }
+        return NappletBlobStore(
             host.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
             host.http,
             launch.paths,
             launch.servers,
             viaTor = plan.blobsUseTor,
         )
-
-    /**
-     * iOS proxies per data store, so there is no process-wide route to claim (`NappletProxyClaims` is
-     * not used here). A napplet only waits for Tor when its files go through it; the open web (an
-     * nSite) comes with the plan's N6.
-     */
-    private inner class Route : NappletRoutePort {
-        override val torRunning: Boolean get() = host.torRunning()
-
-        override suspend fun claim(useTor: Boolean): Boolean {
-            Log.w(TAG) { "${launch.identity.coordinate} asks for a network of its own, which iOS doesn't give yet" }
-            return false
-        }
-
-        override suspend fun awaitTor(): Boolean = host.awaitTor()
-
-        override fun release() = Unit
     }
 
     private inner class Links : NappletLinkOpener {

@@ -172,12 +172,69 @@ class NappletSessionPoliciesTest {
     @Test
     fun aSiteMayNotLookUpTheInternalNames() {
         val rules = NappletRequestPolicy.contentRules(HostProfile.WEBSITE, "napplet://n1.napplet.local", NappletWebContract.NAPPLET_SCHEME)
-        val rule = Regex(rules.single().urlFilter)
-        assertTrue(rules.single().block)
+        val rule = Regex(rules.first().urlFilter)
+        assertTrue(rules.first().block)
         assertTrue(rule.containsMatchIn("https://n1.napplet.local/x"))
         assertTrue(rule.containsMatchIn("http://napplet.local:80/"))
         assertFalse(rule.containsMatchIn("https://example.com/napplet.local/"))
         assertFalse(rule.containsMatchIn("https://napplet.localhost/"))
+    }
+
+    @Test
+    fun aSiteMayNotReachTheLocalNetwork() {
+        val rules = NappletRequestPolicy.contentRules(HostProfile.WEBSITE, "napplet://n1.napplet.local", NappletWebContract.NAPPLET_SCHEME)
+        val blocked =
+            listOf(
+                "http://192.168.1.1/",
+                "https://127.0.0.1:8080/x",
+                "ws://localhost:1234/socket",
+                "wss://localhost/",
+                "http://0.0.0.0:3000/",
+                "http://10.0.0.7/admin",
+                "http://172.16.0.1/",
+                "http://172.31.255.255/",
+                "http://169.254.169.254/latest",
+                "http://100.64.0.1/",
+                "http://100.127.1.1/",
+                "http://[::1]/",
+                "http://[::]:8080/",
+                "http://[fd12:3456::1]/",
+                "http://[fe80::1]/",
+                "http://[::ffff:7f00:1]/",
+                "http://printer.local/",
+                "http://router.lan/",
+                "http://nas.home.arpa/",
+                "http://db.internal:5432/",
+                "http://app.localhost/",
+                "http://user:pw@10.1.2.3/",
+                // Mixed content: plain http and ws to the clearnet.
+                "http://example.com/script.js",
+                "ws://relay.example.com/",
+            )
+        blocked.forEach { assertFalse(NappletRequestPolicy.allows(rules, it), "$it was let through") }
+        val allowed =
+            listOf(
+                "https://example.com/",
+                "https://check.torproject.org/api/ip",
+                "https://10.example.com/",
+                "https://172.32.0.1/",
+                "https://100.128.0.1/",
+                "https://8.8.8.8/",
+                "https://[2001:db8::1]/",
+                "https://local.example/",
+                "https://localhost.example.com/",
+                "wss://relay.example.com/",
+                "http://abcdefghijklmnop.onion/",
+                "ws://abcdefghijklmnop.onion/socket",
+                // Our own scheme is the scheme handler's, never the network's: the shell and the site.
+                "napplet://napplet.local/__shell__",
+                "napplet://n1.napplet.local/index.html",
+            )
+        allowed.forEach { assertTrue(NappletRequestPolicy.allows(rules, it), "$it was blocked") }
+        // A napplet's list still refuses all of it, and any other host too.
+        val napplet = NappletRequestPolicy.contentRules(HostProfile.NAPPLET, "napplet://x.napplet.local", NappletWebContract.NAPPLET_SCHEME)
+        assertFalse(NappletRequestPolicy.allows(napplet, "https://example.com/"))
+        assertTrue(NappletRequestPolicy.allows(napplet, "napplet://napplet.local/__shell__"))
     }
 
     // ---- navigation ----

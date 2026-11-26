@@ -39,12 +39,12 @@ import java.util.zip.ZipInputStream
  */
 object WebxdcArchive {
     /** The largest archive downloaded; the largest one seen published is a 178 MB Half-Life. */
-    const val MAX_ARCHIVE_BYTES = 256L * 1024 * 1024
+    const val MAX_ARCHIVE_BYTES = WebxdcArchiveRules.MAX_ARCHIVE_BYTES
 
     /** Every byte inflated out of one archive, kept or not: a small zip of zeros can't fill the disk. */
-    const val MAX_UNPACKED_BYTES = 1024L * 1024 * 1024
+    const val MAX_UNPACKED_BYTES = WebxdcArchiveRules.MAX_UNPACKED_BYTES
 
-    const val MAX_ENTRIES = 20_000
+    const val MAX_ENTRIES = WebxdcArchiveRules.MAX_ENTRIES
 
     private const val TAG = "WebxdcArchive"
 
@@ -179,10 +179,5 @@ object WebxdcArchive {
      * The relative path a zip entry may be written to, or null for one that must not be: empty,
      * absolute, climbing out with `..`, or macOS metadata.
      */
-    fun entryPath(name: String): String? {
-        val parts = name.replace('\\', '/').split('/').filter { it.isNotEmpty() && it != "." }
-        if (parts.isEmpty() || name.startsWith("/") || parts.any { it == ".." }) return null
-        if (parts.first() == "__MACOSX" || parts.last() == ".DS_Store") return null
-        return parts.joinToString("/")
-    }
+    fun entryPath(name: String): String? = WebxdcArchiveRules.entryPath(name)
 }

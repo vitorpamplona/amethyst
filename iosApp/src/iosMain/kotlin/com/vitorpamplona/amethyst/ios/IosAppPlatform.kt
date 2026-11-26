@@ -26,10 +26,13 @@ import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
+import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalAppNav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
@@ -38,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
 import com.vitorpamplona.amethyst.ios.tor.IosArti
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
@@ -79,20 +83,26 @@ class IosAppPlatform(
         val toaster = rememberToaster()
         val nappletFailed = stringRes(Res.string.napplet_desktop_open_failed)
         val siteFailed = stringRes(Res.string.nsite_open_failed)
-        return remember(toaster, nappletFailed, siteFailed) { IosAppLauncher({ modules.nappletHost }, toaster, nappletFailed, siteFailed) }
+        val webxdcFailed = stringRes(Res.string.webxdc_open_failed)
+        // A webxdc card sits deep in a note, with no screen's nav at hand: its app opens on the window's.
+        val appNav = LocalAppNav.current
+        return remember(toaster, nappletFailed, siteFailed, webxdcFailed, appNav) {
+            IosAppLauncher({ modules.nappletHost }, toaster, nappletFailed, siteFailed, webxdcFailed, appNav)
+        }
     }
 }
 
 /**
- * NIP-5D napplets open as [Route.NostrApp] screens, which the navigation layout places, as on the
- * desktop. nSites and webxdc apps don't run here yet (they need their own network route, the plan's
- * N6), so their cards offer no Open. Web links keep the platform's default (nothing yet).
+ * NIP-5D napplets, NIP-5A nSites and webxdc apps open as [Route.NostrApp] screens, which the
+ * navigation layout places, as on the desktop. Web links keep the platform's default (nothing yet).
  */
 private class IosAppLauncher(
     private val napplets: () -> IosNappletHost,
     private val toaster: Toaster,
     private val nappletFailed: String,
     private val siteFailed: String,
+    private val webxdcFailed: String,
+    private val appNav: INav?,
 ) : AppLauncher {
     override fun launch(
         app: FavoriteApp,
@@ -105,7 +115,7 @@ private class IosAppLauncher(
                 when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
                     null -> toaster.show(stillLoading, false)
                     is NappletManifest -> openNapplet(event, nav)
-                    is RootSiteEvent, is NamedSiteEvent -> toaster.show(siteFailed, false)
+                    is RootSiteEvent, is NamedSiteEvent -> openSite(event, nav)
                     else -> Unit
                 }
             }
@@ -120,9 +130,9 @@ private class IosAppLauncher(
 
     override val opensNapplets: Boolean get() = true
 
-    override val opensSites: Boolean get() = false
+    override val opensSites: Boolean get() = true
 
-    override val opensWebxdc: Boolean get() = false
+    override val opensWebxdc: Boolean get() = true
 
     override fun openNapplet(
         manifest: NappletManifest,
@@ -135,6 +145,33 @@ private class IosAppLauncher(
             return
         }
         nav.nav(Route.NostrApp(favoriteCoordinateOf(event)))
+    }
+
+    override fun openSite(
+        site: Event,
+        nav: INav?,
+    ) {
+        if (nav == null || !napplets().canRunAsScreen(site)) {
+            Log.w(TAG) { "Refusing to open nSite ${site.id}" }
+            toaster.show(siteFailed, false)
+            return
+        }
+        nav.nav(Route.NostrApp(favoriteCoordinateOf(site)))
+    }
+
+    override fun openWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+    ) {
+        val nav = appNav
+        val routeId = if (nav != null) napplets().prepareWebxdc(app, postId, poster).getOrNull() else null
+        if (nav == null || routeId == null) {
+            Log.w(TAG) { "Refusing to open webxdc app ${app.url}" }
+            toaster.show(webxdcFailed, false)
+            return
+        }
+        nav.nav(Route.NostrApp(routeId))
     }
 
     private companion object {

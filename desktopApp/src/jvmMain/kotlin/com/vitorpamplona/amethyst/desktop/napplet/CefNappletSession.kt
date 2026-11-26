@@ -49,6 +49,7 @@ import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletWebEngine
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
+import com.vitorpamplona.amethyst.commons.napplet.webxdc.downloadClient
 import com.vitorpamplona.amethyst.desktop.app.DesktopBrowser
 import com.vitorpamplona.amethyst.desktop.app.DesktopDeepLinks
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -482,7 +483,8 @@ class CefNappletSession(
                 // Read now: the request is CEF's only for the length of this call.
                 val method = request.method
                 val url = request.url
-                return AsyncResourceHandler(url) { core.serve(method, url, acceptsHtml) }
+                val mainFrame = request.resourceType == CefRequest.ResourceType.RT_MAIN_FRAME
+                return AsyncResourceHandler(url) { core.serve(method, url, acceptsHtml, mainFrame) }
             }
         }
 

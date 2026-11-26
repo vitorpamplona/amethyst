@@ -143,6 +143,29 @@ class NappletSiteServerTest {
         }
 
     @Test
+    fun theShellIsServedOnlyToTheTopFramesNavigation() =
+        runBlocking {
+            // A frame's no-cors fetch of the shell reads nothing: the shell carries the launch.
+            assertEquals(404, assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = false)).status)
+            assertEquals(200, assertNotNull(site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = true)).status)
+        }
+
+    @Test
+    fun noResponseIsSniffedIntoAnotherType() =
+        runBlocking {
+            val responses =
+                listOf(
+                    site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true),
+                    site.serve("GET", "$origin/", acceptsHtml = true),
+                    site.serve("GET", "$origin/app.js", acceptsHtml = false),
+                    site.serve("GET", "$origin/missing.js", acceptsHtml = false),
+                    site.serve("POST", "$origin/api", acceptsHtml = false),
+                    site.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true, mainFrameNavigation = false),
+                )
+            responses.forEach { assertEquals("nosniff", assertNotNull(it).headers[NappletSiteServer.NOSNIFF_HEADER], "status ${it.status}") }
+        }
+
+    @Test
     fun aClientRouteFallsBackToThePageButAMissingFileIsA404() =
         runBlocking {
             val route = assertNotNull(site.serve("GET", "$origin/posts/42", acceptsHtml = true))
