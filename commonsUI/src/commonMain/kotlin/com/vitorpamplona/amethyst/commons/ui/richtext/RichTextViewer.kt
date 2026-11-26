@@ -93,6 +93,8 @@ import com.vitorpamplona.amethyst.commons.richtext.isBlankLine
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideZoomSourceGroup
+import com.vitorpamplona.amethyst.commons.ui.content.NoteParagraph
+import com.vitorpamplona.amethyst.commons.ui.content.NoteTextLayout
 import com.vitorpamplona.amethyst.commons.ui.note.WebxdcPostCard
 
 /**
@@ -176,6 +178,10 @@ private fun RenderParagraph(
     authorPubKey: String?,
     modifier: Modifier,
 ) {
+    if (NoteTextLayout.useDocument) {
+        NoteParagraph(paragraph, state, canPreview, quotesLeft, mediaBleed, modifier)
+        return
+    }
     val spaceWidth = measureSpaceWidth(LocalTextStyle.current)
     FlowRow(
         modifier = modifier,

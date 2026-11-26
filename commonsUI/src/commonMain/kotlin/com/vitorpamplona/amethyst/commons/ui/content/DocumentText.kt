@@ -99,6 +99,7 @@ import com.vitorpamplona.amethyst.commons.richtext.RelayGroupLinkSegment
 import com.vitorpamplona.amethyst.commons.richtext.RelayUrlSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.SchemelessUrlSegment
+import com.vitorpamplona.amethyst.commons.richtext.SecretEmoji
 import com.vitorpamplona.amethyst.commons.richtext.Segment
 import com.vitorpamplona.amethyst.commons.richtext.TimestampSegment
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
@@ -435,6 +436,7 @@ private class TextBuilder(
             is NowhereLinkSegment -> fullWidth { segments.NowhereLink(segment, context.canPreview, Modifier) }
             is WebxdcSegment -> fullWidth { WebxdcPostCard(segment.app, segment.postUri, null) }
             is TimestampSegment -> inlineFit { LocalTimestampText(segment) }
+            is SecretEmoji -> fullWidth { segments.SecretMessage(segment, state, context.canPreview, context.quotesLeft, Modifier) }
             else -> append(segment.segmentText)
         }
     }

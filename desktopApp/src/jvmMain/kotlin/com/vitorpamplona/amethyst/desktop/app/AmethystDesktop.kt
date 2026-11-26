@@ -65,6 +65,7 @@ import com.vitorpamplona.amethyst.commons.service.QuicLogBridge
 import com.vitorpamplona.amethyst.commons.ui.app.AmethystApp
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
+import com.vitorpamplona.amethyst.commons.ui.content.NoteTextLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerBadges
 import com.vitorpamplona.amethyst.commons.ui.navigation.drawer.LocalDrawerMetrics
 import com.vitorpamplona.amethyst.commons.ui.note.elements.NowProvider
@@ -200,6 +201,8 @@ fun main(args: Array<String>) {
     // installed family) alongside the OS theme (a shell-out), which the first frame needs.
     thread(isDaemon = true, name = "font-warmup") { PlatformFonts.ui }
     PlatformAppearance.startupDark
+
+    System.getProperty("amethyst.documentNotes")?.let { NoteTextLayout.useDocument = it == "true" }
 
     val isDebug = System.getProperty("amethyst.debug") == "true"
     Log.minLevel = if (isDebug) LogLevel.DEBUG else LogLevel.INFO
