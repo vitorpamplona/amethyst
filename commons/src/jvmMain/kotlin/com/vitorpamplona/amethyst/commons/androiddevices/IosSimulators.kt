@@ -129,9 +129,16 @@ class IosSimulators(
         }
     }
 
-    /** Copies an earlier run of the app left (it quit without deleting them), once they are shut down. */
+    /**
+     * What an earlier run of the app left (it quit without cleaning up): its companions, and its
+     * copies, once they are shut down.
+     */
     private fun sweepLeftovers(all: List<SimDevice>) {
         swept = true
+        scope.launch {
+            val ended = IdbCompanion.endOrphans()
+            if (ended > 0) Log.i(TAG) { "Ended $ended idb companions an earlier run left" }
+        }
         val leftovers = all.filter { it.name.endsWith(COPY_MARK) && it.isShutdown && !copies.containsKey(it.udid) }
         if (leftovers.isEmpty()) return
         scope.launch {

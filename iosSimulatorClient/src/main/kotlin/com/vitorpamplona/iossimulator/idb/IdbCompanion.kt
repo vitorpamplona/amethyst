@@ -88,7 +88,8 @@ class IdbCompanion private constructor(
                     Files.createTempDirectory(Path.of("/tmp"), "amy-idb", PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")))
                 }
             val socket = folder.resolve("${udid.take(8)}.sock")
-            val command = listOf(binary.path, "--udid", udid, "--grpc-domain-sock", socket.toString(), "--log-level", "info")
+            // It goes when its simulator does (shut down here, in Xcode, or by simctl).
+            val command = listOf(binary.path, "--udid", udid, "--grpc-domain-sock", socket.toString(), "--terminate-offline", "1", "--log-level", "info")
             val process =
                 withContext(Dispatchers.IO) {
                     ProcessBuilder(command)
@@ -116,6 +117,25 @@ class IdbCompanion private constructor(
                 folder.toFile().deleteRecursively()
                 throw e
             }
+        }
+
+        /** The folders this app's companions listen in: `/tmp/amy-idb…`. */
+        const val SOCKET_DIR_PREFIX = "/tmp/amy-idb"
+
+        /**
+         * Ends the companions an earlier run of the app left behind (it crashed, or was killed before
+         * it could stop them): orphans, now children of launchd, listening in one of its folders.
+         * Returns how many it ended.
+         */
+        fun endOrphans(): Int {
+            var ended = 0
+            ProcessHandle.allProcesses().forEach { p ->
+                val line = p.info().commandLine().orElse("")
+                val orphan = p.parent().map { it.pid() == 1L }.orElse(true)
+                if (orphan && line.contains("--grpc-domain-sock $SOCKET_DIR_PREFIX") && p.destroy()) ended++
+            }
+            File("/tmp").listFiles { f -> f.isDirectory && f.path.startsWith(SOCKET_DIR_PREFIX) && f.listFiles().isNullOrEmpty() }?.forEach { it.delete() }
+            return ended
         }
 
         /** The last lines [log] holds, for an error. */

@@ -376,6 +376,19 @@ def hid(screen, event):
         screen.changed()
 
 
+def exit_when_offline(state, udid):
+    """As `--terminate-offline`: gone once its simulator is shut down or deleted."""
+    while True:
+        time.sleep(1)
+        try:
+            with open(state) as f:
+                device = next((d for d in json.load(f)["devices"] if d["udid"] == udid), None)
+        except (OSError, ValueError, KeyError):
+            continue
+        if device is None or device["state"] == "Shutdown":
+            os._exit(0)
+
+
 def main(argv):
     args = dict(zip(argv[1::2], argv[2::2]))
     udid = args.get("--udid")
@@ -396,6 +409,8 @@ def main(argv):
     server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     server.bind(path)
     server.listen(8)
+    if args.get("--terminate-offline") in ("1", "true", "yes"):
+        threading.Thread(target=exit_when_offline, args=(state, udid), daemon=True).start()
     print(json.dumps({"grpc_path": path}), flush=True)
     sys.stderr.write(f"fake idb_companion for {udid} on {path}\n")
     while True:

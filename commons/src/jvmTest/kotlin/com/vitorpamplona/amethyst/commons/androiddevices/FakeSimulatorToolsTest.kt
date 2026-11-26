@@ -87,6 +87,18 @@ class FakeSimulatorToolsTest {
         val devices = AndroidDevices(sdkHome = { null }, scope = scope, discoveryDirs = { emptyList() }, avdHome = { File(dir, "no-avds") }, ios = ios)
         val server = DeviceToolServer(devices, AndroidAppRunner(devices), owner = { "ws-1" }, ownerLabel = { "Fix login" }, folder = dir)
 
+        try {
+            run(devices, server)
+        } finally {
+            // The copies' companions go with them, also when an assertion stopped the run.
+            ios.shutdown()
+        }
+    }
+
+    private fun run(
+        devices: AndroidDevices,
+        server: DeviceToolServer,
+    ) {
         runBlocking {
             withTimeout(120_000) {
                 val list = server.call(DeviceToolServer.LIST, args("{}"))
@@ -162,6 +174,5 @@ class FakeSimulatorToolsTest {
                 )
             }
         }
-        ios.shutdown()
     }
 }
