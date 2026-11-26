@@ -175,6 +175,8 @@ fun produceNip82Releases(app: SoftwareApplicationEvent): State<List<ReleaseArtif
 @Composable
 fun RenderSoftwareRelease(
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -212,9 +214,9 @@ fun RenderSoftwareRelease(
         }
 
         if (expanded && trusted) {
-            ReleaseDetails(event, app, backgroundColor, accountViewModel, nav)
+            ReleaseDetails(event, app, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
         } else {
-            ReleaseNotes(event, backgroundColor, accountViewModel, nav)
+            ReleaseNotes(event, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
             ReleaseSummaryFooter(event, shownApp)
         }
     }
@@ -229,6 +231,7 @@ fun RenderSoftwareRelease(
 @Composable
 fun RenderReleaseArtifactSet(
     note: Note,
+    canPreview: Boolean,
     quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
@@ -273,7 +276,7 @@ fun RenderReleaseArtifactSet(
             }
         }
 
-        ReleaseNotes(event, backgroundColor, accountViewModel, nav)
+        ReleaseNotes(event, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 
         if (artifacts.isNotEmpty()) {
             PagedMemberColumn(artifacts, backgroundColor, Modifier.fillMaxWidth().padding(top = 5.dp)) { item ->
@@ -324,7 +327,8 @@ fun RenderSoftwareReleaseBody(
             ChannelChip(event.channel())
         }
 
-        ReleaseDetails(event, app, backgroundColor, accountViewModel, nav)
+        // The app's own page, not a note row: no outer quote budget to inherit.
+        ReleaseDetails(event, app, canPreview = true, quotesLeft = 1, backgroundColor, accountViewModel, nav)
     }
 }
 
@@ -380,6 +384,8 @@ private fun ChannelChip(channel: String?) {
 @Composable
 private fun ReleaseNotes(
     event: ReleaseArtifactSetEvent,
+    canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -391,8 +397,8 @@ private fun ReleaseNotes(
     Spacer(StdVertSpacer)
     TranslatableRichTextViewer(
         content = notes,
-        canPreview = true,
-        quotesLeft = 1,
+        canPreview = canPreview,
+        quotesLeft = quotesLeft,
         modifier = Modifier.fillMaxWidth(),
         tags = tags,
         backgroundColor = backgroundColor,
@@ -443,6 +449,8 @@ internal fun ReleaseSummaryFooter(
 private fun ReleaseDetails(
     event: ReleaseArtifactSetEvent,
     app: SoftwareApplicationEvent?,
+    canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -455,7 +463,7 @@ private fun ReleaseDetails(
     val commit = assets.firstNotNullOfOrNull { it.commit() } ?: event.commit()
     commit?.let { CommitLine(it, app, nav) }
 
-    ReleaseNotes(event, backgroundColor, accountViewModel, nav)
+    ReleaseNotes(event, canPreview, quotesLeft, backgroundColor, accountViewModel, nav)
 
     if (assetIds.isNotEmpty()) {
         Spacer(StdVertSpacer)

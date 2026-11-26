@@ -144,8 +144,11 @@ fun SoftwareAppsFeedLoaded(
             contentType = { _, item -> item.event?.kind ?: -1 },
         ) { _, item ->
             if (item.event is SoftwareApplicationEvent) {
+                // A feed root, as a note row with the feed's budget would be.
                 RenderSoftwareApplication(
                     note = item,
+                    canPreview = true,
+                    quotesLeft = 1,
                     accountViewModel = accountViewModel,
                     nav = nav,
                 )

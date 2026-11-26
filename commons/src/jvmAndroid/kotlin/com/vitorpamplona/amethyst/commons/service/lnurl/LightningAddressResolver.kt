@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.service.lnurl
 
+import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip57Zaps.ZapRequestEvent
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlEndpointCache
@@ -110,6 +111,15 @@ class LightningAddressResolver(
                 val callbackUrl =
                     lnurlp?.get("callback")?.asText()?.ifBlank { null }
                         ?: return@withContext Result.Error("No callback URL in LNURL response")
+
+                lnurlp.sendableRangeNotice(lnAddress, milliSats)?.let { notice ->
+                    val limit =
+                        when (notice) {
+                            is InvoiceNotice.AmountBelowMinimum -> "at least ${notice.minSats}"
+                            is InvoiceNotice.AmountAboveMaximum -> "up to ${notice.maxSats}"
+                        }
+                    return@withContext Result.Error("$lnAddress only accepts payments of $limit sats")
+                }
 
                 val allowsNostr = lnurlp.get("allowsNostr")?.asBoolean() ?: false
                 val nostrPubkey = lnurlp.get("nostrPubkey")?.asText()?.ifBlank { null }
