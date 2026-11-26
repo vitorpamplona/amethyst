@@ -252,4 +252,28 @@ class DevicesTest {
         assertEquals(listOf("release ws", "shutdown"), android.calls)
         assertEquals(listOf("release ws", "shutdown"), ios.calls)
     }
+
+    @Test
+    fun aPlatformThatFailsItsFirstLookSaysWhyInsteadOfLookingMissing() =
+        runBlocking {
+            ios.fail = IOException("simctl: CoreSimulatorService is not running")
+            val devices = Devices(listOf(android, ios), scope)
+
+            devices.refresh()
+
+            val setup = devices.state.value.ios
+            assertTrue(setup.xcodeFound)
+            assertEquals("simctl: CoreSimulatorService is not running", setup.error)
+        }
+
+    @Test
+    fun aDeviceThatCannotReportCrashesIsNotAsked() =
+        runBlocking {
+            // The fake's connection throws: a poll that asked it would fail.
+            ios.devices = listOf(device("AAAA-1", DevicePlatform.IOS).copy(canReadCrashes = false))
+            val devices = Devices(listOf(android, ios), scope)
+            devices.refresh()
+
+            assertEquals(emptyList(), devices.pollCrashes("AAAA-1"))
+        }
 }

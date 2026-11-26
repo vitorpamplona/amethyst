@@ -214,4 +214,26 @@ class IdbTest {
         // A wide view: the landscape fit is the larger, and it wins.
         assertEquals(1000.0 / 2622, screen.streamScale(1000, 603), 1e-9)
     }
+
+    @Test
+    fun bigFramesInSmallMessagesComeWholeFromInsideTheirMessages() {
+        val header = ByteArray(24).also { it[1] = 24 }
+        // Bigger than the reader's first buffer, so it grows while the frame arrives.
+        val big = ByteArray(700_000) { (it % 251).toByte() }
+        val small = jpeg(10, 10)
+        val stream = header + le(big.size) + big + le(small.size) + small
+        val reader = MinicapReader()
+        val frames = ArrayList<ByteArray>()
+        var at = 0
+        while (at < stream.size) {
+            val n = minOf(16_384, stream.size - at)
+            // Each piece sits inside a bigger array, as the frame's bytes sit inside the gRPC message.
+            val message = ByteArray(n + 7).also { stream.copyInto(it, 3, at, at + n) }
+            frames += reader.feed(message, 3, n)
+            at += n
+        }
+        assertEquals(2, frames.size)
+        assertContentEquals(big, frames[0])
+        assertContentEquals(small, frames[1])
+    }
 }

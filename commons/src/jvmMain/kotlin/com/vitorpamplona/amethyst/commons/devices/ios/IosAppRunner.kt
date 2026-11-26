@@ -87,9 +87,8 @@ class IosAppRunner(
             set(root, AppRunState.Building(target.label, scheme))
             val built = XcodeBuilder(xcrun, runner).build(target, scheme, udid, log)
             set(root, AppRunState.Installing(built.bundleId))
-            val connection = backend.connection(udid)
-            connection.install(built.app)
-            connection.launch(built.bundleId)
+            // simctl alone: Run works without idb, which only the live screen and input need.
+            backend.installAndLaunch(udid, built.app, built.bundleId)
             set(root, AppRunState.Done(built.bundleId, udid))
             report(DeviceActivity(udid, DeviceActivity.Kind.APP, label = built.bundleId))
             return built.bundleId

@@ -29,6 +29,8 @@ import com.vitorpamplona.devicecore.grpc.varint
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class ProtobufTest {
@@ -59,5 +61,15 @@ class ProtobufTest {
         assertEquals("nested", nested.string(2))
         assertTrue(fields[1] is ProtoField.Length)
         assertEquals(8, (fields[1] as ProtoField.Length).value.size)
+    }
+
+    @Test
+    fun aNestedFieldIsFoundInPlace() {
+        val data = byteArrayOf(9, 8, 7)
+        val message = ProtoWriter().int(1, 5).message(2) { int(1, 3).bytes(2, data) }.bytes()
+        val payload = assertNotNull(ProtoReader.lengthField(message, 2))
+        val inner = assertNotNull(ProtoReader.lengthField(message, 2, payload.first, payload.last + 1))
+        assertContentEquals(data, message.copyOfRange(inner.first, inner.last + 1))
+        assertNull(ProtoReader.lengthField(message, 9))
     }
 }

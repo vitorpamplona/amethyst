@@ -34,7 +34,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 /** The simulator's screen as idb describes it: pixels, and the points touches are given in. */
@@ -190,9 +189,10 @@ class IdbClient(
             val stop = ProtoWriter().message(2) {}.bytes()
             val frames = MinicapReader()
             channel.openStream(rpc("video_stream"), start, onClose = stop).collect { message ->
-                val payload = ProtoReader.read(message).message(2)
-                val data = payload.bytes(2)
-                if (data.isNotEmpty()) frames.feed(data).forEach { emit(it) }
+                // VideoStreamResponse{payload=2: Payload{data=2}}: read in place, the bytes copied only into the reader.
+                val payload = ProtoReader.lengthField(message, 2) ?: return@collect
+                val data = ProtoReader.lengthField(message, 2, payload.first, payload.last + 1) ?: return@collect
+                if (!data.isEmpty()) frames.feed(message, data.first, data.last - data.first + 1).forEach { emit(it) }
             }
         }
 
@@ -311,38 +311,73 @@ class IdbClient(
  * Splits idb's minicap stream into its JPEG frames: a header (version, its own length, the pid, the
  * screen's sizes), then each frame as a 32-bit little-endian length and that many bytes. The
  * companion's messages don't line up with frames, so bytes are kept until a frame is whole.
+ *
+ * One growable buffer with read and write offsets: each byte is copied in once and each frame out
+ * once, however many messages a frame arrives in.
  */
 class MinicapReader {
-    private val pending = ByteArrayOutputStream()
+    private var buffer = ByteArray(INITIAL)
+    private var start = 0
+    private var end = 0
     private var headerLeft = -1
 
-    fun feed(data: ByteArray): List<ByteArray> {
-        pending.write(data)
-        val bytes = pending.toByteArray()
-        var at = 0
+    fun feed(data: ByteArray) = feed(data, 0, data.size)
+
+    fun feed(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+    ): List<ByteArray> {
+        append(data, offset, length)
         if (headerLeft < 0) {
-            if (bytes.size < 2) return emptyList()
-            headerLeft = bytes[1].toInt() and 0xff
+            if (end - start < 2) return emptyList()
+            headerLeft = buffer[start + 1].toInt() and 0xff
         }
         if (headerLeft > 0) {
-            val skip = minOf(headerLeft, bytes.size)
+            val skip = minOf(headerLeft, end - start)
             headerLeft -= skip
-            at = skip
+            start += skip
         }
-        val frames = ArrayList<ByteArray>()
-        while (headerLeft == 0 && bytes.size - at >= 4) {
-            val length = (bytes[at].toInt() and 0xff) or ((bytes[at + 1].toInt() and 0xff) shl 8) or ((bytes[at + 2].toInt() and 0xff) shl 16) or ((bytes[at + 3].toInt() and 0xff) shl 24)
-            if (length < 0 || length > MAX_FRAME) throw IOException("Bad minicap frame length $length")
-            if (bytes.size - at - 4 < length) break
-            frames += bytes.copyOfRange(at + 4, at + 4 + length)
-            at += 4 + length
+        var frames: ArrayList<ByteArray>? = null
+        while (headerLeft == 0 && end - start >= 4) {
+            val b = buffer
+            val at = start
+            val size = (b[at].toInt() and 0xff) or ((b[at + 1].toInt() and 0xff) shl 8) or ((b[at + 2].toInt() and 0xff) shl 16) or ((b[at + 3].toInt() and 0xff) shl 24)
+            if (size < 0 || size > MAX_FRAME) throw IOException("Bad minicap frame length $size")
+            if (end - at - 4 < size) break
+            (frames ?: ArrayList<ByteArray>(1).also { frames = it }).add(b.copyOfRange(at + 4, at + 4 + size))
+            start = at + 4 + size
         }
-        pending.reset()
-        pending.write(bytes, at, bytes.size - at)
-        return frames
+        if (start == end) {
+            start = 0
+            end = 0
+        }
+        return frames ?: emptyList()
+    }
+
+    private fun append(
+        data: ByteArray,
+        offset: Int,
+        length: Int,
+    ) {
+        if (end + length > buffer.size) {
+            val kept = end - start
+            // Room by moving what is kept to the front, else a bigger buffer (doubling, so a big
+            // frame costs a few grows, not one per message).
+            if (kept + length <= buffer.size && start > 0) {
+                buffer.copyInto(buffer, 0, start, end)
+            } else {
+                buffer = buffer.copyInto(ByteArray(maxOf(buffer.size * 2, kept + length)), 0, start, end)
+            }
+            start = 0
+            end = kept
+        }
+        data.copyInto(buffer, end, offset, offset + length)
+        end += length
     }
 
     companion object {
+        private const val INITIAL = 256 * 1024
         private const val MAX_FRAME = 64 * 1024 * 1024
     }
 }

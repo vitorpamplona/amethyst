@@ -138,13 +138,13 @@ class Devices(
             backends
                 .map { backend -> async { backend.platform to look(backend) } }
                 .awaitAll()
-                .forEach { (platform, snapshot) -> snapshot?.let { snapshots[platform] = it } }
+                .forEach { (platform, snapshot) -> snapshots[platform] = snapshot }
         }
         merge()
     }
 
-    /** One platform's look, or its last good one marked with what went wrong (null before any). */
-    private suspend fun look(backend: DeviceBackend): BackendSnapshot? =
+    /** One platform's look, or its last good one marked with what went wrong. */
+    private suspend fun look(backend: DeviceBackend): BackendSnapshot =
         try {
             withTimeout(refreshTimeoutMs) { backend.refresh() }
         } catch (e: CancellationException) {
@@ -161,10 +161,20 @@ class Devices(
     private fun stale(
         backend: DeviceBackend,
         why: String,
-    ): BackendSnapshot? {
-        val last = snapshots[backend.platform] ?: return null
+    ): BackendSnapshot {
+        // Before any good look there is nothing to keep showing, but the platform is there and says why it failed.
+        val last = snapshots[backend.platform] ?: return BackendSnapshot(emptyList(), emptyList(), failedSetup(backend.platform, why))
         return BackendSnapshot(last.devices, last.startable, last.setup.withError(why), last.startFailures)
     }
+
+    private fun failedSetup(
+        platform: DevicePlatform,
+        why: String,
+    ): PlatformSetup =
+        when (platform) {
+            DevicePlatform.ANDROID -> AndroidSetup(error = why)
+            DevicePlatform.IOS -> IosSetup(xcodeFound = true, error = why)
+        }
 
     private fun PlatformSetup.withError(why: String): PlatformSetup =
         when (this) {
@@ -342,11 +352,16 @@ class Devices(
 
     /**
      * Reads [serial]'s crashes and adds what is new to [crashes]. The first read of a device only
-     * notes what is there: those crashes happened before anyone was watching.
+     * notes what is there: those crashes happened before anyone was watching. A device that can't
+     * report crashes (a simulator without idb) has none to read.
+     *
+     * The read happens outside the lock (it may start a simulator's companion, or wait on adb), so
+     * one slow device never holds up another's: the lock covers only the bookkeeping.
      */
-    suspend fun pollCrashes(serial: String): List<SeenCrash> =
-        crashLock.withLock {
-            val found = connection(serial).crashes()
+    suspend fun pollCrashes(serial: String): List<SeenCrash> {
+        if (device(serial)?.canReadCrashes == false) return emptyList()
+        val found = connection(serial).crashes()
+        return crashLock.withLock {
             val known = crashesSeen[serial]
             if (known == null) {
                 crashesSeen[serial] = found.mapTo(HashSet()) { it.id }
@@ -356,6 +371,7 @@ class Devices(
             if (fresh.isNotEmpty()) _crashes.update { (it + fresh).takeLast(MAX_CRASHES) }
             fresh
         }
+    }
 
     /** The crashes of [serial] after [cursor]. */
     fun crashesSince(

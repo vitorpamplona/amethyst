@@ -82,6 +82,8 @@ data class DeviceInfo(
     val canReset: Boolean = false,
     /** Whether it can be started again without its saved state. */
     val canColdBoot: Boolean = false,
+    /** Whether its crashes can be read (a simulator's need idb's companion). */
+    val canReadCrashes: Boolean = true,
 ) {
     val isOnline: Boolean get() = status == DeviceStatus.ONLINE
     val isIos: Boolean get() = platform == DevicePlatform.IOS

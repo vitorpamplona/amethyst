@@ -26,6 +26,7 @@ import com.vitorpamplona.iossimulator.simctl.Simctl
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.IOException
+import java.nio.file.Files
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -168,4 +169,27 @@ class SimctlTest {
             val simctl = Simctl(File("/usr/bin/xcrun"), FakeRunner { FakeRunner.fail("No such file or directory") })
             assertNull(simctl.appPath("9F3B", "com.example.none"))
         }
+
+    @Test
+    fun xcrunAloneIsNotXcode() {
+        val dev = Files.createTempDirectory("xcode").toFile()
+        try {
+            val bin = File(dev, "bin").apply { mkdirs() }
+            File(bin, "xcrun").apply { writeText("#!/bin/sh\n") }.setExecutable(true)
+            // The command-line tools, or nothing: xcode-select names no folder with simctl.
+            assertFalse(XcodeTools(env = emptyMap(), os = "Mac OS X", path = bin.path, xcodeSelect = { "/Library/Developer/CommandLineTools" }).available)
+            assertFalse(XcodeTools(env = emptyMap(), os = "Mac OS X", path = bin.path, xcodeSelect = { null }).available)
+            // A full Xcode: its developer folder has simctl.
+            val xcode = File(dev, "Xcode.app/Contents/Developer")
+            File(xcode, "usr/bin").mkdirs()
+            File(xcode, "usr/bin/simctl").apply { writeText("#!/bin/sh\n") }.setExecutable(true)
+            val tools = XcodeTools(env = emptyMap(), os = "Mac OS X", path = bin.path, xcodeSelect = { xcode.path })
+            assertTrue(tools.available)
+            assertEquals(xcode.path, tools.developerDir?.path)
+            // Not a Mac: never, whatever is on the PATH.
+            assertFalse(XcodeTools(env = emptyMap(), os = "Linux", path = bin.path, xcodeSelect = { xcode.path }).available)
+        } finally {
+            dev.deleteRecursively()
+        }
+    }
 }

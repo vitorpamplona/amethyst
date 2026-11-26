@@ -108,7 +108,9 @@ class IdbCompanion private constructor(
                     } ?: throw IOException("idb_companion exited (code ${process.waitFor()}) before it listened${log?.let { ": ${tail(it)}" }.orEmpty()}")
                 val channel =
                     when (where) {
-                        is Listening.Socket -> GrpcChannel("idb-companion", 80, socketFactory = UnixSocketFactory(Path.of(where.path)), callTimeoutMs = 30_000)
+                        // A host of its own per simulator: OkHttp pools connections by host and port, not by
+                        // socket factory, so a shared name could carry one simulator's calls to another's socket.
+                        is Listening.Socket -> GrpcChannel(hostFor(udid), 80, socketFactory = UnixSocketFactory(Path.of(where.path)), callTimeoutMs = 30_000)
                         is Listening.Port -> GrpcChannel("127.0.0.1", where.port, callTimeoutMs = 30_000)
                     }
                 return IdbCompanion(udid, process, IdbClient(channel), folder)
@@ -122,20 +124,40 @@ class IdbCompanion private constructor(
         /** The folders this app's companions listen in: `/tmp/amy-idb…`. */
         const val SOCKET_DIR_PREFIX = "/tmp/amy-idb"
 
+        /** The name [udid]'s channel goes by: never looked up, but what OkHttp pools its connection under. */
+        fun hostFor(udid: String): String = "idb-" + udid.lowercase().filter { it.isLetterOrDigit() || it == '-' }
+
+        /** What [endOrphans] did: the companions it ended, and the folders it couldn't remove. */
+        data class Sweep(
+            val ended: Int,
+            val leftBehind: List<File>,
+        )
+
         /**
          * Ends the companions an earlier run of the app left behind (it crashed, or was killed before
          * it could stop them): orphans, now children of launchd, listening in one of its folders.
-         * Returns how many it ended.
+         * Then removes the folders no companion listens in any more.
          */
-        fun endOrphans(): Int {
+        fun endOrphans(): Sweep {
             var ended = 0
+            val live = HashSet<String>()
             ProcessHandle.allProcesses().forEach { p ->
                 val line = p.info().commandLine().orElse("")
+                if (!line.contains("--grpc-domain-sock $SOCKET_DIR_PREFIX")) return@forEach
                 val orphan = p.parent().map { it.pid() == 1L }.orElse(true)
-                if (orphan && line.contains("--grpc-domain-sock $SOCKET_DIR_PREFIX") && p.destroy()) ended++
+                if (orphan && p.destroy()) {
+                    ended++
+                } else {
+                    // Another running app's companion: its folder stays.
+                    Regex("--grpc-domain-sock (\\S+)").find(line)?.let { live += File(it.groupValues[1]).parent }
+                }
             }
-            File("/tmp").listFiles { f -> f.isDirectory && f.path.startsWith(SOCKET_DIR_PREFIX) && f.listFiles().isNullOrEmpty() }?.forEach { it.delete() }
-            return ended
+            val leftBehind =
+                File("/tmp")
+                    .listFiles { f -> f.isDirectory && f.path.startsWith(SOCKET_DIR_PREFIX) && f.path !in live }
+                    .orEmpty()
+                    .filter { !it.deleteRecursively() && it.exists() }
+            return Sweep(ended, leftBehind)
         }
 
         /** The last lines [log] holds, for an error. */

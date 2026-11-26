@@ -44,6 +44,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.io.IOException
@@ -105,10 +106,16 @@ class IosBackend(
     /** A simulator's serial is its udid; an adb serial never looks like one. */
     override fun claims(serial: String): Boolean = UDID.matches(serial)
 
-    /** Every iPhone and iPad simulator, from simctl: the booted ones as devices, the shut-down ones to start. */
-    override suspend fun refresh(): BackendSnapshot =
-        refreshLock.withLock {
-            val simctl = simctl ?: return@withLock BackendSnapshot(emptyList(), emptyList(), IosSetup())
+    /**
+     * Every iPhone and iPad simulator, from simctl: the booted ones as devices, the shut-down ones
+     * to start. Off the caller's thread (a screen may ask from the UI's): closing a gone simulator's
+     * companion waits for its process.
+     */
+    override suspend fun refresh(): BackendSnapshot = withContext(Dispatchers.IO) { refreshLock.withLock { look() } }
+
+    private suspend fun look(): BackendSnapshot =
+        run {
+            val simctl = simctl ?: return BackendSnapshot(emptyList(), emptyList(), IosSetup())
             var error: String? = null
             val all =
                 try {
@@ -173,6 +180,7 @@ class IosBackend(
                     ownerLabel = copy?.ownerLabel,
                     // A copy is made again from the simulator it copies; the simulator itself is the user's.
                     canReset = copy != null,
+                    canReadCrashes = idb,
                 )
             }
     }
@@ -195,8 +203,9 @@ class IosBackend(
     private fun sweepLeftovers(all: List<SimDevice>) {
         swept = true
         scope.launch {
-            val ended = IdbCompanion.endOrphans()
-            if (ended > 0) Log.i(TAG) { "Ended $ended idb companions an earlier run left" }
+            val sweep = IdbCompanion.endOrphans()
+            if (sweep.ended > 0) Log.i(TAG) { "Ended ${sweep.ended} idb companions an earlier run left" }
+            sweep.leftBehind.forEach { Log.w(TAG) { "Could not remove the companion folder $it" } }
         }
         val leftovers = all.filter { it.name.endsWith(COPY_MARK) && it.isShutdown && !copies.containsKey(it.udid) }
         if (leftovers.isEmpty()) return
@@ -294,7 +303,9 @@ class IosBackend(
     }
 
     /** Shuts [udid] down; a copy is deleted with its changes. */
-    override suspend fun stop(serial: String) {
+    override suspend fun stop(serial: String) = withContext(Dispatchers.IO) { shutDown(serial) }
+
+    private suspend fun shutDown(serial: String) {
         val udid = serial
         val simctl = simctl ?: return
         companions.remove(udid)?.close()
@@ -313,6 +324,20 @@ class IosBackend(
         val copy = copies[udid] ?: throw IOException("Only a workstream's own copy can be reset: shut this simulator down and erase it in Xcode's Devices window to wipe it")
         stop(udid)
         return boot(copy.source, copy.owner, copy.ownerLabel).also { warm(it) }
+    }
+
+    /**
+     * Installs [app] on [udid] and opens it as [bundleId], through simctl alone: a build's Run
+     * needs no idb companion (the live screen does).
+     */
+    suspend fun installAndLaunch(
+        udid: String,
+        app: File,
+        bundleId: String,
+    ) {
+        val simctl = simctl ?: throw IOException("Xcode isn't installed: simulators need it")
+        simctl.install(udid, app)
+        simctl.launch(udid, bundleId)
     }
 
     /** Stops [owner]'s copies: its workstream was removed or its clones freed. */
@@ -334,7 +359,10 @@ class IosBackend(
      * How to drive [udid]: its own idb companion, started on first use and kept while the
      * simulator runs. Throws [IOException] without idb, or when the companion doesn't come up.
      */
-    override suspend fun connection(serial: String): SimulatorConnection {
+    override suspend fun connection(serial: String): SimulatorConnection = withContext(Dispatchers.IO) { connect(serial) }
+
+    /** [connection], off the caller's thread: a dead companion is closed (waiting for its process) before a new one starts. */
+    private suspend fun connect(serial: String): SimulatorConnection {
         val udid = serial
         connections[udid]?.let { cached -> if (companions[udid]?.isAlive == true) return cached }
         return connectLocks.computeIfAbsent(udid) { Mutex() }.withLock {

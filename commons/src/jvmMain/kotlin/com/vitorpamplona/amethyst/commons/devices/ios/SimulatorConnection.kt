@@ -253,12 +253,18 @@ class SimulatorConnection(
     private var primed = false
 
     /**
+     * Only reports from about when this connection started are asked for: older ones can't be news
+     * (the first look marks what is there), and a long-used simulator may have hundreds.
+     */
+    private val watchingSince = System.currentTimeMillis() / 1000 - CRASH_SLACK_S
+
+    /**
      * The crash reports idb finds for this simulator. The first call only notes them (their
      * details aren't read: those crashes happened before anyone watched); later ones read each new
      * report once.
      */
     override suspend fun crashes(): List<DeviceCrash> {
-        val listed = idb.crashes().sortedBy { it.timestamp }
+        val listed = idb.crashes(watchingSince).sortedBy { it.timestamp }
         synchronized(reports) { if (listed.all { it.name in reports }) return reports.values.toList() }
         for (info in listed) {
             if (synchronized(reports) { info.name in reports }) continue
@@ -288,5 +294,6 @@ class SimulatorConnection(
         private const val MAX_SWIPE_STEPS = 60
         private const val LOG_MINUTES = 2
         private const val CRASHES_SHOWN = 5
+        private const val CRASH_SLACK_S = 60L
     }
 }

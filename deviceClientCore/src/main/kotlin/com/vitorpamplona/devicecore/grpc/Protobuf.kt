@@ -154,6 +154,52 @@ sealed class ProtoField(
 }
 
 object ProtoReader {
+    /**
+     * Where the last length-delimited field [number] of the message in `bytes[start until end]`
+     * holds its value, without copying it: for the hot paths (a video frame inside a message
+     * inside a message) that [read] would copy at each level. Null when it isn't there.
+     */
+    fun lengthField(
+        bytes: ByteArray,
+        number: Int,
+        start: Int = 0,
+        end: Int = bytes.size,
+    ): IntRange? {
+        var at = start
+        var found: IntRange? = null
+
+        fun varint(): Long {
+            var result = 0L
+            var shift = 0
+            while (true) {
+                require(at < end) { "Truncated varint" }
+                val b = bytes[at++].toInt() and 0xff
+                result = result or ((b and 0x7f).toLong() shl shift)
+                if (b and 0x80 == 0) return result
+                shift += 7
+                require(shift < 64) { "Varint too long" }
+            }
+        }
+        while (at < end) {
+            val key = varint()
+            val field = (key ushr 3).toInt()
+            when ((key and 7).toInt()) {
+                ProtoWriter.VARINT -> varint()
+                ProtoWriter.FIXED64 -> at += 8
+                ProtoWriter.LENGTH -> {
+                    val length = varint().toInt()
+                    require(length >= 0 && at + length <= end) { "Truncated field $field" }
+                    if (field == number) found = at until at + length
+                    at += length
+                }
+                ProtoWriter.FIXED32 -> at += 4
+                else -> throw IllegalArgumentException("Unsupported wire type in field $field")
+            }
+        }
+        require(at == end) { "Truncated message" }
+        return found
+    }
+
     /** Every field of the message [bytes], in order. Throws [IllegalArgumentException] on a malformed message. */
     fun read(bytes: ByteArray): List<ProtoField> {
         val fields = ArrayList<ProtoField>()
