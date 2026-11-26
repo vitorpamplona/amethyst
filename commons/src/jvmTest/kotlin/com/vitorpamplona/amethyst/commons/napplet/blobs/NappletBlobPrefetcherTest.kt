@@ -26,6 +26,7 @@ import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.util.concurrent.ConcurrentHashMap
@@ -62,7 +63,7 @@ class NappletBlobPrefetcherTest {
         }
     private val serverUrl = "http://127.0.0.1:${server.address.port}"
     private val dir = createTempDirectory("prefetch-test").toFile()
-    private val cache = NappletBlobCache(dir).forSite("site")
+    private val cache = NappletBlobCache(dir.toOkioPath()).forSite("site")
 
     @BeforeTest
     fun setUp() = NappletBlobPrefetcher.resetBudget()
@@ -140,8 +141,8 @@ class NappletBlobPrefetcherTest {
             var downloaded = 0L
             repeat(40) { card ->
                 val paths = List(4) { blob(1024 * 1024) }
-                NappletBlobPrefetcher.prefetchWith(paths, listOf(serverUrl), NappletBlobCache(dir).forSite("site-$card"), OkHttpClient(), "site-$card")
-                downloaded += paths.count { NappletBlobCache(dir).forSite("site-$card").has(it.hash) } * 1024L * 1024
+                NappletBlobPrefetcher.prefetchWith(paths, listOf(serverUrl), NappletBlobCache(dir.toOkioPath()).forSite("site-$card"), OkHttpClient(), "site-$card")
+                downloaded += paths.count { NappletBlobCache(dir.toOkioPath()).forSite("site-$card").has(it.hash) } * 1024L * 1024
             }
 
             assertTrue(downloaded <= NappletBlobPrefetcher.MAX_WINDOW_BYTES + 5L * 1024 * 1024, "downloaded $downloaded bytes")

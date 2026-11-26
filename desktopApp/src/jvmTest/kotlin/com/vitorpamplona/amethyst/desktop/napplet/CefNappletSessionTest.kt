@@ -79,6 +79,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import org.cef.browser.CefBrowser
 import org.cef.browser.OffscreenCefBrowser
 import org.cef.handler.CefFocusHandlerAdapter
@@ -211,7 +212,7 @@ class CefNappletSessionTest {
     private fun runtime(
         engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "jcef-cache")),
         torPort: StateFlow<Int?> = MutableStateFlow(null),
-    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs")), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
+    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs").toOkioPath()), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
 
     private fun session(
         html: ByteArray,

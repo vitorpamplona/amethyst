@@ -31,6 +31,7 @@ import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -92,7 +93,7 @@ object NappletBlobPrefetcher {
         if (paths.isEmpty() || allowed.isEmpty()) return
 
         withContext(Dispatchers.IO) {
-            val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir)).forSite(partition)
+            val cache = NappletBlobCache(NappletBlobCache.dirFor(cacheDir.toOkioPath())).forSite(partition)
             val client = clients.getOrPut(proxyPort) { NappletBlobHttp.client(proxyPort, publicOnly = true) }
             // Tor's port changes when it restarts (desktop picks one each time): keep the client of
             // the route in use, not one per port ever seen.

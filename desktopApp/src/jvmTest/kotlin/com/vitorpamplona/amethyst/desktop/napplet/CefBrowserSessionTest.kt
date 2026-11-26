@@ -54,6 +54,7 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import org.junit.After
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -180,7 +181,7 @@ class CefBrowserSessionTest {
     private fun runtime(
         engine: DesktopCefEngine = DesktopCefEngine(File(tmp, "jcef"), File(tmp, "cache")),
         torPort: MutableStateFlow<Int?> = MutableStateFlow(null),
-    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs")), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
+    ) = DesktopNappletRuntime(engine, NappletBlobCache(File(tmp, "blobs").toOkioPath()), { OkHttpClient() }, scope, torPort, torWaitMs = 500)
 
     @Test
     fun webPagesLoadAndOtherAppsLinksGoToTheSystem() {

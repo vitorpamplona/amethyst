@@ -22,11 +22,13 @@ package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import okio.Path.Companion.toOkioPath
 import kotlin.io.path.createTempDirectory
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -40,7 +42,7 @@ import kotlin.test.assertTrue
 /** The serving rules both hosts share, from a cache that already holds the files (no network). */
 class NappletSiteServerTest {
     private val dir = createTempDirectory("site-server-test").toFile()
-    private val cache = NappletBlobCache(dir)
+    private val cache = NappletBlobCache(dir.toOkioPath())
     private val origin = NappletWebContract.appOrigin("nsite1")
     private val shellHtml = "<!doctype html><html><head><title>shell</title></head><body>__APP_SANDBOX__ __APP_BOOTSTRAP__</body></html>".encodeToByteArray()
 
@@ -63,7 +65,7 @@ class NappletSiteServerTest {
         profile: HostProfile,
         paths: List<PathTag>,
     ) = NappletSiteServer(
-        blobs = NappletBlobStore(cache, OkHttpClient(), paths, emptyList()),
+        blobs = NappletBlobStore(cache, OkHttpNappletHttp(OkHttpClient()), paths, emptyList()),
         shellHtml = shellHtml,
         shimJs = "/*shim*/",
         appOrigin = origin,
@@ -185,7 +187,7 @@ class NappletSiteServerTest {
             val appOrigin = origins.appOrigin("nsite1")
             val server =
                 NappletSiteServer(
-                    blobs = NappletBlobStore(cache, OkHttpClient(), listOf(file("/index.html", "<p>HOME</p>")), emptyList()),
+                    blobs = NappletBlobStore(cache, OkHttpNappletHttp(OkHttpClient()), listOf(file("/index.html", "<p>HOME</p>")), emptyList()),
                     shellHtml = shellHtml,
                     shimJs = "/*shim*/",
                     appOrigin = appOrigin,

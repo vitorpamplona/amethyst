@@ -23,10 +23,12 @@ package com.vitorpamplona.amethyst.commons.napplet
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.flow.StateFlow
-import java.io.ByteArrayInputStream
-import java.io.IOException
-import java.io.InputStream
-import java.io.SequenceInputStream
+import okio.Buffer
+import okio.IOException
+import okio.Source
+import okio.Timeout
+import okio.buffer
+import okio.use
 
 /**
  * What a host serves for one napplet or nSite, whatever its browser: the trusted shell on
@@ -71,7 +73,7 @@ class NappletSiteServer(
         val charset: String?,
         val headers: Map<String, String>,
         val length: Long,
-        private val source: () -> InputStream,
+        private val source: () -> Source,
     ) {
         constructor(
             status: Int,
@@ -80,15 +82,15 @@ class NappletSiteServer(
             charset: String?,
             headers: Map<String, String>,
             body: ByteArray,
-        ) : this(status, reason, mime, charset, headers, body.size.toLong(), { ByteArrayInputStream(body) })
+        ) : this(status, reason, mime, charset, headers, body.size.toLong(), { Buffer().write(body) })
 
         /** [mime] with its charset, for a `Content-Type` header. */
         val contentType: String get() = if (charset != null) "$mime; charset=$charset" else mime
 
-        /** The body, from the start. */
-        fun open(): InputStream = source()
+        /** The body, from the start. A JVM host reading streams takes `openStream()`. */
+        fun open(): Source = source()
 
-        fun readBody(): ByteArray = open().use { it.readBytes() }
+        fun readBody(): ByteArray = open().buffer().use { it.readByteArray() }
     }
 
     // The prelude every page of this launch gets: built once, prepended to each page's bytes.
@@ -189,9 +191,27 @@ class NappletSiteServer(
         val headers = (profile.appCsp?.let { mapOf("Content-Security-Policy" to it) } ?: emptyMap()) + NO_STORE
         return if (mime.equals(MIME_HTML, ignoreCase = true)) {
             // Streamed behind the prelude, never read whole: an archive's page can be any size.
-            Response(200, "OK", mime, charset, headers, prelude.size + blob.length) { SequenceInputStream(ByteArrayInputStream(prelude), blob.open()) }
+            Response(200, "OK", mime, charset, headers, prelude.size + blob.length) { PrefixedSource(Buffer().write(prelude), blob.open()) }
         } else {
             Response(200, "OK", mime, charset, headers, blob.length, blob::open)
+        }
+    }
+
+    // [prefix]'s bytes, then [rest]'s: a page behind its prelude, with no copy of either.
+    private class PrefixedSource(
+        private val prefix: Buffer,
+        private val rest: Source,
+    ) : Source {
+        override fun read(
+            sink: Buffer,
+            byteCount: Long,
+        ): Long = if (prefix.size > 0) prefix.read(sink, byteCount) else rest.read(sink, byteCount)
+
+        override fun timeout(): Timeout = rest.timeout()
+
+        override fun close() {
+            prefix.clear()
+            rest.close()
         }
     }
 

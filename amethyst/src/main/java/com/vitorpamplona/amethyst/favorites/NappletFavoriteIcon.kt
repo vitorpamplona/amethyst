@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nip5dNapplets.root.RootNappletEvent
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 
 /** The chosen icon blob and the servers that hold it — resolved from the live manifest. */
@@ -105,7 +106,7 @@ private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
         if (icon == null) return@LaunchedEffect
         withContext(Dispatchers.IO) {
             val partition = NappletBlobCache.partitionOf(NappletWebViewProfiles.current().orEmpty(), icon.author, icon.identifier)
-            val cache = NappletBlobCache(NappletBlobCache.dirFor(context.cacheDir)).forSite(partition)
+            val cache = NappletBlobCache(NappletBlobCache.dirFor(context.cacheDir.toOkioPath())).forSite(partition)
             if (cache.file(icon.path.hash) == null) {
                 val torPort = Amethyst.instance.torManager.activePortOrNull.value
                 // Never in the clear while the user wants Tor and it isn't up yet: the icon can wait.
@@ -113,7 +114,7 @@ private fun rememberVerifiedIconModel(icon: IconBlob?): String? {
                     runCatchingCancellable { NappletBlobPrefetcher.prefetch(listOf(icon.path), icon.servers, context.cacheDir, torPort ?: -1, partition) }
                 }
             }
-            val file = cache.file(icon.path.hash)
+            val file = cache.file(icon.path.hash)?.toFile()
             if (file != null && (icon.mime == null || verifiedIcon(file, icon))) model = "file://" + file.absolutePath
         }
     }

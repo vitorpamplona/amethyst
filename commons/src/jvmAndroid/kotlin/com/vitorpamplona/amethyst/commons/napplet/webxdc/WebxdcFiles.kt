@@ -40,6 +40,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okio.FileSystem
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
@@ -317,7 +319,7 @@ class WebxdcFiles(
         if (!file.path.startsWith(rootPrefix) || !file.isFile || relative == WebxdcBundles.COMPLETE) return null
         val byExtension = guessStaticContentType(relative)
         val type = if (byExtension == GENERIC_CONTENT_TYPE) sniffContentType(head(file)) ?: byExtension else byExtension
-        return NappletBlobStore.Blob("/$relative", hash.orEmpty(), type, file, null)
+        return NappletBlobStore.Blob("/$relative", hash.orEmpty(), type, file.toOkioPath(), null, FileSystem.SYSTEM)
     }
 
     // Every file is in the archive or it isn't: a miss is a 404, never an error.

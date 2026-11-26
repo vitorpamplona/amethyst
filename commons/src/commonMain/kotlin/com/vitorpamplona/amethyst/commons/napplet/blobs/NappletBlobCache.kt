@@ -20,14 +20,18 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.blobs
 
-import com.vitorpamplona.amethyst.commons.util.deleteOrWarn
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
+import com.vitorpamplona.amethyst.commons.util.setLastModifiedMillis
 import com.vitorpamplona.crypto.sha2.sha256
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.utils.Hex
 import com.vitorpamplona.quartz.utils.Log
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+import com.vitorpamplona.quartz.utils.TimeUtils
+import okio.FileSystem
+import okio.IOException
+import okio.Path
+import okio.use
+import kotlin.random.Random
 
 /**
  * A content-addressed, on-disk cache for verified Blossom blobs, shared across the app's processes.
@@ -43,31 +47,36 @@ import java.io.IOException
  * Files are kept per site and per account ([forSite]): one shared cache would tell a site which files
  * this device already holds (no request reaches its server, the page loads instantly), so a site
  * could learn what else was opened, or link two accounts on one device. [trimToSize] covers them all.
+ *
+ * [fileSystem] is the platform's; the modification times that order [trimToSize] are set on it
+ * directly ([setLastModifiedMillis]), so a test may swap it only for one backed by the same disk.
  */
 class NappletBlobCache private constructor(
-    private val dir: File,
+    private val dir: Path,
     // The cache's top folder, which trimming walks whichever site's cache it is called on.
-    private val root: File,
+    private val root: Path,
+    val fileSystem: FileSystem,
 ) {
-    constructor(dir: File) : this(dir, dir)
+    constructor(dir: Path, fileSystem: FileSystem = platformFileSystem) : this(dir, dir, fileSystem)
 
     /** The files [partition] (see [partitionOf]) may see: its own, never another site's or account's. */
-    fun forSite(partition: String): NappletBlobCache = NappletBlobCache(File(root, sha256(partition.encodeToByteArray()).toHexKey().take(PARTITION_NAME_LENGTH)), root)
+    fun forSite(partition: String): NappletBlobCache = NappletBlobCache(root / sha256(partition.encodeToByteArray()).toHexKey().take(PARTITION_NAME_LENGTH), root, fileSystem)
 
-    fun has(sha256: String): Boolean = fileFor(sha256)?.isFile == true
+    fun has(sha256: String): Boolean = fileFor(sha256)?.let(::isFile) == true
 
-    fun get(sha256: String): ByteArray? = file(sha256)?.let { runCatching { it.readBytes() }.getOrNull() }
+    fun get(sha256: String): ByteArray? = file(sha256)?.let { runCatching { fileSystem.read(it) { readByteArray() } }.getOrNull() }
 
     /**
      * The cached blob's file, to stream instead of loading, or null when it isn't cached. A hit
      * marks the blob as used, so [trimToSize] evicts what was used longest ago, not what was
      * downloaded first: a napplet opened every day stays cached.
      */
-    fun file(sha256: String): File? {
-        val file = fileFor(sha256)?.takeIf { it.isFile } ?: return null
-        val now = System.currentTimeMillis()
+    fun file(sha256: String): Path? {
+        val file = fileFor(sha256) ?: return null
+        val metadata = fileSystem.metadataOrNull(file)?.takeIf { it.isRegularFile } ?: return null
+        val now = TimeUtils.nowMillis()
         // At most once an hour per blob: a page's requests shouldn't each cost a metadata write.
-        if (now - file.lastModified() > TOUCH_INTERVAL_MS && !file.setLastModified(now)) {
+        if (now - (metadata.lastModifiedAtMillis ?: 0L) > TOUCH_INTERVAL_MS && !setLastModifiedMillis(file, now)) {
             Log.d("NappletBlobCache") { "Could not mark $sha256 as used" }
         }
         return file
@@ -91,24 +100,26 @@ class NappletBlobCache private constructor(
         bytes: ByteArray,
     ) {
         val target = fileFor(sha256) ?: return
-        if (target.isFile) return
-        if (!dir.isDirectory && !dir.mkdirs()) {
+        if (isFile(target)) return
+        try {
+            fileSystem.createDirectories(dir)
+        } catch (e: IOException) {
             Log.w("NappletBlobCache") { "Cannot create $dir" }
             return
         }
-        val tmp = File(dir, "$sha256$TEMP_MARKER${System.nanoTime()}")
+        val tmp = dir / "$sha256$TEMP_MARKER${Random.nextLong().toULong()}"
         try {
             // Synced before the rename: reads never re-hash, so a file under a hash's name must be
-            // whole even after a power loss.
-            FileOutputStream(tmp).use { out ->
-                out.write(bytes)
-                out.fd.sync()
+            // whole even after a power loss. (A file handle's flush is an fsync on every platform.)
+            fileSystem.openReadWrite(tmp, mustCreate = true, mustExist = false).use { handle ->
+                handle.write(0, bytes, 0, bytes.size)
+                handle.flush()
             }
-            if (!tmp.renameTo(target)) tmp.deleteOrWarn("NappletBlobCache", "leftover temp file")
+            fileSystem.atomicMove(tmp, target)
         } catch (e: IOException) {
             // A full disk, most likely: the partial file goes, the blob is simply not cached.
             Log.w("NappletBlobCache", "Could not cache $sha256", e)
-            tmp.deleteOrWarn("NappletBlobCache", "partial temp file")
+            deleteOrWarn(tmp, "partial temp file")
         }
     }
 
@@ -119,38 +130,60 @@ class NappletBlobCache private constructor(
     fun trimToSize(maxBytes: Long) {
         runCatching {
             val files =
-                root
-                    .walkTopDown()
-                    .maxDepth(2)
-                    .filter { it.isFile && !isStaleTemp(it) && !it.name.contains(TEMP_MARKER) }
-                    .map { Triple(it, it.length(), it.lastModified()) }
-                    .toList()
+                filesToDepthTwo()
+                    .mapNotNull { path -> fileSystem.metadataOrNull(path)?.takeIf { it.isRegularFile }?.let { path to it } }
+                    .filter { (path, metadata) -> !isStaleTemp(path, metadata.lastModifiedAtMillis ?: 0L) && !path.name.contains(TEMP_MARKER) }
+                    .map { (path, metadata) -> Triple(path, metadata.size ?: 0L, metadata.lastModifiedAtMillis ?: 0L) }
             var total = files.sumOf { it.second }
             if (total <= maxBytes) return
             files.sortedBy { it.third }.forEach { (f, length, _) ->
                 if (total <= maxBytes) return
-                if (f.deleteOrWarn("NappletBlobCache", "blob")) {
+                if (deleteOrWarn(f, "blob")) {
                     total -= length
                 }
             }
         }
     }
 
+    // The root's files and its partitions' files, as File.walkTopDown().maxDepth(2) found them.
+    private fun filesToDepthTwo(): List<Path> {
+        val top = fileSystem.listOrNull(root) ?: return emptyList()
+        return top + top.flatMap { child -> if (fileSystem.metadataOrNull(child)?.isDirectory == true) fileSystem.listOrNull(child).orEmpty() else emptyList() }
+    }
+
     /**
      * A temp file a crashed or killed write left behind: one being written now is younger than this,
      * so it stays. Deleted here, as trimming walks the directory anyway.
      */
-    private fun isStaleTemp(file: File): Boolean {
-        if (!file.name.contains(TEMP_MARKER) || System.currentTimeMillis() - file.lastModified() < STALE_TEMP_MS) return false
-        file.deleteOrWarn("NappletBlobCache", "stale temp file")
+    private fun isStaleTemp(
+        file: Path,
+        lastModified: Long,
+    ): Boolean {
+        if (!file.name.contains(TEMP_MARKER) || TimeUtils.nowMillis() - lastModified < STALE_TEMP_MS) return false
+        deleteOrWarn(file, "stale temp file")
         return true
     }
+
+    private fun isFile(path: Path): Boolean = fileSystem.metadataOrNull(path)?.isRegularFile == true
+
+    // As File.deleteOrWarn: true when the file is gone, a warning when it couldn't be removed.
+    private fun deleteOrWarn(
+        path: Path,
+        what: String,
+    ): Boolean =
+        try {
+            fileSystem.delete(path, mustExist = false)
+            true
+        } catch (e: IOException) {
+            Log.w("NappletBlobCache") { "Could not delete $what $path" }
+            false
+        }
 
     /**
      * The blob's file, or null when [sha256] is not one. The name comes from a site's manifest, so it is
      * checked here too: a `../` in it would otherwise read and write outside the cache directory.
      */
-    private fun fileFor(sha256: String): File? = sha256.lowercase().takeIf { it.length == 64 && Hex.isHex64(it) }?.let { File(dir, it) }
+    private fun fileFor(sha256: String): Path? = sha256.lowercase().takeIf { it.length == 64 && Hex.isHex64(it) }?.let { dir / it }
 
     companion object {
         const val DEFAULT_MAX_BYTES = 256L * 1024 * 1024
@@ -171,6 +204,6 @@ class NappletBlobCache private constructor(
         private const val TEMP_MARKER = ".tmp."
 
         /** The shared cache directory, identical across processes since they share the app's cacheDir. */
-        fun dirFor(cacheDir: File) = File(cacheDir, "napplet-blobs")
+        fun dirFor(cacheDir: Path): Path = cacheDir / "napplet-blobs"
     }
 }

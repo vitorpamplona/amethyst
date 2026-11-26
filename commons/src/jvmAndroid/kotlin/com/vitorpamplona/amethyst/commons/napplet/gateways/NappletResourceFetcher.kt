@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.napplet.gateways
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletResource
 import com.vitorpamplona.amethyst.commons.napplet.NappletResourceResult
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletInetAddresses
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.quartz.nip01Core.core.Address
@@ -450,35 +451,7 @@ class NappletResourceFetcher(
 
         internal fun isSafeHttpsResourceUrl(url: String): Boolean = url.toHttpUrlOrNull()?.let { it.scheme == "https" && it.username.isEmpty() && it.password.isEmpty() } == true
 
-        internal fun isPublicAddress(address: InetAddress): Boolean {
-            if (address.isAnyLocalAddress || address.isLoopbackAddress || address.isLinkLocalAddress || address.isSiteLocalAddress || address.isMulticastAddress) {
-                return false
-            }
-            val bytes = address.address
-            if (bytes.size == 4) {
-                val first = bytes[0].toInt() and 0xff
-                val second = bytes[1].toInt() and 0xff
-                // Shared address space (100.64/10) and reserved/non-routed ranges Java does not classify.
-                if (first == 0 || first >= 224) return false
-                if (first == 100 && second in 64..127) return false
-                if (first == 192 && second == 0) return false
-                if (first == 198 && second in 18..19) return false
-                if (first == 198 && second == 51 && (bytes[2].toInt() and 0xff) == 100) return false
-                if (first == 203 && second == 0 && (bytes[2].toInt() and 0xff) == 113) return false
-            } else if (bytes.size == 16) {
-                val first = bytes[0].toInt() and 0xff
-                if (first and 0xfe == 0xfc) return false // fc00::/7 unique-local
-                if (
-                    first == 0x20 &&
-                    (bytes[1].toInt() and 0xff) == 0x01 &&
-                    (bytes[2].toInt() and 0xff) == 0x0d &&
-                    (bytes[3].toInt() and 0xff) == 0xb8
-                ) {
-                    return false // 2001:db8::/32 documentation range
-                }
-            }
-            return true
-        }
+        internal fun isPublicAddress(address: InetAddress): Boolean = NappletInetAddresses.isPublic(address)
 
         private const val NOSTR_FETCH_TIMEOUT_MS = 8_000L
         private const val FETCH_TIMEOUT_SECONDS = 30L

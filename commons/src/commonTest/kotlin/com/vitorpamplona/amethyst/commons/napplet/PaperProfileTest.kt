@@ -21,7 +21,7 @@
 package com.vitorpamplona.amethyst.commons.napplet
 
 import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -57,7 +57,7 @@ class PaperProfileTest {
 
     @Test
     fun theShellFramesThePageWithoutScripts() =
-        runBlocking {
+        runTest {
             val shell = server.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true)!!.readBody().decodeToString()
             assertFalse(shell.contains("allow-scripts"))
             assertTrue(shell.contains("allow-popups allow-popups-to-escape-sandbox"))
@@ -66,7 +66,7 @@ class PaperProfileTest {
 
     @Test
     fun thePageIsServedAsWrittenUnderItsCsp() =
-        runBlocking {
+        runTest {
             val response = server.serve("GET", "$origin/index.html", acceptsHtml = true)!!
             // Behind a markup-only prelude that names the charset the header already promises.
             assertEquals(NappletWebContract.PAPER_PRELUDE + page, response.readBody().decodeToString())
@@ -76,7 +76,7 @@ class PaperProfileTest {
 
     @Test
     fun aPageWithoutItsOwnCharsetIsStillReadAsUtf8() =
-        runBlocking {
+        runTest {
             // JCEF drops the header's charset, so a page that names none fell back to Latin-1:
             // "Kräftig" showed as "KrÃ¤ftig". The prelude names it first, ahead of the page.
             val accented = "<title>The Nostr Observer</title><p>Kräftig</p>"
@@ -92,7 +92,7 @@ class PaperProfileTest {
 
     @Test
     fun hotlinkedArtIsTheBrowsersToFetch() =
-        runBlocking {
+        runTest {
             assertNull(server.serve("GET", "https://img.example/sun.jpg", acceptsHtml = false))
         }
 

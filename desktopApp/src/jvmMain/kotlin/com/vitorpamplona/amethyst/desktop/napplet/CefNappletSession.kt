@@ -36,9 +36,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletWebResources
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletFiles
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.PaperFiles
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFilePort
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
+import com.vitorpamplona.amethyst.commons.napplet.openStream
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcFiles
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcRuntime
@@ -303,7 +305,7 @@ class CefNappletSession(
                     } else {
                         NappletBlobStore(
                             runtime.blobCache.forSite(NappletBlobCache.partitionOf(accountPubKey, launch.identity.authorPubKey, launch.identity.identifier)),
-                            runtime.httpClient(blobsUseTor),
+                            OkHttpNappletHttp(runtime.httpClient(blobsUseTor)),
                             launch.paths,
                             launch.servers,
                         )
@@ -969,7 +971,7 @@ class CefNappletSession(
             bytesRead: IntRef,
             callback: CefCallback,
         ): Boolean {
-            val input = body ?: runCatching { served.open() }.getOrNull()?.also { body = it }
+            val input = body ?: runCatching { served.openStream() }.getOrNull()?.also { body = it }
             val n = input?.let { runCatching { it.read(dataOut, 0, bytesToRead) }.getOrDefault(-1) } ?: -1
             if (n <= 0) {
                 cancel()

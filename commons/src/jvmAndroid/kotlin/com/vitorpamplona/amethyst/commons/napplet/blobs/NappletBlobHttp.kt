@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.napplet.blobs
 
-import com.vitorpamplona.amethyst.commons.napplet.gateways.NappletResourceFetcher
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -93,7 +92,7 @@ object NappletBlobHttp {
                 .cookieJar(CookieJar.NO_COOKIES)
                 .dns { hostname ->
                     Dns.SYSTEM.lookup(hostname).also { addresses ->
-                        if (addresses.isEmpty() || !addresses.all { NappletResourceFetcher.isPublicAddress(it) }) {
+                        if (addresses.isEmpty() || !addresses.all { NappletInetAddresses.isPublic(it) }) {
                             throw UnknownHostException("$hostname does not resolve to a public address")
                         }
                     }
@@ -107,7 +106,7 @@ object NappletBlobHttp {
                             ?.route()
                             ?.socketAddress
                             ?.address
-                    if (address != null && !NappletResourceFetcher.isPublicAddress(address)) {
+                    if (address != null && !NappletInetAddresses.isPublic(address)) {
                         throw IOException("${chain.request().url.host} is not a public address")
                     }
                     chain.proceed(chain.request())

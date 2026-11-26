@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okio.Path.Companion.toOkioPath
 import java.io.File
 import java.util.UUID
 
@@ -88,7 +89,7 @@ class DesktopNappletHost(
     val runtime =
         DesktopNappletRuntime(
             engine = DesktopCefEngine(File(modules.filesDir, "jcef"), DesktopInstance.ownFolder(DesktopInstance.PerCopyFolder.BROWSER_PROFILE), onQuit = { modules.quitRequests.tryEmit(Unit) }),
-            blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir)),
+            blobCache = NappletBlobCache(NappletBlobCache.dirFor(modules.filesDir.toOkioPath())),
             httpClient = { useTor -> modules.okHttpClients.getHttpClient(useTor) },
             scope = modules.applicationIOScope,
             torPort = modules.torManager.activePortOrNull,
