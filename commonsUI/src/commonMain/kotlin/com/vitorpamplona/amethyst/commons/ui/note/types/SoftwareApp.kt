@@ -118,6 +118,8 @@ import kotlinx.collections.immutable.toImmutableList
 @Composable
 fun RenderSoftwareApplication(
     note: Note,
+    canPreview: Boolean,
+    quotesLeft: Int,
     accountViewModel: AccountViewModel,
     nav: INav,
     backgroundColor: MutableState<Color> = MaterialTheme.colorScheme.background.let { remember(it) { mutableStateOf(it) } },
@@ -189,8 +191,8 @@ fun RenderSoftwareApplication(
             val tags = remember(event) { event.tags.toImmutableListOfLists() }
             TranslatableRichTextViewer(
                 content = description,
-                canPreview = true,
-                quotesLeft = 1,
+                canPreview = canPreview,
+                quotesLeft = quotesLeft,
                 modifier = Modifier.fillMaxWidth(),
                 tags = tags,
                 backgroundColor = backgroundColor,

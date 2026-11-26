@@ -73,6 +73,7 @@ fun VideoDisplay(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     contentScale: ContentScale,
     accountViewModel: AccountViewModel,
@@ -192,7 +193,7 @@ fun VideoDisplay(
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview && !makeItShort,
-                    quotesLeft = 1,
+                    quotesLeft = quotesLeft,
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,

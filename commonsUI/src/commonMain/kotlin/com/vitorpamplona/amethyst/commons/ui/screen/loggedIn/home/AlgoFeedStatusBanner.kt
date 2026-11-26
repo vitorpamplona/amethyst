@@ -54,6 +54,7 @@ import com.vitorpamplona.amethyst.commons.resources.dvm_offline_banner
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.types.feedbackMessage
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.DvmPaymentActions
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.dvms.rememberDvmHeartbeatFresh
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -135,9 +136,7 @@ private fun SingleAlgoFeedBanner(
                 status?.code == "payment-required" -> {
                     BannerMessageRow(
                         message =
-                            status.description.ifBlank {
-                                stringRes(Res.string.dvm_home_status_payment_required)
-                            },
+                            snapshot.latestStatus?.feedbackMessage() ?: stringRes(Res.string.dvm_home_status_payment_required),
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
@@ -160,9 +159,7 @@ private fun SingleAlgoFeedBanner(
                 status?.code == "error" -> {
                     BannerMessageRow(
                         message =
-                            status.description.ifBlank {
-                                stringRes(Res.string.dvm_home_status_error)
-                            },
+                            snapshot.latestStatus?.feedbackMessage() ?: stringRes(Res.string.dvm_home_status_error),
                         showSpinner = false,
                     )
                     Spacer(modifier = StdVertSpacer)
@@ -172,9 +169,7 @@ private fun SingleAlgoFeedBanner(
                 status?.code == "processing" -> {
                     BannerMessageRow(
                         message =
-                            status.description.ifBlank {
-                                stringRes(Res.string.dvm_home_status_processing)
-                            },
+                            snapshot.latestStatus?.feedbackMessage() ?: stringRes(Res.string.dvm_home_status_processing),
                         showSpinner = true,
                     )
                 }

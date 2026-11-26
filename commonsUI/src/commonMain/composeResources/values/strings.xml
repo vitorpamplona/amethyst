@@ -2932,6 +2932,11 @@
     <string name="git_timeline_pushed">pushed new commits</string>
     <string name="git_timeline_pushed_rebased">rebased and pushed new commits</string>
     <string name="git_timeline_set_status">set status to</string>
+    <string name="git_status_merge_commit">Merge commit</string>
+    <plurals name="git_status_applied_as_commits">
+        <item quantity="one">Applied as %1$d commit</item>
+        <item quantity="other">Applied as %1$d commits</item>
+    </plurals>
     <string name="git_inline_removed_lines">(removed lines)</string>
     <string name="git_timeline_patch_added">added a patch</string>
     <string name="git_timeline_patch_revision">posted a new revision</string>
@@ -4731,6 +4736,14 @@
     <string name="import_follows_search_keywords" translatable="false">contacts, follows, follow list, import</string>
     <string name="inbox_relays_title">Inbox Relays</string>
     <string name="incorrect_invoice_amount_sats_from_it_should_have_been">Incorrect invoice amount (%1$s sats) from %2$s. It should have been %3$s</string>
+    <plurals name="lightning_amount_below_receiver_minimum">
+        <item quantity="one">%1$s only accepts payments of at least %2$s sat.</item>
+        <item quantity="other">%1$s only accepts payments of at least %2$s sats.</item>
+    </plurals>
+    <plurals name="lightning_amount_above_receiver_maximum">
+        <item quantity="one">%1$s only accepts payments of up to %2$s sat.</item>
+        <item quantity="other">%1$s only accepts payments of up to %2$s sats.</item>
+    </plurals>
     <string name="indexer_section">Indexer Relays</string>
     <string name="indexer_section_explainer">Relays that specialize in hosting everyone's metadata and relay lists, like purplepag.es. Amethyst will use these relays to find users that are not in your lists.</string>
     <string name="interest_set_creation_screen_title">New Interest Set</string>
@@ -4790,7 +4803,7 @@
     <string name="kind_comments">Comments</string>
     <string name="kind_community_def">Community Def</string>
     <string name="kind_community_list">Community List</string>
-    <string name="kind_community_post">Community Post</string>
+    <string name="kind_community_post_approval">Community Post Approval</string>
     <string name="kind_contact_card">Contact Card</string>
     <string name="kind_day_appointment">Day Appointment</string>
     <string name="kind_deletions">Deletions</string>
@@ -8112,6 +8125,14 @@
     <string name="kc_dvm_param_until">Until</string>
     <string name="kc_dvm_param_group">Group</string>
     <string name="kc_dvm_heartbeat_title">DVM heartbeat</string>
+    <string name="kc_dvm_feedback_title">Job feedback</string>
+    <string name="kc_dvm_status_payment_required">Payment required</string>
+    <string name="kc_dvm_status_processing">Processing</string>
+    <string name="kc_dvm_status_error">Error</string>
+    <string name="kc_dvm_status_success">Success</string>
+    <string name="kc_dvm_status_partial">Partial result</string>
+    <string name="kc_dvm_label_amount">Amount</string>
+    <string name="kc_audio_track_price">Price</string>
     <string name="kc_dev_app_id">App</string>
     <plurals name="kc_dev_files_count">
         <item quantity="one">%1$d file</item>
@@ -8461,6 +8482,7 @@
     <string name="kc_list_favorite_follow_sets">Favorite follow sets</string>
     <string name="kc_list_external_identities">External identities</string>
     <string name="kc_list_top_eight">Top 8</string>
+    <string name="kc_list_top_eight_rank">#%1$d</string>
     <string name="kc_list_theme_active">Profile theme</string>
     <string name="kc_list_theme_definition">Theme</string>
     <string name="kc_list_theme_incomplete">Incomplete theme, missing colors</string>

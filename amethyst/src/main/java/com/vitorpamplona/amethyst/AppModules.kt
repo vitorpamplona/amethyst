@@ -735,6 +735,8 @@ class AppModules(
     // selection, via BitcoinExplorerEndpoint — onchain zaps must not silently
     // bypass the user's Tor preference.
     init {
+        // The money-tier client for the default explorer, picked once at startup.
+        val moneyClient = roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL)
         cache.onchainBackend =
             CachingOnchainBackend(
                 EsploraClient(
@@ -747,7 +749,7 @@ class AppModules(
                                 ),
                         )
                     },
-                    transport = OkHttpEsploraTransport { roleBasedHttpClientBuilder.okHttpClientForMoney(OkHttpBitcoinExplorer.MEMPOOL_API_URL) },
+                    transport = OkHttpEsploraTransport { moneyClient },
                 ),
             )
 
