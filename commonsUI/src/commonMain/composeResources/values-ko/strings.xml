@@ -2240,7 +2240,6 @@
     <string name="kind_comments">댓글</string>
     <string name="kind_community_def">커뮤니티 정의</string>
     <string name="kind_community_list">커뮤니티 목록</string>
-    <string name="kind_community_post">커뮤니티 게시물</string>
     <string name="kind_contact_card">연락처 카드</string>
     <string name="kind_day_appointment">일별 일정</string>
     <string name="kind_deletions">삭제</string>

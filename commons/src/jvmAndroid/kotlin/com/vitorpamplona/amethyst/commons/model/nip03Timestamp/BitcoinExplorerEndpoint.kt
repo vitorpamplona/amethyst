@@ -28,7 +28,7 @@ import com.vitorpamplona.quartz.nip03Timestamp.okhttp.OkHttpBitcoinExplorer
  * This is the single source of truth shared by two features that both talk to
  * the same Esplora API:
  * - OpenTimestamps verification ([TorAwareOkHttpOtsResolverBuilder]).
- * - NIP-BC onchain zaps (the `EsploraBackend` wired in `AppModules`).
+ * - NIP-BC onchain zaps (the `EsploraClient` wired in `AppModules`).
  *
  * So a user who configures a custom explorer in the OTS settings gets it for
  * onchain zaps too, and both honour the same Tor preference: a configured

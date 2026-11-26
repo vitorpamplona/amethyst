@@ -20,15 +20,24 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.note.types
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,16 +45,19 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.model.navigation.routeForUser
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.contact_list_containing_label
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.GalleryUnloaded
+import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.SpacedBy5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonColumn
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.viewmodels.mockAccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip02FollowList.ContactListEvent
 import kotlinx.collections.immutable.toImmutableList
 
@@ -58,7 +70,19 @@ fun DisplayContactList(
 ) {
     val noteEvent = baseNote.event as? ContactListEvent ?: return
 
+    // NIP-02 defines only `p` tags: `["p", <key>, <relay>, <petname>]`.
     val follows = remember(noteEvent) { noteEvent.verifiedFollowKeySet().toImmutableList() }
+    val petnames =
+        remember(noteEvent) {
+            noteEvent
+                .follows()
+                .mapNotNull { tag ->
+                    tag.petname
+                        ?.trim()
+                        ?.ifBlank { null }
+                        ?.let { tag.pubKey to it }
+                }.distinctBy { it.first }
+        }
 
     Column(
         modifier =
@@ -76,6 +100,47 @@ fun DisplayContactList(
         )
 
         GalleryUnloaded(follows, Modifier, accountViewModel, nav)
+
+        // The local names the author gave some of them (NIP-02's petname scheme).
+        if (petnames.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                petnames.take(MAX_PETNAMES).forEach { (pubKey, petname) -> PetnameChip(pubKey, petname, accountViewModel, nav) }
+            }
+            KindCardMore(petnames.size - MAX_PETNAMES)
+        }
+    }
+}
+
+private const val MAX_PETNAMES = 6
+
+/** A follow under the petname the list's author gave them: their picture and that name, opening their profile. */
+@Composable
+private fun PetnameChip(
+    pubKey: HexKey,
+    petname: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier =
+            Modifier
+                .clip(RoundedCornerShape(50))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                .clickable { nav.nav(routeForUser(pubKey)) }
+                .padding(start = 2.dp, end = 10.dp, top = 2.dp, bottom = 2.dp),
+    ) {
+        UserPicture(pubKey, 22.dp, Modifier.clip(CircleShape), accountViewModel, nav)
+        Text(
+            text = petname,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

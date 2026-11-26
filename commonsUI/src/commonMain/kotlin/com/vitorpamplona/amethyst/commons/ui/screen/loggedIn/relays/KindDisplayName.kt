@@ -26,6 +26,10 @@ import com.vitorpamplona.amethyst.commons.resources.attestation
 import com.vitorpamplona.amethyst.commons.resources.attestation_request
 import com.vitorpamplona.amethyst.commons.resources.attestor_proficiency
 import com.vitorpamplona.amethyst.commons.resources.attestor_recommendation
+import com.vitorpamplona.amethyst.commons.resources.kc_list_streak_title
+import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_active
+import com.vitorpamplona.amethyst.commons.resources.kc_list_theme_definition
+import com.vitorpamplona.amethyst.commons.resources.kc_list_top_eight
 import com.vitorpamplona.amethyst.commons.resources.kind_accepted_badge_set
 import com.vitorpamplona.amethyst.commons.resources.kind_adventure_prologue
 import com.vitorpamplona.amethyst.commons.resources.kind_adventure_reading
@@ -65,7 +69,7 @@ import com.vitorpamplona.amethyst.commons.resources.kind_classifieds
 import com.vitorpamplona.amethyst.commons.resources.kind_comments
 import com.vitorpamplona.amethyst.commons.resources.kind_community_def
 import com.vitorpamplona.amethyst.commons.resources.kind_community_list
-import com.vitorpamplona.amethyst.commons.resources.kind_community_post
+import com.vitorpamplona.amethyst.commons.resources.kind_community_post_approval
 import com.vitorpamplona.amethyst.commons.resources.kind_contact_card
 import com.vitorpamplona.amethyst.commons.resources.kind_day_appointment
 import com.vitorpamplona.amethyst.commons.resources.kind_deletions
@@ -210,10 +214,14 @@ import com.vitorpamplona.quartz.experimental.nip95.header.FileStorageHeaderEvent
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.nns.NNSEvent
 import com.vitorpamplona.quartz.experimental.notifications.wake.WakeUpEvent
+import com.vitorpamplona.quartz.experimental.postingStreak.PostingStreakEvent
 import com.vitorpamplona.quartz.experimental.pressstr.ebook.EbookEvent
 import com.vitorpamplona.quartz.experimental.pressstr.issue.MagazineIssueEvent
 import com.vitorpamplona.quartz.experimental.pressstr.magazine.MagazineEvent
 import com.vitorpamplona.quartz.experimental.profileGallery.ProfileGalleryEntryEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.active.ActiveProfileThemeEvent
+import com.vitorpamplona.quartz.experimental.profileTheme.definition.ThemeDefinitionEvent
+import com.vitorpamplona.quartz.experimental.topEight.TopEightEvent
 import com.vitorpamplona.quartz.experimental.videoCollaboration.VideoCollaborationEvent
 import com.vitorpamplona.quartz.experimental.zapPolls.ZapPollEvent
 import com.vitorpamplona.quartz.kinds.KindNames
@@ -420,7 +428,7 @@ fun kindDisplayName(kind: Int): StringResource? =
         CommentEvent.KIND -> Res.string.kind_comments
         CommunityDefinitionEvent.KIND -> Res.string.kind_community_def
         CommunityListEvent.KIND -> Res.string.kind_community_list
-        CommunityPostApprovalEvent.KIND -> Res.string.kind_community_post
+        CommunityPostApprovalEvent.KIND -> Res.string.kind_community_post_approval
         ContactListEvent.KIND -> Res.string.kind_follow_list
         DeletionRequestEvent.KIND -> Res.string.kind_deletions
         DraftWrapEvent.KIND -> Res.string.kind_drafts
@@ -478,6 +486,10 @@ fun kindDisplayName(kind: Int): StringResource? =
         NipTextEvent.KIND -> Res.string.kind_nip
         NostrConnectEvent.KIND -> Res.string.kind_nostr_connect
         DvmStatusEvent.KIND -> Res.string.kind_dvm_status
+        ThemeDefinitionEvent.KIND -> Res.string.kc_list_theme_definition
+        ActiveProfileThemeEvent.KIND -> Res.string.kc_list_theme_active
+        PostingStreakEvent.KIND -> Res.string.kc_list_streak_title
+        TopEightEvent.KIND -> Res.string.kc_list_top_eight
         DvmContentDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_content_req
         DvmContentDiscoveryResponseEvent.KIND -> Res.string.kind_dvm_content_resp
         DvmUserDiscoveryRequestEvent.KIND -> Res.string.kind_dvm_user_req

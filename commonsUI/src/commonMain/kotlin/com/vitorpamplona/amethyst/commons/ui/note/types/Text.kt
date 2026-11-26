@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeFor
 import com.vitorpamplona.amethyst.commons.model.replyingDirectlyTo
 import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
+import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReplyContext
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
@@ -66,11 +67,13 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
 import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
@@ -111,6 +114,18 @@ fun displayedNoteText(
     }
 }
 
+/**
+ * The kinds whose feed card is [RenderTextEvent] when no branch of the note row claims them: those
+ * whose `content` is a note's text by their spec, NIP-10's kind 1, NIP-22's kind 1111 and NIP-34's
+ * kind 1622. Every other kind that reaches the row's fallback, typed or not, gets the unknown-kind
+ * card, since its content may be JSON, ciphertext or another app's data.
+ *
+ * Keep it in step with NoteComposeKindCoverageTest's TEXT_CARD_KINDS.
+ */
+@Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
+fun hasTextCard(event: Event): Boolean = event is TextNoteEvent || event is CommentEvent || event is GitReplyEvent
+
+@Suppress("DEPRECATION") // GitReplyEvent: replaced by NIP-22, still rendered for old threads
 @Composable
 fun RenderTextEvent(
     note: Note,
@@ -170,6 +185,14 @@ fun RenderTextEvent(
             // No in-cache parent note: this comment answers a scope rather than a note.
             // What a comment answers is context, like a quote: its card keeps the margin.
             ProvideMediaBleed(0.dp) { DisplayCommentScope(noteEvent, accountViewModel, nav) }
+        }
+
+        // A legacy NIP-34 reply names the issue or patch it is in and its repository, unless the
+        // quote above is that item.
+        if (!makeItShort && noteEvent is GitReplyEvent) {
+            val shownParent = if (parentNote != null && canShowReply && unPackReply == ReplyRenderType.FULL) parentNote else null
+            GitReplyContext(noteEvent, shownParent, accountViewModel, nav)
+            Spacer(modifier = HalfVertSpacer)
         }
     }
 
