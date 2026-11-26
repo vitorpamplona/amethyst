@@ -681,13 +681,17 @@ class AccountFeedContentStates(
         }
 
         // The Everyone tab's Web of Trust switch removes cards, not just adds them: clear first so
-        // the refresh rebuilds instead of taking the additive path.
+        // the refresh rebuilds instead of taking the additive path. Not part of the feed key, as the
+        // relay pages stay valid either way (the filter is local), so a flip keeps the paging. While
+        // no network is active the switch hides nobody: nothing to rebuild.
         scope.launch(Dispatchers.IO) {
             account.settings.everyoneNotificationsUseTrust
                 .drop(1)
                 .collect {
-                    notificationsEveryone.clear()
-                    notificationsEveryone.invalidateData()
+                    if (account.trustVerdicts.value.isActive) {
+                        notificationsEveryone.clear()
+                        notificationsEveryone.invalidateData()
+                    }
                 }
         }
 

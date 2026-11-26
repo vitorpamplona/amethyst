@@ -32,7 +32,10 @@ import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.CashuMintDirectoryFilterAssembler
 import com.vitorpamplona.amethyst.commons.relayClient.nip47WalletConnect.NWCPaymentFilterAssembler
 import com.vitorpamplona.amethyst.commons.service.http.EncryptionKeyCache
+import com.vitorpamplona.amethyst.commons.wot.network.TrustNetwork
+import com.vitorpamplona.amethyst.commons.wot.network.TrustVerdicts
 import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
@@ -44,7 +47,11 @@ import com.vitorpamplona.quartz.nip03Timestamp.EmptyOtsResolverBuilder
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip19Bech32.toNpub
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.OkHttpMintTransport
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkBuilder
+import com.vitorpamplona.quartz.nip85TrustedAssertions.users.index.TrustNetworkHeader
 import com.vitorpamplona.quartz.utils.TimeUtils
+import io.mockk.every
+import io.mockk.spyk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -155,5 +162,37 @@ class DesktopNotificationsFilterTest {
 
         select(TopFilter.AllFollows)
         assertFalse(notifies(strangerMention))
+    }
+
+    /** The decisions of a network that knows only the user's follows: everyone else is outside. */
+    private fun activeNetwork(): TrustVerdicts {
+        val provider = "a".repeat(64)
+        val now = TimeUtils.now()
+        val index = TrustNetworkBuilder(provider, initialCapacity = 1).build().first
+        return TrustVerdicts(TrustNetwork(TrustNetworkHeader(provider, "wss://rank.example.com/", now, now, now), index), emptyMap(), 10, me.pubKey.toHexKey(), setOf(friend.pubKey))
+    }
+
+    @Test
+    fun withSplitToastsFollowTheEveryoneTabNotTheHiddenSpinner() {
+        // The spinner is hidden with split on; a choice left in it must not narrow the toasts.
+        select(TopFilter.AllFollows)
+        account.settings.splitNotificationsEnabled.value = true
+
+        assertTrue(notifies(mentionBy(friend)))
+        assertTrue(notifies(mentionBy(stranger)))
+    }
+
+    @Test
+    fun withSplitTheEveryoneTabsWebOfTrustSwitchFiltersToasts() {
+        val trusting = spyk(account).also { every { it.currentTrustVerdicts() } answers { activeNetwork() } }
+        val notifiesTrusting = DesktopNotifications.notifiesAbout(trusting)
+        select(TopFilter.Global)
+        account.settings.splitNotificationsEnabled.value = true
+
+        assertTrue(notifiesTrusting(mentionBy(friend)))
+        assertFalse(notifiesTrusting(mentionBy(stranger)))
+
+        account.settings.everyoneNotificationsUseTrust.value = false
+        assertTrue(notifiesTrusting(mentionBy(stranger)))
     }
 }

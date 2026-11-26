@@ -61,7 +61,6 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 /**
@@ -165,11 +164,13 @@ class NotificationEveryoneTrustTest {
     }
 
     @Test
-    fun theSwitchChangesTheFeedKeySoTheTabRebuilds() {
+    fun theSwitchKeepsTheFeedKeySoRelayPagingSurvives() {
+        // The filter is local: the relay pages stay valid, and a rebuild comes from the switch's
+        // own collector instead of a key change that would reset them.
         val before = everyoneTab.feedKey()
         account.settings.changeEveryoneNotificationsUseTrust(false)
 
-        assertNotEquals(before, everyoneTab.feedKey())
+        assertEquals(before, everyoneTab.feedKey())
     }
 
     @Test
@@ -194,9 +195,12 @@ class NotificationEveryoneTrustTest {
     @Test
     fun pushFollowsTheSpinnerWhenNotSplit() {
         assertFalse(account.settings.splitNotificationsEnabled.value)
+        // The Everyone switch plays no part without split: only Curated filters push.
         account.settings.changeEveryoneNotificationsUseTrust(false)
-        assertEquals(account.settings.defaultNotificationFollowList.value is TopFilter.Selected, account.pushNotificationsApplyTrust())
+        account.settings.changeDefaultNotificationFollowList(TopFilter.Selected)
+        assertTrue(account.pushNotificationsApplyTrust())
 
+        account.settings.changeEveryoneNotificationsUseTrust(true)
         account.settings.changeDefaultNotificationFollowList(TopFilter.Global)
         assertFalse(account.pushNotificationsApplyTrust())
     }

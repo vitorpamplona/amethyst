@@ -32,9 +32,10 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,8 +60,9 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 /**
  * The split screen's second tab. Its label says who the tab shows: "Web of Trust" while the
  * filter is on and a network is active, else "Everyone". Tapping it while it is the selected tab
- * opens a menu to switch between the two; the Web of Trust choice points to its settings while
- * no network is active, since it would hide nobody yet.
+ * opens a menu to switch between the two. The menu's choice is the stored one, as in Settings, so
+ * a choice made before a network is ready still applies once it is; while none is active, the Web
+ * of Trust choice says so and points to its settings.
  */
 @Composable
 fun NotificationEveryoneTab(
@@ -75,7 +77,10 @@ fun NotificationEveryoneTab(
     val trustActive = verdicts.isActive
     val filtering = useTrust && trustActive
 
-    var menuOpen by rememberSaveable { mutableStateOf(false) }
+    // Not saveable: a menu reopening by itself after a rotation is a surprise. Closed when the
+    // user swipes away, so it never hangs off a tab that is not selected.
+    var menuOpen by remember { mutableStateOf(false) }
+    LaunchedEffect(selected) { if (!selected) menuOpen = false }
 
     Tab(
         selected = selected,
@@ -107,7 +112,7 @@ fun NotificationEveryoneTab(
                             stringRes(
                                 if (trustActive) Res.string.notification_tab_mode_trust_description else Res.string.notification_tab_mode_trust_inactive,
                             ),
-                        selected = filtering,
+                        selected = useTrust,
                         onClick = {
                             menuOpen = false
                             accountViewModel.account.settings.changeEveryoneNotificationsUseTrust(true)
@@ -117,7 +122,7 @@ fun NotificationEveryoneTab(
                     TabModeItem(
                         title = stringRes(Res.string.notification_tab_everyone),
                         description = stringRes(Res.string.notification_tab_mode_everyone_description),
-                        selected = !filtering,
+                        selected = !useTrust,
                         onClick = {
                             menuOpen = false
                             accountViewModel.account.settings.changeEveryoneNotificationsUseTrust(false)

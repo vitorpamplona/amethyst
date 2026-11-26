@@ -466,7 +466,7 @@ class NotificationFeedFilter(
         }
     }
 
-    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value + "-" + appliesTrust()
+    override fun feedKey(): String = account.userProfile().pubkeyHex + "-" + followList().code + "-" + account.settings.showMessagesInNotifications.value
 
     fun followList(): TopFilter = modeOverride ?: account.settings.defaultNotificationFollowList.value
 

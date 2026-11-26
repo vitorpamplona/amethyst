@@ -96,14 +96,17 @@ private fun DisplaySection(accountViewModel: AccountViewModel) {
             checked = splitByFollows,
             onCheckedChange = { accountViewModel.account.settings.toggleSplitNotificationsEnabled() },
         )
-        SettingsDivider()
-        SettingsSwitchTile(
-            icon = MaterialSymbols.Shield,
-            title = Res.string.everyone_notifications_trust_setting_title,
-            description = Res.string.everyone_notifications_trust_setting_description,
-            checked = everyoneUsesTrust,
-            onCheckedChange = { accountViewModel.account.settings.changeEveryoneNotificationsUseTrust(it) },
-        )
+        // Only with split on: without the Everyone tab the switch has nothing to act on.
+        if (splitByFollows) {
+            SettingsDivider()
+            SettingsSwitchTile(
+                icon = MaterialSymbols.Shield,
+                title = Res.string.everyone_notifications_trust_setting_title,
+                description = Res.string.everyone_notifications_trust_setting_description,
+                checked = everyoneUsesTrust,
+                onCheckedChange = { accountViewModel.account.settings.changeEveryoneNotificationsUseTrust(it) },
+            )
+        }
         SettingsDivider()
         SettingsSwitchTile(
             icon = MaterialSymbols.Mail,
