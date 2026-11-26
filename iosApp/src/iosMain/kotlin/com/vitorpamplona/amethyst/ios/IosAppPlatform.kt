@@ -21,18 +21,37 @@
 package com.vitorpamplona.amethyst.ios
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
+import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
+import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
+import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
+import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
 import com.vitorpamplona.amethyst.ios.tor.IosArti
+import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
- * iOS's [AppPlatform]: the shared bottom bar, as the desktop draws it. Pickers, sharing and the
- * rest of the platform pieces keep the empty defaults until B4, B5 and B7.
+ * iOS's [AppPlatform]: the shared bottom bar, as the desktop draws it, and napplets as screens
+ * ([IosAppLauncher]). Pickers, sharing and the rest of the platform pieces keep the empty defaults
+ * until B4, B5 and B7.
  */
-object IosAppPlatform : AppPlatform {
+class IosAppPlatform(
+    private val modules: IosAppModules,
+) : AppPlatform {
     /** Android's version name (the catalog's `app`, plus the branch off main), from the build. */
     override val appVersionName: String get() = IosBuildInfo.VERSION_NAME
 
@@ -54,4 +73,71 @@ object IosAppPlatform : AppPlatform {
         accountViewModel: AccountViewModel,
         onClick: (Route) -> Unit,
     ) = SharedAppBottomBar(selectedRoute, nav, accountViewModel, onClick)
+
+    @Composable
+    override fun rememberAppLauncher(): AppLauncher {
+        val toaster = rememberToaster()
+        val nappletFailed = stringRes(Res.string.napplet_desktop_open_failed)
+        val siteFailed = stringRes(Res.string.nsite_open_failed)
+        return remember(toaster, nappletFailed, siteFailed) { IosAppLauncher({ modules.nappletHost }, toaster, nappletFailed, siteFailed) }
+    }
+}
+
+/**
+ * NIP-5D napplets open as [Route.NostrApp] screens, which the navigation layout places, as on the
+ * desktop. nSites and webxdc apps don't run here yet (they need their own network route, the plan's
+ * N6), so their cards offer no Open. Web links keep the platform's default (nothing yet).
+ */
+private class IosAppLauncher(
+    private val napplets: () -> IosNappletHost,
+    private val toaster: Toaster,
+    private val nappletFailed: String,
+    private val siteFailed: String,
+) : AppLauncher {
+    override fun launch(
+        app: FavoriteApp,
+        stillLoading: String,
+        nav: INav?,
+    ) {
+        when (app) {
+            is FavoriteApp.WebApp -> launchUrl(app.url, preferTor = false, nav = nav)
+            is FavoriteApp.NostrApp -> {
+                when (val event = LocalCache.getAddressableNoteIfExists(app.coordinate)?.event) {
+                    null -> toaster.show(stillLoading, false)
+                    is NappletManifest -> openNapplet(event, nav)
+                    is RootSiteEvent, is NamedSiteEvent -> toaster.show(siteFailed, false)
+                    else -> Unit
+                }
+            }
+        }
+    }
+
+    override fun launchUrl(
+        url: String,
+        preferTor: Boolean,
+        nav: INav?,
+    ) {}
+
+    override val opensNapplets: Boolean get() = true
+
+    override val opensSites: Boolean get() = false
+
+    override val opensWebxdc: Boolean get() = false
+
+    override fun openNapplet(
+        manifest: NappletManifest,
+        nav: INav?,
+    ) {
+        val event = manifest as Event
+        if (nav == null || !napplets().canRunAsScreen(event)) {
+            Log.w(TAG) { "Refusing to open napplet ${event.id}" }
+            toaster.show(nappletFailed, false)
+            return
+        }
+        nav.nav(Route.NostrApp(favoriteCoordinateOf(event)))
+    }
+
+    private companion object {
+        const val TAG = "IosAppLauncher"
+    }
 }

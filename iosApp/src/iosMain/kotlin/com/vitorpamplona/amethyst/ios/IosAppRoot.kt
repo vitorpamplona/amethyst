@@ -23,12 +23,15 @@ package com.vitorpamplona.amethyst.ios
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.app.AppRoot
 import com.vitorpamplona.amethyst.commons.ui.app.RedialRelaysOnReturn
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.UnavailableScreen
+import com.vitorpamplona.amethyst.commons.ui.navigation.host.composableFromEndArgs
 import com.vitorpamplona.amethyst.commons.ui.tor.TorConnectionFailureDialog
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.napplet.IosNostrAppScreen
 
 /**
  * iOS's answers to the shared app root. The window size picks the shell, as everywhere: the bottom
@@ -68,6 +71,8 @@ class IosAppRoot(
         destinations: NavDestinations,
         accountViewModel: AccountViewModel,
     ) {
+        // A napplet as a screen of its own (plans/2026-11-26-ios-napplets.md, N5), as on the desktop.
+        destinations.composableFromEndArgs<Route.NostrApp>(capWidth = false) { route -> IosNostrAppScreen(route, nav, modules.nappletHost, accountViewModel) }
         // Screens still in jvmAndroid (A4) have ways in from shared menus: show a notice, not a crash.
         destinations.unavailable { UnavailableScreen(nav) }
     }

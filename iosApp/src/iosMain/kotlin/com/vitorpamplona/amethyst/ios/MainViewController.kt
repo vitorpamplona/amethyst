@@ -56,6 +56,7 @@ private val modules by lazy { IosAppModules(appVersion = IosBuildInfo.VERSION_NA
 fun MainViewController(): UIViewController {
     val root = IosAppRoot(modules)
     val services = IosAppServices(modules)
+    val platform = IosAppPlatform(modules)
     modules.sessionManager.loginWithDefaultAccountIfLoggedOff()
     return ComposeUIViewController {
         val viewModels =
@@ -68,7 +69,7 @@ fun MainViewController(): UIViewController {
             CompositionLocalProvider(
                 LocalViewModelStoreOwner provides viewModels,
                 LocalAppServices provides services,
-                LocalAppPlatform provides IosAppPlatform,
+                LocalAppPlatform provides platform,
                 LocalNotePlatform provides IosNotePlatform,
                 LocalPlaybackPlatform provides modules.playbackPlatform,
                 LocalRichTextPlatform provides IosRichTextPlatform,
