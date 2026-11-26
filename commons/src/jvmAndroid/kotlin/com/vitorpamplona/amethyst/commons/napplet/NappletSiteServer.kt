@@ -30,7 +30,7 @@ import java.io.SequenceInputStream
 
 /**
  * What a host serves for one napplet or nSite, whatever its browser: the trusted shell on
- * [NappletWebContract.SHELL_URL] and the launch's verified files on its own [appOrigin]. Android's
+ * [NappletOrigins.shellUrl] ([NappletWebContract.SHELL_URL] unless the host says otherwise) and the launch's verified files on its own [appOrigin]. Android's
  * WebView and the desktop's Chromium only translate requests in and [Response]s out, so the rules
  * below can't drift between them.
  *
@@ -55,6 +55,9 @@ class NappletSiteServer(
     private val imeProxy: Boolean = false,
     // Markup the host adds to the shell's head, before anything else runs there (the desktop's bridge).
     private val shellHead: String = "",
+    // The scheme the host's browser serves the internal hosts on: https, except where the browser
+    // can't intercept it (iOS). [appOrigin] must be on the same scheme.
+    private val origins: NappletOrigins = NappletWebContract.HTTPS,
 ) {
     /**
      * One HTTP response, for the host to hand its browser. A file the page loads as it is (a script,
@@ -128,12 +131,12 @@ class NappletSiteServer(
         if (!method.equals("GET", ignoreCase = true)) {
             // Nothing here answers anything but a GET. Left to the browser, a POST to the app's own
             // host would go out and look that host up: a lookup that says which app is running.
-            val internal = url == NappletWebContract.SHELL_URL || url == appOrigin || url.startsWith("$appOrigin/")
+            val internal = url == origins.shellUrl || url == appOrigin || url.startsWith("$appOrigin/")
             return if (internal || !profile.allowsOffOrigin) methodNotAllowed() else null
         }
         return try {
             when {
-                url == NappletWebContract.SHELL_URL -> shell()
+                url == origins.shellUrl -> shell()
                 url == appOrigin || url.startsWith("$appOrigin/") -> appResource(url, acceptsHtml)
                 // A napplet or webxdc app has no network; a site is a normal web app.
                 profile.allowsOffOrigin -> null

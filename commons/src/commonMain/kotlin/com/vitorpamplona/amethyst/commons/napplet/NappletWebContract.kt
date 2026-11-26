@@ -26,6 +26,30 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
+ * The internal origins of one host's browser: the shell's [origin] and each app's [appOrigin], on
+ * [scheme]. Android's WebView and the desktop's Chromium serve them over `https`
+ * ([NappletWebContract.HTTPS]). WKWebView can't intercept `https` (a scheme handler may not claim a
+ * scheme WebKit handles itself), so iOS serves the same hosts on its own scheme
+ * ([NappletWebContract.NAPPLET_SCHEME]). Each subdomain of either is still its own origin and a
+ * secure context, so the sandbox doesn't change with the scheme.
+ */
+class NappletOrigins(
+    val scheme: String,
+) {
+    /** Where the trusted shell lives. */
+    val origin: String = "$scheme://${NappletWebContract.HOST}"
+
+    /** The trusted shell document (top frame, on [origin], where the native bridge lives). */
+    val shellUrl: String = "$origin/__shell__"
+
+    /** An app's own origin: one subdomain each, webxdc apps under their own parent host. */
+    fun appOrigin(
+        appId: String,
+        profile: HostProfile = HostProfile.WEBSITE,
+    ): String = if (profile == HostProfile.WEBXDC) "$scheme://$appId.${NappletWebContract.WEBXDC_HOST}" else "$scheme://$appId.${NappletWebContract.HOST}"
+}
+
+/**
  * The single source of truth for the napplet **web contract** — the trusted shell page, the injected
  * `window.napplet.*` shim, the internal origin/URLs, and the two Content-Security-Policies that keep
  * the applet boxed in. Every host (the Android `:napplet` WebView today, a desktop CEF host
@@ -39,6 +63,12 @@ object NappletWebContract {
     const val HOST = "napplet.local"
     const val ORIGIN = "https://napplet.local"
 
+    /** The origins Android and Desktop serve: [ORIGIN], [SHELL_URL] and [appOrigin] are these. */
+    val HTTPS = NappletOrigins("https")
+
+    /** The origins a browser that can't intercept `https` serves instead (iOS's WKWebView). */
+    val NAPPLET_SCHEME = NappletOrigins("napplet")
+
     /** The trusted shell document (top frame, on the shell [ORIGIN], where the native bridge lives). */
     const val SHELL_URL = "$ORIGIN/__shell__"
 
@@ -50,7 +80,7 @@ object NappletWebContract {
     fun appOrigin(
         appId: String,
         profile: HostProfile = HostProfile.WEBSITE,
-    ): String = if (profile == HostProfile.WEBXDC) "https://$appId.$WEBXDC_HOST" else "https://$appId.$HOST"
+    ): String = HTTPS.appOrigin(appId, profile)
 
     /**
      * Where webxdc apps live, one subdomain each: a name of their own, so a host can take WebRTC from

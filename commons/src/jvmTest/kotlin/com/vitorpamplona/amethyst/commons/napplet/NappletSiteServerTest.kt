@@ -179,6 +179,29 @@ class NappletSiteServerTest {
         }
 
     @Test
+    fun aHostOnItsOwnSchemeServesTheSameHostsThere() =
+        runBlocking {
+            val origins = NappletWebContract.NAPPLET_SCHEME
+            val appOrigin = origins.appOrigin("nsite1")
+            val server =
+                NappletSiteServer(
+                    blobs = NappletBlobStore(cache, OkHttpClient(), listOf(file("/index.html", "<p>HOME</p>")), emptyList()),
+                    shellHtml = shellHtml,
+                    shimJs = "/*shim*/",
+                    appOrigin = appOrigin,
+                    profile = HostProfile.WEBSITE,
+                    declaredDomains = emptyList(),
+                    origins = origins,
+                )
+            val shell = assertNotNull(server.serve("GET", "napplet://napplet.local/__shell__", acceptsHtml = true))
+            assertContains(shell.readBody().decodeToString(), "iframe.src = 'napplet://nsite1.napplet.local/';")
+            assertContains(assertNotNull(server.serve("GET", "$appOrigin/", acceptsHtml = true)).readBody().decodeToString(), "<p>HOME</p>")
+            // The https shell is not this host's: a site's request there is the browser's to send.
+            assertNull(server.serve("GET", NappletWebContract.SHELL_URL, acceptsHtml = true))
+            assertEquals(405, assertNotNull(server.serve("POST", origins.shellUrl, acceptsHtml = false)).status)
+        }
+
+    @Test
     fun contentTypesSplitIntoMimeAndCharset() {
         assertEquals("text/css" to "utf-8", NappletSiteServer.splitContentType("text/css"))
         assertEquals("application/javascript" to "utf-8", NappletSiteServer.splitContentType("application/javascript"))
