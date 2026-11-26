@@ -12,7 +12,7 @@ name: Amethyst
 options:
   bundleIdPrefix: com.vitorpamplona
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   createIntermediateGroups: true
 targets:
   Amethyst:
