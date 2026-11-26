@@ -50,6 +50,7 @@ import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerInternal
+import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.BetaInteropApi
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
@@ -94,6 +95,7 @@ import platform.posix.sockaddr_in
 import platform.posix.socket
 import platform.posix.socklen_tVar
 import kotlin.concurrent.AtomicReference
+import kotlin.concurrent.Volatile
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -214,7 +216,110 @@ class IosNappletWebEngineTest {
         assertTrue(pumpUntil(10.0) { listener.accepted() > 0 }, "the control page never reached the listener")
     }
 
+    @Test
+    fun aRunInsideANoteCantOpenTheFilePicker() {
+        val reports = Reports()
+        val opened = open(filePickerNapplet(), reports, refusesFilePicker = true)
+        opened.core.start()
+        assertTrue(pumpUntil(20.0) { reports["shadow"] != null }, "the napplet never reported: ${reports.all()}")
+        // Every way to start a pick is cancelled: a click on the input, a click on its label, one on an
+        // input hidden in a shadow root it asked to be closed, and showPicker().
+        assertEquals("true", reports["click"])
+        assertEquals("true", reports["label"])
+        assertEquals("open", reports["shadowMode"])
+        assertEquals("true", reports["shadow"])
+        assertEquals("NotAllowedError", reports["showPicker"])
+        // An app's frame inside it is covered too.
+        assertTrue(pumpUntil(5.0) { reports["nestedClick"] != null }, "the nested frame never reported")
+        assertEquals("true", reports["nestedClick"])
+        Log.w("ATTACK") { "picker: ${reports.all()}" }
+        // And a page that isn't refused clicks normally (the check above can see the difference).
+        val control = Reports()
+        open(filePickerNapplet(), control, refusesFilePicker = false).core.start()
+        assertTrue(pumpUntil(20.0) { control["shadow"] != null }, "the control never reported: ${control.all()}")
+        assertEquals("false", control["click"])
+        assertEquals("closed", control["shadowMode"])
+    }
+
+    @Test
+    fun aFrameCantNavigateTheTopNorOpenWindows() {
+        val reports = Reports()
+        val links = CountingLinks()
+        val opened = open(escapingNapplet(), reports, links = links)
+        opened.core.start()
+        assertTrue(pumpUntil(20.0) { reports["tried"] != null }, "the napplet never reported: ${reports.all()}")
+        pumpUntil(2.0) { false }
+        // The top frame still holds the shell, and the napplet still runs in it.
+        assertEquals(
+            NappletWebContract.NAPPLET_SCHEME.shellUrl,
+            opened.engine.webView.value
+                ?.URL
+                ?.absoluteString,
+        )
+        assertEquals("false", evaluate(opened.engine, "String(document.getElementById('app')===null)"))
+        // Fifty window.open calls without a gesture: no window, and nothing handed to the browser.
+        assertEquals(0, links.external, "a popup without a gesture reached the system browser")
+        // A fake bridge message from the napplet's own document went nowhere.
+        assertNull(reports["forged"], "a frame's DOM event reached the bridge")
+        // Workers lose WebRTC too, or can't be made at all.
+        assertTrue(pumpUntil(5.0) { reports["worker"] != null }, "the worker never reported: ${reports.all()}")
+        Log.w("ATTACK") { "escape: url=${opened.engine.webView.value?.URL?.absoluteString} links=${links.external} reports=${reports.all()}" }
+        assertTrue(reports["worker"] == "undefined" || reports["worker"]!!.startsWith("blocked"), "a worker saw WebRTC: ${reports["worker"]}")
+        assertTrue(reports["sharedWorker"] == "undefined" || reports["sharedWorker"]!!.startsWith("blocked") || reports["sharedWorker"] == "none", "a shared worker saw WebRTC: ${reports["sharedWorker"]}")
+        opened.core.close()
+    }
+
     // ---- the napplets ----
+
+    private fun filePickerNapplet() =
+        """
+        <!doctype html><html><head></head><body><label id="l" for="f">pick</label><input id="f" type="file"><script>
+        (function(){
+          var p=window.__napPort,n=0;
+          function report(k,v){p.postMessage({type:'storage.set',id:'r'+(n++),key:k,value:String(v)});}
+          function cancelled(el){var e=new MouseEvent('click',{bubbles:true,cancelable:true,composed:true});el.dispatchEvent(e);return e.defaultPrevented;}
+          report('click',cancelled(document.getElementById('f')));
+          var seen=false;document.getElementById('f').addEventListener('click',function(e){seen=e.defaultPrevented;});
+          document.getElementById('l').click();
+          report('label',seen);
+          var host=document.createElement('div');document.body.appendChild(host);
+          var root=host.attachShadow({mode:'closed'});root.innerHTML='<input type="file">';
+          report('shadowMode',root.mode);
+          report('shadow',cancelled(root.querySelector('input')));
+          try{document.getElementById('f').showPicker();report('showPicker','none');}catch(e){report('showPicker',e.name);}
+          window.addEventListener('message',function(e){if(e.data&&e.data.nestedClick!==undefined)report('nestedClick',e.data.nestedClick);});
+          var fr=document.createElement('iframe');
+          fr.srcdoc='<input id="g" type="file"><script>var e=new MouseEvent("click",{bubbles:true,cancelable:true});document.getElementById("g").dispatchEvent(e);parent.postMessage({nestedClick:String(e.defaultPrevented)},"*")<\/script>';
+          document.body.appendChild(fr);
+        })();
+        </script></body></html>
+        """.trimIndent()
+
+    private fun escapingNapplet() =
+        """
+        <!doctype html><html><head></head><body><script>
+        (function(){
+          var p=window.__napPort,n=0;
+          function report(k,v){p.postMessage({type:'storage.set',id:'r'+(n++),key:k,value:String(v)});}
+          // The top frame, to the web and to another of our own pages.
+          try{top.location='https://example.org/';}catch(e){}
+          try{top.location.href='${NappletWebContract.NAPPLET_SCHEME.origin}/__shell__?again';}catch(e){}
+          // A popup loop.
+          for(var i=0;i<50;i++){try{window.open('https://example.org/'+i,'_blank');}catch(e){}}
+          // What the shell's bridge object fires, fired on the napplet's own document: the relay listens
+          // only on the shell's, which a frame can't reach.
+          try{document.dispatchEvent(new CustomEvent('${IosNappletWebEngine.OUT_EVENT}',{detail:JSON.stringify({type:'storage.set',id:'x',key:'forged',value:'1'})}));}catch(e){}
+          try{parent.document.dispatchEvent(new CustomEvent('${IosNappletWebEngine.OUT_EVENT}',{detail:'{}'}));report('parentDoc','reached');}catch(e){report('parentDoc',e.name);}
+          // Workers: does WebRTC come back in one?
+          try{var w=new Worker(URL.createObjectURL(new Blob(['postMessage(typeof RTCPeerConnection)'],{type:'text/javascript'})));
+            w.onmessage=function(e){report('worker',e.data);};w.onerror=function(){report('worker','blocked:error');};}catch(e){report('worker','blocked:'+e.name);}
+          if(typeof SharedWorker==='undefined'){report('sharedWorker','none');}else{
+            try{var s=new SharedWorker(URL.createObjectURL(new Blob(['onconnect=function(e){e.ports[0].postMessage(typeof RTCPeerConnection)}'],{type:'text/javascript'})));
+              s.port.onmessage=function(e){report('sharedWorker',e.data);};s.onerror=function(){report('sharedWorker','blocked:error');};s.port.start();}catch(e){report('sharedWorker','blocked:'+e.name);}}
+          setTimeout(function(){report('tried','1');},500);
+        })();
+        </script></body></html>
+        """.trimIndent()
 
     // Stands in for shim.js: makes the port and says hello, as the real shim does before the napplet's
     // own scripts run.
@@ -264,10 +369,12 @@ class IosNappletWebEngineTest {
     private fun open(
         html: String,
         reports: Reports,
+        refusesFilePicker: Boolean = false,
+        links: NappletLinkOpener = NoLinks,
     ): Opened {
         val launch = NappletLaunch(NappletIdentity("aa".repeat(32), "probe"), HostProfile.NAPPLET, NappletCapability.entries.toSet(), emptyList(), "Probe", emptyList(), emptyList())
         val plan = NappletLaunchPlan.of(launch, "bb".repeat(32), useTor = false, appletBlobsUseTor = false, sharedStorageJar = false, origins = NappletWebContract.NAPPLET_SCHEME)
-        val engine = IosNappletWebEngine(plan, dataStore = { WKWebsiteDataStore.nonPersistentDataStore() }, inspectable = false)
+        val engine = IosNappletWebEngine(plan, dataStore = { WKWebsiteDataStore.nonPersistentDataStore() }, refusesFilePicker = refusesFilePicker, inspectable = false)
         val broker = NappletBroker(signer, NappletPermissionLedger(InMemoryNappletPermissionStore()), AllowOnce, relay = NoRelay, storage = reports)
         val shell = NSString.stringWithContentsOfFile(NappletTestFiles.SHELL_HTML, NSUTF8StringEncoding, null) ?: error("no shell at ${NappletTestFiles.SHELL_HTML}")
         val core =
@@ -283,7 +390,7 @@ class IosNappletWebEngineTest {
                 files = { OneFile(html) },
                 shellHtml = { shell.encodeToByteArray() },
                 shimJs = { shim },
-                links = NoLinks,
+                links = links,
                 filePort = null,
                 attendedWhenShown = true,
             )
@@ -386,6 +493,17 @@ class IosNappletWebEngineTest {
         override suspend fun awaitTor(): Boolean = true
 
         override fun release() {}
+    }
+
+    private class CountingLinks : NappletLinkOpener {
+        @Volatile
+        var external = 0
+
+        override fun openExternal(url: String) {
+            external++
+        }
+
+        override fun openNostr(uri: String) {}
     }
 
     private object NoLinks : NappletLinkOpener {

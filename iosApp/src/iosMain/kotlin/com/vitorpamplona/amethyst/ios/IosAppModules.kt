@@ -95,6 +95,7 @@ import com.vitorpamplona.amethyst.commons.tor.supportedOn
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
 import com.vitorpamplona.amethyst.ios.napplet.IosNappletStores
+import com.vitorpamplona.amethyst.ios.napplet.IosNappletWebEngine
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
@@ -440,7 +441,7 @@ class IosAppModules(
      * UIApplication's background and foreground, bridged into the shared Tor lifecycle. iOS
      * suspends a backgrounded app and may reclaim its listening sockets meanwhile, so on the way back
      * Tor's SOCKS listener and the media relay are checked and bound again if they died
-     * (TorManager.onReturnToForeground). The relay pool redials what dropped on its own
+     * (TorManager.onReturnToForeground), and so are the napplet stores' SOCKS routers. The relay pool redials what dropped on its own
      * (RedialRelaysOnReturn), and a network that changed meanwhile arrives through [connectivity].
      */
     val appLifecycle =
@@ -448,6 +449,8 @@ class IosAppModules(
             onReturnToForeground = {
                 torManager.onReturnToForeground()
                 applicationIOScope.launch { IosVideoCache.recheckRelay() }
+                // The napplet stores' SOCKS routers listen on loopback too.
+                if (nappletHostLazy.isInitialized()) applicationIOScope.launch(Dispatchers.Main) { nappletHost.stores.recheckRouters() }
             },
         ).also { it.start() }
 
@@ -478,6 +481,16 @@ class IosAppModules(
     /** Napplets' and nSites' brokers, consent, network choices and blob cache. Built when one first opens. */
     private val nappletHostLazy = lazy { IosNappletHost(this) }
     val nappletHost by nappletHostLazy
+
+    init {
+        // At every start, before any napplet opens (and whether or not one does this run): the stores
+        // a logout could only wipe because a web view still held them go now, and the request filters
+        // a crash left in WebKit's rule store with them.
+        applicationIOScope.launch(Dispatchers.Main) {
+            IosNappletWebEngine.sweepContentRules()
+            IosNappletStores.removePendingStores()
+        }
+    }
 
     // Scheduled posts are hidden on iOS (B13): the store exists, empty, and nothing publishes from it.
     val scheduledPostStore = ScheduledPostStore(filesPath / "scheduled_posts.json")

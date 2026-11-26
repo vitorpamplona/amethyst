@@ -210,8 +210,14 @@ class IosNappletSiteTest {
         Log.w("NSITE") { "direct: socks=${socks.targets()} plain=${plain.targets()} reports=${reports.all()}" }
         assertEquals(NappletRoute.Direct, stores.routeOf(account))
         assertEquals(emptyList(), socks.targets(), "a direct site went through the proxy")
-        // The LAN rule refused the IP literal: nothing asked for /lan on the loopback listener.
-        assertTrue(plain.targets().none { it.contains("/lan") }, "the loopback literal got through: ${plain.targets()}")
+        // The LAN rule refused the IP literal, and the store's router the public name that resolves to
+        // loopback: the loopback listener saw no connection at all.
+        assertEquals(NappletRoute.Direct, stores.routerOf(account)?.route)
+        assertTrue(pumpUntil(10.0) { reports["rebind"] != null }, "the rebind fetch never settled: ${reports.all()}")
+        assertEquals("err", reports["rebind"])
+        assertEquals(emptyList(), plain.targets(), "the local network was reached: ${plain.targets()}")
+        // The open web still works through the router.
+        assertEquals("ok", reports["https"])
     }
 
     @Test
@@ -250,7 +256,7 @@ class IosNappletSiteTest {
         assertTrue(pumpUntil(10.0) { socks2.poll() > 0 }, "the re-pointed store never reached the new port")
         assertTrue(socks2.targets().any { it.startsWith("again.torproject.org") }, "${socks2.targets()}")
 
-        // Tor goes away: the store points nowhere, and the page's next load fails, never direct.
+        // Tor goes away: the store's router refuses everything, and the page's next load fails, never direct.
         torPort = null
         stores.reapplyAll()
         assertEquals(NappletRoute.Blocked, stores.routeOf(account))
@@ -289,6 +295,21 @@ class IosNappletSiteTest {
     }
 
     @Test
+    fun aSiteCantFrameOrLoadAnotherAppsOrigin() {
+        val reports = Reports()
+        val other = NappletWebContract.NAPPLET_SCHEME.appOrigin("other", HostProfile.WEBSITE)
+        val files = OneFile(otherOriginPage(other))
+        val site = open(HostProfile.WEBSITE, "", reports, useTor = false, files = files)
+        site.core.start()
+        assertTrue(pumpUntil(20.0) { reports["own"] != null && reports["other"] != null }, "the page never reported: ${reports.all()}")
+        // Its own picture loads; the same file at another app's origin is not served (only this
+        // launch's host is), and a frame there gets nothing either.
+        assertEquals("ok", reports["own"])
+        assertEquals("err", reports["other"])
+        assertTrue(files.asked().count { it == "/probe.gif" } == 1, "the other origin's request reached the files: ${files.asked()}")
+    }
+
+    @Test
     fun theSiteRequestFilterCompiles() {
         var compiled: Any? = null
         var done = false
@@ -321,8 +342,10 @@ class IosNappletSiteTest {
           i.src='http://amethystprobeonionimage.onion/p.png';
           var s=document.createElement('script');s.onload=function(){report('httpScript','ok');};s.onerror=function(){report('httpScript','err');};
           s.src='http://amethystprobescript.example/x.js';document.head.appendChild(s);
-          // The local network (row 19): an IP literal of the loopback listener.
+          // The local network (row 19): an IP literal of the loopback listener, and a public name that
+          // resolves to it (localtest.me is 127.0.0.1 in public DNS), which only the router can refuse.
           settle('lan',fetch('http://127.0.0.1:${plain.port}/lan',{mode:'no-cors'}));
+          settle('rebind',fetch('https://localtest.me:${plain.port}/rebind',{mode:'no-cors'}));
           // Speculative connections (row 20).
           var l=document.createElement('link');l.rel='preconnect';l.href='https://preconnect-probe.torproject.org';document.head.appendChild(l);
           var d=document.createElement('link');d.rel='dns-prefetch';d.href='//dnsprefetch-probe.torproject.org';document.head.appendChild(d);
@@ -331,6 +354,18 @@ class IosNappletSiteTest {
           if(navigator.serviceWorker){navigator.serviceWorker.register('/sw.js').then(function(){report('swReg','ok');},function(e){report('swReg','err:'+e.name+': '+e.message);});}
           window.addEventListener('message',function(e){if(e.data==='again')fetch('https://again.torproject.org/'+Date.now(),{mode:'no-cors'}).catch(function(){});});
         })();
+        </script></body></html>
+        """.trimIndent()
+
+    private fun otherOriginPage(other: String) =
+        """
+        <!doctype html><html><head></head><body><script>
+        var p=window.__napPort,n=0;
+        function report(k,v){p.postMessage({type:'storage.set',id:'r'+(n++),key:k,value:String(v)});}
+        function probe(k,src){var i=new Image();i.onload=function(){report(k,'ok');};i.onerror=function(){report(k,'err');};i.src=src;}
+        probe('own',location.origin+'/probe.gif');
+        probe('other','$other/probe.gif');
+        var f=document.createElement('iframe');f.src='$other/index.html';document.body.appendChild(f);
         </script></body></html>
         """.trimIndent()
 
@@ -500,11 +535,62 @@ class IosNappletSiteTest {
             return when (requestPath) {
                 "/", "/index.html" -> NappletBlobStore.Blob("/index.html", "00".repeat(32), "text/html", file = null, bytes = html.encodeToByteArray())
                 "/sw.js" -> NappletBlobStore.Blob("/sw.js", "00".repeat(32), "text/javascript", file = null, bytes = "self.addEventListener('fetch',function(){});".encodeToByteArray())
+                "/probe.gif" -> NappletBlobStore.Blob("/probe.gif", "00".repeat(32), "image/gif", file = null, bytes = TINY_GIF)
                 else -> null
             }
         }
 
         override fun isListed(requestPath: String): Boolean = false
+    }
+
+    private companion object {
+        /** A 1x1 transparent GIF. */
+        val TINY_GIF =
+            byteArrayOf(
+                0x47,
+                0x49,
+                0x46,
+                0x38,
+                0x39,
+                0x61,
+                0x01,
+                0x00,
+                0x01,
+                0x00,
+                0x80.toByte(),
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0xFF.toByte(),
+                0xFF.toByte(),
+                0xFF.toByte(),
+                0x21,
+                0xF9.toByte(),
+                0x04,
+                0x01,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x2C,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x01,
+                0x00,
+                0x01,
+                0x00,
+                0x00,
+                0x02,
+                0x02,
+                0x44,
+                0x01,
+                0x00,
+                0x3B,
+            )
     }
 
     /**

@@ -21,7 +21,10 @@
 package com.vitorpamplona.amethyst.ios
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -35,17 +38,23 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalAppNav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
+import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.ios.napplet.IosHeldNappletPane
+import com.vitorpamplona.amethyst.ios.napplet.IosHeldPaperSession
+import com.vitorpamplona.amethyst.ios.napplet.IosInlineNappletPane
 import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
 import com.vitorpamplona.amethyst.ios.tor.IosArti
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
@@ -89,6 +98,60 @@ class IosAppPlatform(
         return remember(toaster, nappletFailed, siteFailed, webxdcFailed, appNav) {
             IosAppLauncher({ modules.nappletHost }, toaster, nappletFailed, siteFailed, webxdcFailed, appNav)
         }
+    }
+
+    @Composable
+    override fun PrefetchNappletFiles(
+        author: String,
+        identifier: String,
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {
+        LaunchedEffect(author, identifier, paths, servers) { runCatchingCancellable { modules.nappletHost.prefetch(author, identifier, paths, servers) } }
+    }
+
+    // A WKWebView in the note, on the same session core as an app screen.
+    override val runsNappletsInline: Boolean get() = true
+
+    @Composable
+    override fun InlineNappletSurface(
+        manifest: NappletManifest,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = modules.nappletHost
+        IosInlineNappletPane(host, instanceId, onStatus, modifier) { host.openInline(manifest, instanceId) }
+    }
+
+    @Composable
+    override fun InlineWebxdcSurface(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+    ) {
+        val host = modules.nappletHost
+        IosInlineNappletPane(host, instanceId, onStatus, modifier) { host.openInlineWebxdc(app, postId, poster, instanceId) }
+    }
+
+    @Composable
+    override fun InlinePaperSurface(
+        html: String,
+        title: String,
+        instanceId: String,
+        onStatus: (InlineNappletStatus) -> Unit,
+        modifier: Modifier,
+        takesWheel: Boolean,
+    ) {
+        val host = modules.nappletHost
+        // Held by the screen's back-stack entry, not the composition: a tab switch and back keeps the
+        // page, scrolled where the reader left it, instead of loading it again from the top.
+        val holder = viewModel(key = "front-page-paper") { IosHeldPaperSession(host) }
+        val session = remember(holder, instanceId, html, title) { holder.open(instanceId, html, title) }
+        IosHeldNappletPane(session, instanceId, onStatus, modifier, takesTouches = takesWheel)
     }
 }
 

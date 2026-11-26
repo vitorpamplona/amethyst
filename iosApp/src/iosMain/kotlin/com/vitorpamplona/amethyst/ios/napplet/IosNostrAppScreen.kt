@@ -67,6 +67,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_waiting
 import com.vitorpamplona.amethyst.commons.ui.components.PlatformBackHandler
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.note.elements.MoreOptionsButton
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -178,7 +179,13 @@ fun IosNostrAppScreen(
     Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(Modifier.fillMaxSize()) {
             val current = session
-            TopBarWithBackButton(title, nav, actions = { if (current != null) SiteRoute(current, host, viewModel::setNetworkMode) })
+            TopBarWithBackButton(title, nav, actions = {
+                if (current != null) SiteRoute(current, host, viewModel::setNetworkMode)
+                // App Store 4.7: the app, site or webxdc post can be reported and its author blocked from
+                // its screen, with the note's own menu (Block / Report and the rest), as in the feed.
+                val reported = note ?: remember(route.coordinate) { host.webxdcPostOf(route.coordinate)?.let(LocalCache::getNoteIfExists) }
+                if (reported != null) MoreOptionsButton(reported, accountViewModel = accountViewModel, nav = nav)
+            })
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 when {
                     current != null -> NostrApp(current, viewModel, nav, host, accountViewModel)

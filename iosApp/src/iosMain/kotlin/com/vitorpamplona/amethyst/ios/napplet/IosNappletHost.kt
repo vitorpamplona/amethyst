@@ -35,9 +35,11 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletThemeColors
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetch
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.blobs.iosNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.gateways.KtorNappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletLaunchPlan
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionServices
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.OkioWebxdcBundles
@@ -50,10 +52,12 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip5aStaticWebsites.NamedSiteEvent
 import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
+import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -91,8 +95,9 @@ import kotlin.concurrent.Volatile
  * nSites reach the web through their account's data store, on Tor or the open web as Android decides
  * ([useTorFor], [stores]); webxdc apps run offline from an archive unpacked under Caches.
  *
- * Not offered yet, so a napplet's `window.napplet` leaves them out: uploads (the file picker is the
- * plan's N7), notifications and NAP-INTENT (a handler would open as a screen of its own).
+ * Uploads go to the account's Blossom servers ([KtorNappletUploadGateway]) and NAP-FS through the
+ * system's document picker ([IosNappletFilePort]). Not offered yet, so a napplet's `window.napplet`
+ * leaves them out: notifications and NAP-INTENT (a handler would open as a screen of its own).
  */
 class IosNappletHost(
     private val modules: IosAppModules,
@@ -152,6 +157,9 @@ class IosNappletHost(
     /** The napplets open as [Route.NostrApp] screens. */
     val screens: StateFlow<List<IosNappletSession>> = mutableScreens.asStateFlow()
 
+    // Apps running inside notes and the front page: no screen of their own, so kept apart from [screens].
+    private val inlineSessions = MutableStateFlow<Set<IosNappletSession>>(emptySet())
+
     // The blob cache is shared, so it is trimmed as screens close, in one pass per burst.
     private val trims = Channel<Unit>(Channel.CONFLATED)
 
@@ -160,8 +168,7 @@ class IosNappletHost(
         // going away blocks a Tor site's store. Watched only then, since watching Tor keeps it running.
         @OptIn(ExperimentalCoroutinesApi::class)
         modules.applicationIOScope.launch {
-            screens
-                .map { it.isNotEmpty() }
+            combine(screens, inlineSessions) { open, inline -> open.isNotEmpty() || inline.isNotEmpty() }
                 .distinctUntilChanged()
                 .flatMapLatest { open -> if (open) modules.torManager.activePortOrNull else emptyFlow() }
                 .distinctUntilChanged()
@@ -174,19 +181,18 @@ class IosNappletHost(
                 .map { (it as? AccountState.LoggedIn)?.account?.pubKey }
                 .distinctUntilChanged()
                 .collect { pubKey ->
-                    screens.value.filter { it.accountPubKey != pubKey }.forEach { withContext(Dispatchers.Main) { closeScreen(it) } }
+                    withContext(Dispatchers.Main) {
+                        screens.value.filter { it.accountPubKey != pubKey }.forEach(::closeScreen)
+                        inlineSessions.value.filter { it.accountPubKey != pubKey }.forEach(::closeInline)
+                    }
                     lock.withLock { brokers.keys.retainAll(setOfNotNull(pubKey)) }
                 }
         }
         modules.applicationIOScope.launch {
             for (ignored in trims) blobCache.trimToSize(NappletBlobCache.DEFAULT_MAX_BYTES)
         }
-        // Compiled request filters of launches that ended in a crash would otherwise stay in WebKit's store.
-        modules.applicationIOScope.launch(Dispatchers.Main) {
-            IosNappletWebEngine.sweepContentRules()
-            // Stores of removed accounts that were still in use when they left: emptied then, gone now.
-            IosNappletStores.removePendingStores()
-        }
+        // The request filters a crash left and the stores a logout could only wipe are cleaned at app
+        // start (IosAppModules), not here: this host is built only when a napplet first opens.
     }
 
     /** Tor's SOCKS port now, or null: a site on Tor waits for one, and never goes direct without it. */
@@ -210,6 +216,33 @@ class IosNappletHost(
      */
     fun dataStoreFor(pubKey: HexKey): WKWebsiteDataStore = stores.storeFor(pubKey)
 
+    /**
+     * Downloads a card's files into the blob cache while it is on screen, so Open starts at once, as
+     * Desktop and Android do ([NappletBlobPrefetch], shared): never in the clear while Tor is on and has
+     * no port yet (the launch waits for it instead), through Tor whenever it runs, and not when the
+     * user's media setting keeps images from loading by themselves.
+     */
+    suspend fun prefetch(
+        author: HexKey,
+        identifier: String,
+        paths: List<PathTag>,
+        servers: List<String>,
+    ) {
+        val account = modules.sessionManager.loggedInAccount() ?: return
+        if (!modules.uiState.showImages()) return
+        val torPort = modules.torManager.activePortOrNull.value
+        if (torPort == null && torEnabled()) return
+        val allowed = NappletBlobPrefetch.prefetchServers(servers)
+        if (paths.isEmpty() || allowed.isEmpty()) return
+        // The partition its screen will use: the account opening it, and the site.
+        val partition = NappletBlobCache.partitionOf(account.pubKey, author, identifier)
+        withContext(Dispatchers.IO) {
+            if (NappletBlobPrefetch.prefetchWith(paths, allowed, blobCache.forSite(partition), partition, http, viaTor = torPort != null)) {
+                NappletBlobPrefetch.trimNowAndThen(blobCache)
+            }
+        }
+    }
+
     /** Trims the shared blob cache soon, off the caller's thread. */
     fun trimBlobCache() {
         trims.trySend(Unit)
@@ -231,6 +264,12 @@ class IosNappletHost(
     // Webxdc apps have no event of their own to find again: the launch waits here for its screen.
     private val pendingWebxdc = HashMap<String, Pair<HexKey, NappletLaunch>>()
 
+    // The post each readied webxdc screen came from, for its report menu.
+    private val webxdcPosts = HashMap<String, HexKey>()
+
+    /** The post a webxdc screen's app was attached to, or null when [routeId] is not one this run readied. Main thread. */
+    fun webxdcPostOf(routeId: String): HexKey? = webxdcPosts[routeId]
+
     /**
      * Readies the webxdc [app] attached to post [postId] by [poster] for a [Route.NostrApp] screen and
      * returns that screen's id: offline, at an origin of its own for this account and app instance.
@@ -246,6 +285,7 @@ class IosNappletHost(
             val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName())
             val routeId = WEBXDC_ROUTE_PREFIX + app.stageKey(poster, postId)
             pendingWebxdc[routeId] = account.pubKey to launch
+            webxdcPosts[routeId] = postId
             routeId
         }
     }
@@ -318,8 +358,80 @@ class IosNappletHost(
     suspend fun removeAccount(pubKey: HexKey) {
         withContext(Dispatchers.Main) {
             screens.value.filter { it.accountPubKey == pubKey }.forEach(::closeScreen)
+            inlineSessions.value.filter { it.accountPubKey == pubKey }.forEach(::closeInline)
             stores.remove(pubKey)
         }
+    }
+
+    /**
+     * Runs [manifest] inside a note as instance [instanceId]: it may use what the user granted the app
+     * but never asks anything ([NappletLaunch.inline]). The note closes it with [closeInline]. Main thread.
+     */
+    fun openInline(
+        manifest: NappletManifest,
+        instanceId: String,
+    ): Result<IosNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run napplets"))
+        return NappletLaunch.fromManifest(manifest).map { launch -> startInline(launch.inline(instanceId), account, useTor = false) }
+    }
+
+    /**
+     * Runs the webxdc [app] posted in [postId] by [poster] inside its note, as instance [instanceId]:
+     * the same offline origin, and so the same storage, its screen has. Main thread.
+     */
+    fun openInlineWebxdc(
+        app: WebxdcApp,
+        postId: HexKey,
+        poster: HexKey,
+        instanceId: String,
+    ): Result<IosNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to run webxdc apps"))
+        return runCatching {
+            val launch = NappletLaunch.fromWebxdc(app, postId, poster, account.pubKey, account.userProfile().toBestDisplayName()).inline(instanceId)
+            startInline(launch, account, useTor = false)
+        }
+    }
+
+    /**
+     * Shows the reader's front page [html] (written, resolved and checked by commons `frontpage`) as
+     * instance [instanceId], as Desktop and Android do: no script runs in it, and its art follows the
+     * user's Tor choice the way a site's traffic does. Main thread.
+     */
+    fun openInlinePaper(
+        html: String,
+        title: String,
+        instanceId: String,
+    ): Result<IosNappletSession> {
+        val account = modules.sessionManager.loggedInAccount() ?: return Result.failure(IllegalStateException("Log in to read your Observer"))
+        return runCatching {
+            val launch = NappletLaunch.forPaper(account.pubKey, title, html).inline(instanceId)
+            val useTor = NappletLaunchPlan.useTorFor(launch.profile, torEnabled()) { networkChoices.useTor(launch.identity.coordinate) }
+            startInline(launch, account, useTor)
+        }
+    }
+
+    private fun startInline(
+        launch: NappletLaunch,
+        account: Account,
+        useTor: Boolean,
+    ): IosNappletSession {
+        val session = IosNappletSession(launch, account.pubKey, useTor, account, brokerFor(account), this, routeId = launch.identity.instanceId.orEmpty())
+        inlineSessions.update { it + session }
+        // The account may have left between reading it and listing the session, after the switch
+        // closed what it found: this one would run on as someone who left.
+        if (modules.sessionManager.loggedInAccount()?.pubKey != account.pubKey) {
+            closeInline(session)
+            throw IllegalStateException("The account changed")
+        }
+        session.pushTheme(themeColors)
+        session.start()
+        return session
+    }
+
+    /** Ends a run inside a note (or the front page). Main thread. */
+    fun closeInline(session: IosNappletSession) {
+        inlineSessions.update { it - session }
+        session.close()
     }
 
     /** Closes a screen's napplet: its questions go with it, and the session's grants with the last one. Main thread. */
@@ -337,6 +449,7 @@ class IosNappletHost(
         if (colors == themeColors) return
         themeColors = colors
         screens.value.forEach { it.pushTheme(colors) }
+        inlineSessions.value.forEach { it.pushTheme(colors) }
     }
 
     /** Whether Tor is on for the app. */
@@ -382,6 +495,9 @@ class IosNappletHost(
             useTor = ::useTor,
             prompts = consent,
             theme = NappletThemeGateway { themeColors },
+            // NAP-UPLOAD to the account's Blossom servers, on the uploads role's clients (Tor as the
+            // settings say for uploads), as the app's own media uploads go.
+            upload = KtorNappletUploadGateway(account, modules.roleBasedHttpClientBuilder::ktorClientForUploads),
         )
 
     private companion object {

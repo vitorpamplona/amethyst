@@ -31,6 +31,11 @@ targets:
         UIBackgroundModes: [audio]
         NSPhotoLibraryAddUsageDescription: Amethyst saves the videos you choose to your photo library.
         NSMicrophoneUsageDescription: Amethyst records the voice messages and voice notes you choose to send.
+        # A napplet's or nSite's <input type=file> opens WebKit's own picker, which offers "Take Photo
+        # or Video": WebKit asks for the camera then, and without this text the app would crash. The
+        # photo library needs no text: WebKit's picker is the system's out-of-process one. Napplets
+        # never get the camera any other way (the web view denies getUserMedia).
+        NSCameraUsageDescription: Amethyst uses the camera only when you take a photo or video to pick as a file in an app or site.
         # Onion relays are mostly ws:// and onion sites http://, which ATS blocks. An onion name only
         # resolves inside Tor, whose circuit is end-to-end encrypted to the service, so plain HTTP is
         # allowed for the `onion` TLD alone; every clearnet http:// stays blocked. Measured on the

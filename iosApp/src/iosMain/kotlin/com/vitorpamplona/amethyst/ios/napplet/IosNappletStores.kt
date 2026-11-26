@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.napplet.session.NappletRoute
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletRouteArbiter
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletRoutePort
 import com.vitorpamplona.amethyst.commons.napplet.session.NappletStorageProfile
+import com.vitorpamplona.amethyst.commons.napplet.socks.IosNappletSocksRouter
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -57,10 +58,13 @@ import kotlin.native.runtime.NativeRuntimeApi
  *
  * WebKit proxies per data store, and every app of one account shares the account's store, so the
  * store's sites share one route, decided as Android decides its process-wide WebView proxy and Desktop
- * its SOCKS router ([NappletRouteArbiter], Tor always wins): a site on Tor puts the store on Tor's
- * SOCKS listener, an open-web site alone leaves it direct, and a Tor site while Tor has no port points
- * it at a port nothing listens on, so its loads fail (`-1004`) and never go direct. Napplets and webxdc
- * apps claim nothing: they have no network (their request filter blocks it all).
+ * its SOCKS router ([NappletRouteArbiter], Tor always wins). Once a site claims it, the store's proxy
+ * is its own loopback router ([IosNappletSocksRouter], Desktop's design on the shared SOCKS code),
+ * whose route follows the claims: a site on Tor sends every connection to Tor's SOCKS port, an
+ * open-web site alone has the router resolve each name and refuse any that lands on this device or its
+ * network, and a Tor site while Tor has no port has every connection refused, so its loads fail and
+ * never go direct. Napplets and webxdc apps claim nothing: they have no network (their request filter
+ * blocks it all).
  *
  * Main thread only: WebKit's stores are.
  */
@@ -74,6 +78,10 @@ class IosNappletStores(
     ) {
         val arbiter = NappletRouteArbiter()
         var applied: NappletRoute? = null
+
+        // The store's proxy, made when a site first claims it, and the port the store points at.
+        val router = IosNappletSocksRouter()
+        var proxiedPort: Int? = null
     }
 
     private val entries = HashMap<String, Entry>()
@@ -92,14 +100,50 @@ class IosNappletStores(
         return entries.getOrPut(id) { Entry(WKWebsiteDataStore.dataStoreForIdentifier(NSUUID(uUIDString = id))) }
     }
 
-    /** [owner], a site of [pubKey]'s, wants Tor or the open web: the store's route follows, and is returned. */
-    fun claim(
+    /**
+     * [owner], a site of [pubKey]'s, wants Tor or the open web: the store's route follows, and is
+     * returned. The store goes behind its router first; null when the router can't listen (or nobody
+     * is logged in), and then the site must not load at all: its store would have no proxy.
+     */
+    suspend fun claim(
         pubKey: HexKey,
         owner: Any,
         useTor: Boolean,
-    ): NappletRoute {
-        val entry = entryFor(pubKey) ?: return NappletRoute.Blocked
-        return apply(entry, entry.arbiter.want(owner, useTor, torPort()))
+    ): NappletRoute? {
+        val entry = entryFor(pubKey) ?: return null
+        val route = entry.arbiter.want(owner, useTor, torPort())
+        if (!proxyThroughRouter(entry)) {
+            entry.router.route = NappletRoute.Blocked
+            return null
+        }
+        return apply(entry, route)
+    }
+
+    // Points the store at its router's port, listening first if needed. False when it can't listen.
+    private suspend fun proxyThroughRouter(entry: Entry): Boolean {
+        val port = entry.router.port() ?: return false
+        if (entry.proxiedPort != port) {
+            entry.store.proxyConfigurations = listOf(socks(port))
+            entry.proxiedPort = port
+            Log.d(TAG) { "store proxy -> router on $port" }
+        }
+        return true
+    }
+
+    /**
+     * Back in the foreground: iOS may have reclaimed a router's listening socket while the app was
+     * suspended. Each listens again (on its port when it can), and its store follows. Main thread.
+     */
+    suspend fun recheckRouters() {
+        entries.values.filter { it.proxiedPort != null }.forEach { entry ->
+            val port = entry.router.recheck()
+            if (port == null) {
+                entry.router.route = NappletRoute.Blocked
+            } else if (port != entry.proxiedPort) {
+                entry.store.proxyConfigurations = listOf(socks(port))
+                entry.proxiedPort = port
+            }
+        }
     }
 
     /** [owner] closed: the store's remaining sites decide its route. */
@@ -133,13 +177,8 @@ class IosNappletStores(
         // A store no site claims has no route of its own: nothing on it has a network.
         if (entry.arbiter.isEmpty && entry.applied == null) return route
         if (route == entry.applied) return route
-        entry.store.proxyConfigurations =
-            when (route) {
-                is NappletRoute.Tor -> listOf(socks(route.port))
-                NappletRoute.Direct -> null
-                // Wanted on Tor and Tor can't be reached: nothing may go out, not even directly.
-                NappletRoute.Blocked -> listOf(socks(DEAD_PORT))
-            }
+        // Wanted on Tor and Tor can't be reached (Blocked): the router refuses everything, never direct.
+        entry.router.route = route
         entry.applied = route
         mutableChanges.update { it + 1 }
         Log.d(TAG) { "store route -> $route" }
@@ -154,16 +193,20 @@ class IosNappletStores(
      * this tries again while they go. True when it is gone.
      */
     suspend fun remove(pubKey: HexKey): Boolean {
-        NappletStorageProfile.uuidFor(pubKey)?.let(entries::remove)
+        NappletStorageProfile
+            .uuidFor(pubKey)
+            ?.let(entries::remove)
+            ?.router
+            ?.close()
         return removeStore(pubKey)
     }
+
+    /** [pubKey]'s store's router, for a test. */
+    internal fun routerOf(pubKey: HexKey): IosNappletSocksRouter? = entryFor(pubKey)?.router
 
     companion object {
         private const val TAG = "IosNappletStores"
         private const val LOOPBACK = "127.0.0.1"
-
-        /** TCP port 1 (tcpmux): nothing listens there, so a blocked store's every load fails at once. */
-        const val DEAD_PORT = 1
 
         private const val REMOVE_ATTEMPTS = 6
         private const val REMOVE_RETRY_MS = 500L
@@ -240,7 +283,7 @@ class IosNappletStores(
 
 /**
  * One launch's [NappletRoutePort] on iOS. A site claims its account's store ([IosNappletStores], Tor
- * always wins among the store's sites); on Tor and with Tor down, the store points nowhere and the
+ * always wins among the store's sites); on Tor and with Tor down, the store's router refuses everything and the
  * launch waits for a port ([awaitTorPort]) before failing closed, so no web view is made meanwhile. A
  * napplet or webxdc app claims nothing and only waits for Tor when its files go through it.
  */
@@ -258,7 +301,8 @@ class IosNappletStoreRoute(
     override val torRunning: Boolean get() = if (usesNetwork) torPort() != null else torRunningForFiles()
 
     override suspend fun claim(useTor: Boolean): Boolean {
-        withContext(Dispatchers.Main) { stores.claim(pubKey, this@IosNappletStoreRoute, useTor) }
+        // No router, no proxy on the store: the site fails closed rather than load on no route at all.
+        withContext(Dispatchers.Main) { stores.claim(pubKey, this@IosNappletStoreRoute, useTor) } ?: return false
         if (!useTor) return true
         val running = awaitTorPort()
         withContext(Dispatchers.Main) { stores.reapplyAll() }

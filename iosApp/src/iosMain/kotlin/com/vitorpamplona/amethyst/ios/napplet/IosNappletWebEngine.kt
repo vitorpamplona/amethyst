@@ -144,8 +144,9 @@ interface NappletJsDialogs {
  * - **Navigation** goes through the shared policy; WebKit names no parent frame, so a frame at the
  *   app's origin is the app's own ([NappletNavigationPolicy.frameByOrigin]). The user's gesture is a
  *   link activation. The top frame only ever holds the shell. Popups never get a window.
- * - No link previews, data detectors, swipe navigation, camera, microphone, motion sensors, file
- *   picker or downloads; the inspector only in a debug build.
+ * - No link previews, data detectors, swipe navigation, camera, microphone, motion sensors or
+ *   downloads; the inspector only in a debug build. `<input type=file>` opens WebKit's own picker
+ *   (the user's photos, camera or files, nothing of the app's), except inside a note.
  *
  * Threads: WebKit calls in on the main thread and is called on it ([loadShell], [evaluateInShell] and
  * [close] hop there); the server's bytes are read off it.
@@ -155,6 +156,12 @@ class IosNappletWebEngine(
     private val plan: NappletLaunchPlan,
     /** The launch's data store, asked for once, on the main thread, as the web view is made. */
     private val dataStore: () -> WKWebsiteDataStore,
+    /**
+     * A run inside a note: `<input type=file>` never opens the system's picker (WebKit on iOS has no
+     * delegate call for it, so a script in every frame cancels the pick), as Android's inline runs
+     * refuse the file chooser.
+     */
+    private val refusesFilePicker: Boolean = false,
     /** Safari's Web Inspector may attach: debug builds only. */
     private val inspectable: Boolean = Platform.isDebugBinary,
 ) : NappletWebEngine {
@@ -173,6 +180,11 @@ class IosNappletWebEngine(
 
     /** The browser, once [loadShell] made it; null again after [close]. Main thread. */
     val webView: StateFlow<WKWebView?> = mutableWebView.asStateFlow()
+
+    private val mutableShellLoaded = MutableStateFlow(false)
+
+    /** Whether the shell's document finished loading: a note shows the page from then on. */
+    val shellLoaded: StateFlow<Boolean> = mutableShellLoaded.asStateFlow()
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val lock = KmpLock()
@@ -261,13 +273,18 @@ class IosNappletWebEngine(
             setURLSchemeHandler(schemeHandler, plan.origins.scheme)
             preferences.javaScriptCanOpenWindowsAutomatically = false
             preferences.fraudulentWebsiteWarningEnabled = true
-            defaultWebpagePreferences.allowsContentJavaScript = plan.profile.runsScripts
+            // The shell is script, whatever runs in its frame: a front page's own frame runs none by its
+            // CSP (`default-src 'none'`), as on Android and Desktop, whose browsers keep script on too.
+            defaultWebpagePreferences.allowsContentJavaScript = true
             dataDetectorTypes = WKDataDetectorTypeNone
             allowsInlineMediaPlayback = true
             limitsNavigationsToAppBoundDomains = false
             val content = userContentController
             for (guard in installed) {
                 content.addUserScript(WKUserScript(scriptOf(guard), WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, false, WKContentWorld.pageWorld))
+            }
+            if (refusesFilePicker) {
+                content.addUserScript(WKUserScript(NappletWebContract.FILE_PICKER_REFUSAL_JS, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, false, WKContentWorld.pageWorld))
             }
             content.addUserScript(WKUserScript(RELAY_JS, WKUserScriptInjectionTime.WKUserScriptInjectionTimeAtDocumentStart, true, world))
             content.addScriptMessageHandlerWithReply(bridgeHandler, world, HANDLER_NAME)
@@ -443,6 +460,7 @@ class IosNappletWebEngine(
     }
 
     private fun onShellLoaded(view: WKWebView) {
+        mutableShellLoaded.value = true
         if (NappletGuard.WEBRTC !in plan.guards) return
         // The runtime half of the guard check, as the console report is on other hosts: the shell's own
         // check stopped it if WebRTC is there, and this fails the launch.

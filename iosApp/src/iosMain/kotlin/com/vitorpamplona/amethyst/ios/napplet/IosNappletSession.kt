@@ -85,7 +85,10 @@ class IosNappletSession(
             origins = NappletWebContract.NAPPLET_SCHEME,
         )
 
-    private val engine = IosNappletWebEngine(plan, dataStore = { host.dataStoreFor(accountPubKey) })
+    /** Whether it runs inside a note: it never asks the user anything, and gets no file picker (as on Android). */
+    val inline: Boolean get() = launch.identity.inline
+
+    private val engine = IosNappletWebEngine(plan, dataStore = { host.dataStoreFor(accountPubKey) }, refusesFilePicker = inline)
 
     /** Where a link the user clicked goes: Safari for the web; a front page's nostr: link into the app. */
     @Volatile
@@ -105,8 +108,8 @@ class IosNappletSession(
             shellHtml = { NappletWebResources.shellHtml() },
             shimJs = { NappletWebResources.shimJs().decodeToString() },
             links = Links(),
-            // NAP-FS needs the file picker (the plan's N7).
-            filePort = null,
+            // NAP-FS through the system's document picker; a run inside a note picks nothing.
+            filePort = if (inline) null else IosNappletFilePort(),
             // Attended only while its screen is on show and the app in front.
             attendedWhenShown = false,
             onClosed = host::trimBlobCache,
@@ -119,6 +122,9 @@ class IosNappletSession(
 
     /** The browser, once it shows. */
     val webView: StateFlow<WKWebView?> get() = engine.webView
+
+    /** Whether the shell finished loading, for a note that shows the page once it has painted. */
+    val loaded: StateFlow<Boolean> get() = engine.shellLoaded
 
     val isClosed: Boolean get() = core.isClosed
 
