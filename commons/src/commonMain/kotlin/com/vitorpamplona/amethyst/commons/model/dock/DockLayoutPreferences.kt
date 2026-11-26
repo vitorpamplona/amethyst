@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.dropWhile
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -92,8 +93,10 @@ class DockLayoutPreferences(
 
     init {
         scope.launch {
-            restoreFromDisk()
-            launch { named.drop(1).collect { persistNamed(it) } }
+            // Saved layouts are written only once the ones on disk were read, so a failed read (or a
+            // save made before it finished) never replaces them with what this run alone saved.
+            val onDisk = restoreFromDisk()
+            if (onDisk != null) launch { named.dropWhile { it == onDisk }.collect { persistNamed(it) } }
             @OptIn(FlowPreview::class)
             layout.drop(1).debounce(SAVE_DELAY_MS).collect { persist(it) }
         }
@@ -118,19 +121,23 @@ class DockLayoutPreferences(
             }
     }
 
-    private suspend fun restoreFromDisk() {
+    /** Reads the layout and the saved layouts; returns the saved layouts on disk, or null when they could not be read. */
+    private suspend fun restoreFromDisk(): Map<String, DockLayout>? =
         try {
             val prefs = store.data.first()
             val restored = prefs[LAYOUT]?.let { DockLayout.fromJson(it) } ?: migrate(prefs)
-            named.value = prefs[SAVED]?.let { decodeNamed(it) }.orEmpty()
+            val onDisk = prefs[SAVED]?.let { decodeNamed(it) }.orEmpty()
+            // A layout saved before the read finished joins the ones on disk.
+            named.update { onDisk + it }
             layout.value = restored
             val now = TimeUtils.now()
             folds.value = restored.states.filterValues { it == PanelState.FOLDED }.mapValues { now }
+            onDisk
         } catch (e: Exception) {
             if (e is CancellationException) throw e
             Log.e("DockLayoutPrefs", "Error reading the dock layout", e)
+            null
         }
-    }
 
     private suspend fun persist(value: DockLayout) {
         try {

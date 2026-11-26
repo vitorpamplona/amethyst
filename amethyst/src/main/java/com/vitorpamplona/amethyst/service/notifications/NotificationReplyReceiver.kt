@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import com.vitorpamplona.amethyst.Amethyst
 import com.vitorpamplona.amethyst.LocalPreferences
 import com.vitorpamplona.amethyst.commons.account.AccountCacheState
+import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.model.marmotGroups.MarmotMentionTags
@@ -40,6 +41,7 @@ import com.vitorpamplona.quartz.nip01Core.tags.people.PTag
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip10Notes.tags.notify
 import com.vitorpamplona.quartz.nip17Dm.messages.ChatMessageEvent
+import com.vitorpamplona.quartz.nip19Bech32.decodePublicKeyAsHexOrNull
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip22Comments.notify
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.isClient
@@ -92,6 +94,7 @@ class NotificationReplyReceiver : BroadcastReceiver() {
         when (intent.action) {
             NotificationUtils.MARK_READ_ACTION -> {
                 notificationManager.cancelAndPrune(notificationId)
+                markChatReadInApp(intent.getStringExtra(NotificationUtils.KEY_ACCOUNT_NPUB), eventId)
             }
 
             // The user swiped the notification away. It is already gone; all that is left
@@ -153,6 +156,26 @@ class NotificationReplyReceiver : BroadcastReceiver() {
             ?.getCharSequence(NotificationUtils.KEY_REPLY_TEXT)
             ?.toString()
             ?: intent.getStringExtra(NotificationUtils.KEY_REPLY_TEXT)
+
+    /**
+     * "Mark read" in the shade marks the chat read in the app too, up to this message, through the
+     * same last-read route its row in Messages reads ([markRoomNoteAsRead]). Otherwise the chat kept
+     * its unread dot, and the Messages badge, for a message the user had just marked read.
+     *
+     * Only while the account and the message are loaded. After the process died neither is, and
+     * starting an account in a broadcast to clear a dot is not worth it: the chat then shows the
+     * message as unread, as it did before.
+     */
+    private fun markChatReadInApp(
+        accountNpub: String?,
+        eventId: String?,
+    ) {
+        if (accountNpub == null || eventId == null) return
+        val pubkey = decodePublicKeyAsHexOrNull(accountNpub) ?: return
+        val account = Amethyst.instance.accountsCache.loadedAccount(pubkey) ?: return
+        val note = LocalCache.getNoteIfExists(eventId) ?: return
+        markRoomNoteAsRead(account, note)
+    }
 
     /**
      * Sends [block] and keeps the notification honest about how it went.

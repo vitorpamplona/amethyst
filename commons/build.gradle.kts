@@ -179,6 +179,9 @@ kotlin {
                 // chats. Desktop only: Android can't run the CLI.
                 api(project(":claudeCodeClient"))
                 api(project(":codexClient"))
+                // The Android devices beside a coding chat (androiddevices/): adb, the emulator's
+                // gRPC screen and input. Desktop only, like the agents that use them.
+                api(project(":androidDeviceClient"))
 
                 // Secure key storage via OS keychain (macOS/Windows/Linux)
                 implementation(libs.java.keyring)

@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
@@ -111,9 +112,14 @@ import com.vitorpamplona.agents.PermissionMode
 import com.vitorpamplona.agents.PermissionRequest
 import com.vitorpamplona.agents.PermissionSuggestion
 import com.vitorpamplona.agents.SlashCommand
+import com.vitorpamplona.amethyst.commons.androiddevices.AndroidDevices
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.ChatFocus
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceChatFocus
+import com.vitorpamplona.amethyst.commons.androiddevices.ui.DeviceUpBadge
 import com.vitorpamplona.amethyst.commons.chats.ui.ThinSendButton
 import com.vitorpamplona.amethyst.commons.claudecode.AccountToolServer
 import com.vitorpamplona.amethyst.commons.claudecode.AgentWorkspace
+import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
 import com.vitorpamplona.amethyst.commons.claudecode.ChatError
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
 import com.vitorpamplona.amethyst.commons.claudecode.ChatKind
@@ -127,6 +133,8 @@ import com.vitorpamplona.amethyst.commons.claudecode.GitHubPullRequests
 import com.vitorpamplona.amethyst.commons.claudecode.GitWorkInfo
 import com.vitorpamplona.amethyst.commons.claudecode.NostrRepoRef
 import com.vitorpamplona.amethyst.commons.claudecode.NoticeKind
+import com.vitorpamplona.amethyst.commons.claudecode.PublishedArtifact
+import com.vitorpamplona.amethyst.commons.claudecode.PublishedArtifacts
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewItem
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewLocation
 import com.vitorpamplona.amethyst.commons.claudecode.ReviewPrompt
@@ -139,9 +147,11 @@ import com.vitorpamplona.amethyst.commons.claudecode.firstPromptLine
 import com.vitorpamplona.amethyst.commons.claudecode.hasOpenWork
 import com.vitorpamplona.amethyst.commons.claudecode.toChatRows
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
+import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.dock.PanelId
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.observeGitStatus
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.verdictLabel
@@ -150,6 +160,8 @@ import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_desc
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_act
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant_permission_screen
+import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle
+import com.vitorpamplona.amethyst.commons.resources.android_device_panel_toggle_desc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_address_review
 import com.vitorpamplona.amethyst.commons.resources.claude_code_ahead_of
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow
@@ -158,6 +170,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_mode
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_project
 import com.vitorpamplona.amethyst.commons.resources.claude_code_allow_rule_session
 import com.vitorpamplona.amethyst.commons.resources.claude_code_app_running
+import com.vitorpamplona.amethyst.commons.resources.claude_code_artifact_open_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_attach
 import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_attach_pick
@@ -192,14 +205,20 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_process_e
 import com.vitorpamplona.amethyst.commons.resources.claude_code_notice_turn_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_open_elsewhere_readonly
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_change_this
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_artifact
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_doc
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_create_this
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_keys_deny
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_publish
+import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_republish
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_run
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_setting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_permission_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_closed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_proposal_merged
+import com.vitorpamplona.amethyst.commons.resources.claude_code_published_count
+import com.vitorpamplona.amethyst.commons.resources.claude_code_published_section
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_waiting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_remove_anyway
@@ -215,6 +234,7 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_review_verdict
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_app
 import com.vitorpamplona.amethyst.commons.resources.claude_code_run_failed
 import com.vitorpamplona.amethyst.commons.resources.claude_code_session_missing
+import com.vitorpamplona.amethyst.commons.resources.claude_code_session_panel
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_data
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_notifications
 import com.vitorpamplona.amethyst.commons.resources.claude_code_settings_starter_privacy
@@ -260,6 +280,7 @@ import com.vitorpamplona.amethyst.commons.ui.feeds.rememberForeverLazyListState
 import com.vitorpamplona.amethyst.commons.ui.layouts.LocalScreenLayout
 import com.vitorpamplona.amethyst.commons.ui.layouts.PaneSplitter
 import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
+import com.vitorpamplona.amethyst.commons.ui.navigation.dock.LocalDockController
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.ShorterTopAppBar
 import com.vitorpamplona.amethyst.commons.ui.note.ArrowBackIcon
@@ -291,6 +312,12 @@ import java.util.concurrent.ConcurrentHashMap
 internal val ChatColumnMaxWidth = 760.dp
 
 private const val LIVE_REFRESH_MS = 5_000L
+
+/** How long the agent must leave the device alone before its next action brings the panel up again. */
+private const val DEVICE_RUN_GAP_MS = 60_000L
+
+/** How fresh the device list behind the top bar's green dot is kept. */
+private const val DEVICE_DOT_REFRESH_MS = 10_000L
 
 /** The agent a chat talks to, as its sentences name it. */
 internal val LocalAgentName = staticCompositionLocalOf { "Claude" }
@@ -444,6 +471,47 @@ fun ClaudeCodeChatScreen(
     // A workspace of fresh clones: its name and repositories stand for the folder's id.
     // From the service's own list, not the disk; a new workstream is in it once its clones are.
     val workspace = remember(state.cwd, state.cloning) { ClaudeCodeService.shared.workspaceAt(state.cwd) }
+    // The dock's Android device panel follows the coding chat in front: its workstream's device, its
+    // folder for Run, and its composer for a screenshot. Where an Android SDK is installed.
+    val canDevice = remember(state.kind) { state.kind == ChatKind.CODE && AndroidSdk.home() != null }
+    val deviceOwner = remember(key, state.cwd, workspace) { ClaudeCodeService.shared.deviceOwner(key, state.cwd) }
+    val dock = LocalDockController.current
+    val chatScope = rememberCoroutineScope()
+    if (canDevice) {
+        DisposableEffect(key, deviceOwner, workspace, state.cwd) {
+            val release =
+                DeviceChatFocus.publish(
+                    ChatFocus(
+                        chatKey = key,
+                        owner = deviceOwner,
+                        ownerLabel = workspace?.title ?: state.title,
+                        folder = File(state.cwd),
+                        agentName = chat.backend.shortName,
+                        attach = { file -> chatScope.launch { attachments.add(listOf(file)) } },
+                    ),
+                )
+            onDispose(release)
+        }
+        // When the agent starts using this chat's device, the panel comes up to show what it does:
+        // once per run of work, so a user who folds it while the agent goes on keeps it folded.
+        LaunchedEffect(key, deviceOwner, dock) {
+            var lastAt = 0L
+            AndroidDevices.shared.activity.collect { a ->
+                if (AndroidDevices.shared.selection.value[deviceOwner] != a.serial) return@collect
+                val now = System.currentTimeMillis()
+                if (now - lastAt > DEVICE_RUN_GAP_MS) dock?.show(PanelId.DEVICES)
+                lastAt = now
+            }
+        }
+        // The top bar's green dot reads the device list: kept fresh while the chat is shown, even
+        // with the panel (which polls it closely) folded.
+        LaunchedEffect(Unit) {
+            while (true) {
+                AndroidDevices.shared.refreshIfStale(DEVICE_DOT_REFRESH_MS)
+                delay(DEVICE_DOT_REFRESH_MS)
+            }
+        }
+    }
     // Sentences in the chat name the agent ("Codex wants to run a command").
     CompositionLocalProvider(LocalAgentName provides chat.backend.shortName, LocalWorkspace provides workspace) {
         BoxWithConstraints {
@@ -465,32 +533,47 @@ fun ClaudeCodeChatScreen(
                         nav = nav,
                         onTitleClick = { renaming = true },
                     ) {
-                        // A workspace of fresh clones: its repositories' pull requests, which the user opens.
-                        if (workspace != null && !showPanel) {
-                            TextButton(onClick = { nav.nav(Route.ClaudeCodePullRequests(key)) }) { Text(stringRes(Res.string.claude_code_pull_requests)) }
-                        }
-                        // With the panel, each repository's changes and pull request are in it, not here.
-                        val git = state.git?.takeIf { !showPanel }
-                        if (git != null && git.hasChanges) {
-                            // A narrow window keeps the title readable: an icon stands for the word. The
-                            // counts are the whole branch's, so the tooltip says what they compare with.
-                            val wide = LocalScreenLayout.current.isLargeScreen
-                            HoverTooltip(changesTooltip(git)) {
-                                TextButton(onClick = { nav.nav(Route.ClaudeCodeChanges(key)) }) {
-                                    if (wide) {
-                                        Text(stringRes(Res.string.claude_code_changes))
-                                    } else {
-                                        Icon(MaterialSymbols.Commit, contentDescription = stringRes(Res.string.claude_code_changes), modifier = Modifier.size(18.dp))
+                        // With the panel, the session's output is in it, not here. Without it, one
+                        // button holds it all: the branch's changes, the workspace's pull requests and
+                        // what the session put on claude.ai, so the title keeps its room.
+                        if (!showPanel) {
+                            SessionMenu(
+                                git = state.git?.takeIf { it.hasChanges },
+                                hasPullRequests = workspace != null,
+                                items = state.items,
+                                cwd = state.cwd,
+                                onChanges = { nav.nav(Route.ClaudeCodeChanges(key)) },
+                                onPullRequests = { nav.nav(Route.ClaudeCodePullRequests(key)) },
+                            )
+                            // Proposing is an action, not something the session made: it keeps its button.
+                            val git = state.git
+                            if (git != null && git.hasChanges && git.repo != null && git.ahead > 0) {
+                                // A merged or closed proposal takes no new version.
+                                val ended = git.proposalId?.let { proposalEnded(it) } ?: false
+                                if (!ended) {
+                                    FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
+                                        Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
                                     }
-                                    Spacer(Modifier.width(6.dp))
-                                    DiffStat(git.insertions, git.deletions)
                                 }
                             }
-                            // A merged or closed proposal takes no new version.
-                            val ended = git.proposalId?.let { proposalEnded(it) } ?: false
-                            if (git.repo != null && git.ahead > 0 && !ended) {
-                                FilledTonalButton(onClick = { nav.nav(Route.ClaudeCodePropose(key)) }) {
-                                    Text(stringRes(if (git.proposalId != null) Res.string.claude_code_update_pr else Res.string.claude_code_create_pr))
+                        }
+                        if (canDevice) {
+                            HoverTooltip(stringRes(Res.string.android_device_panel_toggle_desc)) {
+                                // The dock's device panel; a window without a dock opens the devices screen.
+                                IconButton(onClick = { dock?.toggle(PanelId.DEVICES) ?: nav.nav(Route.AndroidDevices(key)) }) {
+                                    // A green dot while this chat's device is up, panel open or not.
+                                    val devices by AndroidDevices.shared.state.collectAsStateWithLifecycle()
+                                    val picks by AndroidDevices.shared.selection.collectAsStateWithLifecycle()
+                                    val up = remember(devices, picks, deviceOwner) { AndroidDevices.shared.selected(deviceOwner)?.isOnline == true }
+                                    Box {
+                                        Icon(
+                                            MaterialSymbols.PhoneAndroid,
+                                            contentDescription = stringRes(Res.string.android_device_panel_toggle),
+                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                        if (up) DeviceUpBadge(Modifier.align(Alignment.TopEnd))
+                                    }
                                 }
                             }
                         }
@@ -623,7 +706,7 @@ fun ClaudeCodeChatScreen(
                     if (showPanel) {
                         // Dragged like the app's other side panes, and remembered with them.
                         PaneSplitter(onDrag = { delta -> paneWidths.setChangesPanel((panelWidth.value - delta).coerceIn(PullRequestsPanelWidthRange)) })
-                        PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth)
+                        PullRequestsPanel(key = key, busy = state.isBusy, nav = nav, width = panelWidth, items = state.items, cwd = state.cwd)
                     }
                 }
             }
@@ -740,12 +823,15 @@ internal fun ChatTopBar(
 
 /** What the header's counts cover: "Changes · 3 commits ahead of origin/main · 2 files not committed". */
 @Composable
-private fun changesTooltip(git: GitWorkInfo): String =
+private fun changesTooltip(git: GitWorkInfo): String = listOfNotNull(stringRes(Res.string.claude_code_changes), changesDetail(git)).joinToString(" · ")
+
+/** What the counts compare with: "3 commits ahead of main · 2 files not committed". */
+@Composable
+private fun changesDetail(git: GitWorkInfo): String? =
     listOfNotNull(
-        stringRes(Res.string.claude_code_changes),
         git.base?.takeIf { git.ahead > 0 }?.let { pluralStringRes(Res.plurals.claude_code_ahead_of, git.ahead, git.ahead, it) },
         git.uncommitted.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_uncommitted_files, it, it) },
-    ).joinToString(" · ")
+    ).joinToString(" · ").ifEmpty { null }
 
 @Composable
 internal fun DiffStat(
@@ -857,9 +943,18 @@ private fun Messages(
             // A call the user stopped never gets a result: it only spins while the turn runs, and
             // not while it waits for the user.
             val turnRunning = state.status == ChatStatus.WORKING
+            // Waiting on the user is still the turn: a call that runs meanwhile has not stopped.
+            val turnLive = turnRunning || state.status == ChatStatus.NEEDS_APPROVAL
             items(rows, key = { it.key }) { row ->
                 when (row) {
                     is ChatRow.ToolGroup -> ToolGroupRow(row, state.cwd, turnRunning)
+                    is ChatRow.Published ->
+                        PublishedRow(
+                            row,
+                            state.cwd,
+                            turnLive,
+                            waitingForApproval = state.pendingPermissions.any { it.toolUseId == row.call.toolUseId },
+                        )
                     is ChatRow.Single ->
                         when (val item = row.item) {
                             // A new turn: more room above it than between the parts of a reply.
@@ -1438,6 +1533,8 @@ private fun PermissionCard(
     onDeny: () -> Unit,
 ) {
     val view = rememberToolView(request.toolName, request.input, cwd, pending = true)
+    // A page, deck or doc for claude.ai: asked as what it publishes, not as the tool's JSON.
+    val publishing = remember(request.toolName, request.input) { PublishedArtifacts.of(request.toolName, request.input.toString(), null) }
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
         shape = RoundedCornerShape(16.dp),
@@ -1445,7 +1542,7 @@ private fun PermissionCard(
     ) {
         Column(Modifier.padding(CardPadding), verticalArrangement = Arrangement.spacedBy(PartGap)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Icon(publishing?.kind?.symbol() ?: ToolKind.of(request.toolName).symbol(), contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when {
@@ -1453,6 +1550,16 @@ private fun PermissionCard(
                         note != null && request.toolName.startsWith(ACCOUNT_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_act, LocalAgentName.current)
                         note != null && request.toolName.startsWith(SCREEN_TOOLS_PREFIX) -> stringRes(Res.string.amethyst_assistant_permission_screen, LocalAgentName.current)
                         note != null -> stringRes(Res.string.claude_code_permission_setting)
+                        publishing != null ->
+                            stringRes(
+                                when {
+                                    publishing.kind == PublishedArtifact.Kind.DOCUMENT -> Res.string.claude_code_permission_create_doc
+                                    publishing.kind == PublishedArtifact.Kind.TYPED -> Res.string.claude_code_permission_create_artifact
+                                    publishing.change == PublishedArtifact.Change.UPDATED -> Res.string.claude_code_permission_republish
+                                    else -> Res.string.claude_code_permission_publish
+                                },
+                                LocalAgentName.current,
+                            )
                         view is ToolView.FileChange ->
                             // The diff below names the file: the question needn't say it again.
                             stringRes(if (view.newFile) Res.string.claude_code_permission_create_this else Res.string.claude_code_permission_change_this, LocalAgentName.current)
@@ -1469,6 +1576,7 @@ private fun PermissionCard(
                     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = RoundedCornerShape(8.dp), modifier = Modifier.fillMaxWidth()) {
                         Text(note, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp))
                     }
+                publishing != null -> PublishPreview(publishing, cwd)
                 view is ToolView.FileChange ->
                     Box(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) { FileChangeDiff(view) }
                 view is ToolView.Command -> {
@@ -1845,6 +1953,131 @@ private fun ChatMenu(
                 }
             }
         }
+    }
+}
+
+/**
+ * The top bar's one button for what the session made: the branch's changes (with their size),
+ * the workspace's pull requests, and the pages and docs it put on claude.ai. Nothing shows until
+ * there is one of them.
+ */
+@Composable
+private fun SessionMenu(
+    git: GitWorkInfo?,
+    hasPullRequests: Boolean,
+    items: List<ChatItem>,
+    cwd: String,
+    onChanges: () -> Unit,
+    onPullRequests: () -> Unit,
+) {
+    val published = rememberSessionArtifacts(items, cwd)
+    if (git == null && !hasPullRequests && published.isEmpty()) return
+    val open = rememberArtifactOpener()
+    var expanded by remember { mutableStateOf(false) }
+    // A narrow window keeps the title readable: an icon stands for the word.
+    val wide = LocalScreenLayout.current.isLargeScreen
+    val label = stringRes(Res.string.claude_code_session_panel)
+    val tooltip =
+        listOfNotNull(
+            git?.let { changesTooltip(it) },
+            published.size.takeIf { it > 0 }?.let { pluralStringRes(Res.plurals.claude_code_published_count, it, it) },
+        ).joinToString("\n").ifEmpty { label }
+    Box {
+        HoverTooltip(tooltip) {
+            TextButton(onClick = { expanded = true }) {
+                if (wide) Text(label) else Icon(MaterialSymbols.Difference, contentDescription = label, modifier = Modifier.size(18.dp))
+                // The counts that say there is something to look at: the branch's size, the pages up.
+                if (git != null) {
+                    Spacer(Modifier.width(6.dp))
+                    DiffStat(git.insertions, git.deletions)
+                }
+                if (published.isNotEmpty()) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(MaterialSymbols.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(published.size.toString(), style = MaterialTheme.typography.labelMedium)
+                }
+                Icon(MaterialSymbols.KeyboardArrowDown, contentDescription = null, modifier = Modifier.size(16.dp))
+            }
+        }
+        RoundedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            if (git != null || hasPullRequests) {
+                // The rows name themselves ("Changes", "Pull requests"): no label over them.
+                Spacer(Modifier.height(4.dp))
+                RoundedMenuSection {
+                    if (git != null) {
+                        SessionMenuRow(MaterialSymbols.Difference, stringRes(Res.string.claude_code_changes), changesDetail(git), trailing = { DiffStat(git.insertions, git.deletions) }) {
+                            expanded = false
+                            onChanges()
+                        }
+                    }
+                    if (hasPullRequests) {
+                        SessionMenuRow(MaterialSymbols.AltRoute, stringRes(Res.string.claude_code_pull_requests), null) {
+                            expanded = false
+                            onPullRequests()
+                        }
+                    }
+                }
+            }
+            if (published.isNotEmpty()) {
+                SessionMenuLabel(stringRes(Res.string.claude_code_published_section))
+                RoundedMenuSection {
+                    published.forEach { artifact ->
+                        val url = artifact.url ?: return@forEach
+                        PublishedArtifactRow(artifact, Modifier.width(320.dp)) {
+                            open.link(url)
+                            // Nothing opened it: the menu stays, saying so.
+                            if (open.failed == null) expanded = false
+                        }
+                    }
+                }
+                open.failed?.let {
+                    Text(
+                        stringRes(Res.string.claude_code_artifact_open_failed),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SessionMenuLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.grayText,
+        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
+    )
+}
+
+/** A place the session's menu goes to: its icon, name and what it holds, as the artifact rows under it. */
+@Composable
+private fun SessionMenuRow(
+    symbol: MaterialSymbol,
+    title: String,
+    description: String?,
+    trailing: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
+    Row(
+        Modifier
+            .width(320.dp)
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(symbol, contentDescription = null, tint = MaterialTheme.colorScheme.grayText, modifier = Modifier.size(18.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            description?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.grayText, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+        }
+        trailing?.let { Row(verticalAlignment = Alignment.CenterVertically) { it() } }
     }
 }
 

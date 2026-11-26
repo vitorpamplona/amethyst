@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.claudecode.ChatItem
+import com.vitorpamplona.amethyst.commons.claudecode.PublishedArtifacts
 import com.vitorpamplona.amethyst.commons.claudecode.ToolKind
 import com.vitorpamplona.amethyst.commons.claudecode.ToolView
 import com.vitorpamplona.amethyst.commons.claudecode.ToolViews
@@ -161,8 +162,13 @@ internal fun FileChangeRow(
     val view = rememberToolView(call.name, call.input, cwd, pending = !call.isDone)
     val change = view as? ToolView.FileChange
     if (change != null && call.isDone && !call.isError) {
-        // Folded to the file's card: a turn of edits reads as a list of files, each opened on a click.
-        FileChangeDiff(change, startFolded = true)
+        // A page Claude wrote (HTML, SVG) is looked at in the browser, not only read as a diff.
+        val page = rememberLocalPage(change.path, cwd)
+        Column {
+            // Folded to the file's card: a turn of edits reads as a list of files, each opened on a click.
+            FileChangeDiff(change, startFolded = true)
+            page?.let { OpenPageButton(it) }
+        }
     } else {
         ToolCallRow(call, cwd, turnRunning)
     }
@@ -241,7 +247,15 @@ private fun SubagentBody(
     val codeChips = rememberChatCodeChips()
     call.subagent.forEach { item ->
         when (item) {
-            is ChatItem.ToolCall -> ToolCallRow(item, cwd, running)
+            is ChatItem.ToolCall -> {
+                // A page a subagent published gets its card too: it is as much the session's as the chat's own.
+                val published = remember(item) { PublishedArtifacts.of(item)?.takeIf { !item.isError } }
+                if (published != null) {
+                    ArtifactCard(item, rememberTitled(published, cwd), cwd, running)
+                } else {
+                    ToolCallRow(item, cwd, running)
+                }
+            }
             is ChatItem.AssistantText -> RenderMarkdown(item.text, onLink, Modifier.fillMaxWidth().padding(vertical = 2.dp), style = style, textStyle = MaterialTheme.typography.bodySmall, blockComposer = codeChips)
             else -> {}
         }
@@ -329,4 +343,4 @@ internal fun ToolLine(
 /** Half a sans-serif face's x-height, as a share of its size (about 0.53 em in the app's faces). */
 private const val HALF_X_HEIGHT = 0.27f
 
-private const val RESULT_SHOWN = 20_000
+internal const val RESULT_SHOWN = 20_000

@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.wot.onboarding.OkHttpTrustProviderHttp
 import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.amethyst.service.ai.WritingAssistantFactory
 import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationForEvent
+import com.vitorpamplona.amethyst.service.notifications.NotificationUtils.dismissNotificationsReadUpTo
 import com.vitorpamplona.amethyst.service.scheduledposts.ScheduledPostWorker
 import com.vitorpamplona.amethyst.service.uploads.AndroidMediaUploader
 import com.vitorpamplona.amethyst.ui.actions.uploads.VoiceAnonymizer
@@ -160,6 +161,15 @@ class AndroidAccountViewModelHost(
         ContextCompat
             .getSystemService(modules.appContext, NotificationManager::class.java)
             ?.dismissNotificationForEvent(eventId)
+    }
+
+    override fun dismissNotificationsReadUpTo(
+        npub: String,
+        createdAt: Long,
+    ) {
+        ContextCompat
+            .getSystemService(modules.appContext, NotificationManager::class.java)
+            ?.dismissNotificationsReadUpTo(npub, createdAt)
     }
 
     override fun openLightningWallet(invoice: String): Boolean {

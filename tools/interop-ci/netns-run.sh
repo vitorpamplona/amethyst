@@ -83,15 +83,27 @@ echo "netns-run: namespace $NS, lo${ADDRS[*]:+ + ${ADDRS[*]}}; external network 
 # Proxy settings would only point the JVM at a host it cannot reach.
 JTO="$(printf '%s' "${JAVA_TOOL_OPTIONS:-}" | sed -E 's/-D(https?|socks)\.(proxyHost|proxyPort|nonProxyHosts)=[^ ]*//g')"
 
+# CMD gets the caller's environment as explicit NAME=VALUE arguments. sudo resets the
+# environment (the outer `sudo ip netns exec` already drops it), and --preserve-env
+# cannot bring back what that dropped; the sudo-rs on current runners ignores it
+# outright. Lost, the harness never saw INTEROP_RESULTS_DIR, so every suite recorded
+# 0 results and read as aborted while its scenarios passed.
+ENV_ARGS=()
+while IFS= read -r name; do
+  case "$name" in
+    HTTPS_PROXY|HTTP_PROXY|https_proxy|http_proxy|ALL_PROXY|all_proxy|JAVA_TOOL_OPTIONS) ;;
+    *) ENV_ARGS+=("$name=${!name}") ;;
+  esac
+done < <(compgen -e)
+
 AS_USER=()
 if [[ ${#SUDO[@]} -gt 0 ]]; then
-  AS_USER=(sudo -n --preserve-env -u "$(id -un)")
+  AS_USER=(sudo -n -u "$(id -un)")
 fi
 
 set +e
-"${SUDO[@]}" ip netns exec "$NS" "${AS_USER[@]}" env \
-  -u HTTPS_PROXY -u HTTP_PROXY -u https_proxy -u http_proxy -u ALL_PROXY -u all_proxy \
-  PATH="$PATH" HOME="$HOME" JAVA_TOOL_OPTIONS="$JTO" NETNS_ISOLATED=1 AMY_LOCAL_ONLY=1 \
+"${SUDO[@]}" ip netns exec "$NS" "${AS_USER[@]}" env -i "${ENV_ARGS[@]}" \
+  JAVA_TOOL_OPTIONS="$JTO" NETNS_ISOLATED=1 AMY_LOCAL_ONLY=1 \
   "$@"
 rc=$?
 set -e

@@ -23,13 +23,12 @@ package com.vitorpamplona.amethyst.service.uploads.nip96
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
-import android.provider.OpenableColumns
 import android.webkit.MimeTypeMap
-import androidx.core.net.toFile
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploadResult
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.Nip96Uploader
 import com.vitorpamplona.amethyst.commons.service.uploads.nip96.ServerInfoRetriever
 import com.vitorpamplona.amethyst.service.uploads.PreviewMetadataCalculator
+import com.vitorpamplona.amethyst.service.uploads.uriByteSize
 import com.vitorpamplona.quartz.nip96FileStorage.info.ServerInfo
 import com.vitorpamplona.quartz.nip98HttpAuth.HTTPAuthorizationEvent
 import okhttp3.OkHttpClient
@@ -37,15 +36,6 @@ import java.io.IOException
 
 /** Android's extension lookup, ahead of the shared client's own table. */
 fun androidExtensionFor(mimeType: String): String? = MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType)
-
-/** The provider's size for [uri], or null when it has no row, no SIZE column or no value in it. */
-private fun ContentResolver.querySize(uri: Uri): Long? =
-    runCatching {
-        query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use {
-            val sizeIndex = it.getColumnIndex(OpenableColumns.SIZE)
-            if (sizeIndex >= 0 && it.moveToFirst() && !it.isNull(sizeIndex)) it.getLong(sizeIndex) else null
-        }
-    }.getOrNull()
 
 /** Reads [uri] to its end to count its bytes, for a provider that does not report a size. */
 private fun ContentResolver.countBytes(uri: Uri): Long? =
@@ -59,8 +49,6 @@ private fun ContentResolver.countBytes(uri: Uri): Long? =
         }
         total
     }
-
-private fun fileSize(uri: Uri) = runCatching { uri.toFile().length() }.getOrNull()
 
 /** Uploads a content or file [uri] to the NIP-96 server at [serverBaseUrl]. */
 suspend fun Nip96Uploader.upload(
@@ -110,7 +98,7 @@ suspend fun Nip96Uploader.upload(
     val contentResolver = context.contentResolver
     val myContentType = contentType ?: contentResolver.getType(uri)
     // The body declares this length up front, so it must be exact: a wrong one fails the upload.
-    val length = size ?: contentResolver.querySize(uri) ?: fileSize(uri) ?: contentResolver.countBytes(uri) ?: 0
+    val length = size ?: context.uriByteSize(uri) ?: contentResolver.countBytes(uri) ?: 0
 
     val localMetadata = PreviewMetadataCalculator.computeFromUri(context, uri, myContentType)
     return upload(
