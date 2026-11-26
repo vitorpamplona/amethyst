@@ -20,16 +20,20 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedIn.embed
 
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
+
 /**
  * Main-frame load state of an embedded tab (browser web app or napplet/nsite), reported by its
  * controller from the provider's WebView. Lets the favorite screen draw a loading spinner / error+retry
  * overlay over the (z-below) surface instead of leaving a bare black/white void on a slow or failed load.
  *
  * [hasLoadedReal] flips true once a real page has finished, so re-entering a warm, already-loaded tab
- * doesn't flash a spinner over working content.
+ * doesn't flash a spinner over working content. [session] is where a napplet tab's launch is in the
+ * shared session core (null for a browser tab, and until the provider says).
  */
 data class EmbeddedLoadStatus(
     val isLoading: Boolean = false,
     val failed: Boolean = false,
     val hasLoadedReal: Boolean = false,
+    val session: NappletSessionState? = null,
 )

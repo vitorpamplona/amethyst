@@ -522,6 +522,10 @@ class EmbeddedNostrAppController(
                     }
                 }
             }
+            NappletEmbedContract.MSG_SESSION_STATE -> {
+                val state = NappletEmbedContract.sessionStateOf(msg.data) ?: return true
+                publishLoadStatus(loadStatus.copy(session = state))
+            }
             NappletEmbedContract.MSG_ROUTE -> routedOverTor.value = msg.data?.getBoolean(NappletEmbedContract.KEY_ROUTE_TOR, false) ?: false
             NappletEmbedContract.MSG_DOWNLOAD -> {
                 val data = msg.data
@@ -615,7 +619,7 @@ class EmbeddedNostrAppController(
         failed: Boolean,
     ) {
         if (!isLoading && !failed) hasLoadedReal = true
-        publishLoadStatus(EmbeddedLoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal))
+        publishLoadStatus(EmbeddedLoadStatus(isLoading = isLoading, failed = failed, hasLoadedReal = hasLoadedReal, session = loadStatus.session))
     }
 
     private fun publishLoadStatus(status: EmbeddedLoadStatus) {
