@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.error_video_needs_tor
 import com.vitorpamplona.amethyst.commons.resources.error_video_open_in_browser
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed
 import com.vitorpamplona.amethyst.commons.resources.error_video_playback_failed_description
@@ -122,7 +123,12 @@ fun RenderPlaybackError(
                     Spacer(Modifier.height(4.dp))
 
                     Text(
-                        text = stringRes(Res.string.error_video_playback_failed_description, errorCodeName),
+                        text =
+                            if (current.isTorRefusal) {
+                                stringRes(Res.string.error_video_needs_tor)
+                            } else {
+                                stringRes(Res.string.error_video_playback_failed_description, errorCodeName)
+                            },
                         color = Color.White.copy(alpha = 0.85f),
                         style = MaterialTheme.typography.bodySmall,
                         textAlign = TextAlign.Center,
@@ -131,6 +137,9 @@ fun RenderPlaybackError(
                     )
                 }
             }
+
+            // A browser would fetch it directly too, which is what the refusal kept from happening.
+            if (current.isTorRefusal) return@Column
 
             Spacer(Modifier.height(16.dp))
 

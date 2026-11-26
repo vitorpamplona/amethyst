@@ -4520,6 +4520,7 @@
     <string name="error_video_open_in_browser">Open in browser</string>
     <string name="error_video_playback_failed">Can't play this video</string>
     <string name="error_video_playback_failed_description">The codec or format isn't supported on this device (%1$s). Try opening it in your browser.</string>
+    <string name="error_video_needs_tor">Your Tor settings send this video through Tor, and this kind of stream can't go through Tor on this device yet, so it was not loaded.</string>
     <string name="errors">Errors</string>
     <string name="event_sync_search_keywords" translatable="false">negentropy, sync, reconcile, backfill</string>
     <string name="event_sync_title">Relay Sync</string>

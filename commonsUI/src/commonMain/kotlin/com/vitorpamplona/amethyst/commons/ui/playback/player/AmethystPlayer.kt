@@ -242,6 +242,12 @@ data class PlayerFailure(
     /** A live stream fell behind its window: rejoin the live edge rather than give up. */
     val isBehindLiveWindow: Boolean = false,
     /**
+     * The settings route this media through Tor and this player cannot (iOS plays HLS with
+     * AVFoundation's own networking, which takes no proxy), so it refused to play rather than go
+     * direct. Neither a retry nor a browser helps; the Tor settings do.
+     */
+    val isTorRefusal: Boolean = false,
+    /**
      * The engine's full account for the logs (media3: the error code and the nested cause chain,
      * which tells "format truly unsupported" from "decoder failed to start"). Never shown to the user.
      */
@@ -250,5 +256,8 @@ data class PlayerFailure(
     companion object {
         /** What the UI reports itself when frames stop arriving while the sound plays on. */
         fun decodeStall() = PlayerFailure("The video stopped decoding", "DECODING_FORMAT_UNSUPPORTED", isDecoderProblem = true)
+
+        /** The player refused [what] because it would have gone direct although Tor is required. */
+        fun torRefusal(what: String) = PlayerFailure("Refused outside Tor: $what", "TOR_REQUIRED", isTorRefusal = true)
     }
 }

@@ -36,6 +36,7 @@ import com.vitorpamplona.amethyst.commons.ui.layouts.ScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.layouts.rememberScreenLayoutSpec
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.NavDestinations
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.Nav
+import com.vitorpamplona.amethyst.commons.ui.tor.TorConnectionFailureDialog
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.service.resourceusage.DisplayResourceUsageAlert
 import com.vitorpamplona.amethyst.ui.navigation.NavigateIfIntentRequested
@@ -50,7 +51,6 @@ import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabAccountWat
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabLayer
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabPreloader
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.EmbeddedTabThemeWatcher
-import com.vitorpamplona.amethyst.ui.tor.TorConnectionFailureDialog
 
 /** Android's fill of the shared [AppRoot]: the app graph, the Activity's effects and the Android-only screens. */
 object AndroidAppRoot : AppRoot {
