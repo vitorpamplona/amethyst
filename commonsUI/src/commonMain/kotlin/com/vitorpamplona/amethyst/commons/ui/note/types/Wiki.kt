@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,11 +37,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.CachedDocuments
+import com.vitorpamplona.amethyst.commons.content.Document
+import com.vitorpamplona.amethyst.commons.content.NostrInlinePass
+import com.vitorpamplona.amethyst.commons.content.PlainText
+import com.vitorpamplona.amethyst.commons.content.djot.DjotToDocument
+import com.vitorpamplona.amethyst.commons.content.withoutLeadingTitle
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.content.RenderDocument
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
@@ -51,7 +63,9 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
+import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
 
 @Composable
 fun RenderWikiContent(
@@ -74,7 +88,7 @@ private fun WikiArticleHeader(
     val title = remember(noteEvent) { noteEvent.title() }
     val summary =
         remember(noteEvent) {
-            noteEvent.summary()?.ifBlank { null } ?: noteEvent.content.take(200).ifBlank { null }
+            noteEvent.summary()?.ifBlank { null } ?: wikiArticlePreview(noteEvent)
         }
     val image = remember(noteEvent) { noteEvent.image() }
 
@@ -139,3 +153,77 @@ private fun WikiArticleHeader(
         }
     }
 }
+
+/**
+ * Older articles are AsciiDoc, NIP-54's format before Djot: their first non-blank line is an
+ * AsciiDoc document title (`= Title`). That line means nothing in Djot, which has no `=` headings,
+ * so no Djot article starts with one.
+ */
+fun isLegacyAsciiDocWiki(content: String): Boolean {
+    val first = content.lineSequence().firstOrNull { it.isNotBlank() } ?: return false
+    return first.startsWith("= ") && first.length > 2 && !first[2].isWhitespace()
+}
+
+/**
+ * A wiki article's [body] as a document: Djot (NIP-54), or the AsciiDoc of an older article. A first
+ * heading that repeats the title tag is left out, as the article's header already shows it.
+ */
+fun wikiArticleDocument(
+    event: WikiArticleEvent,
+    body: String,
+    tags: ImmutableListOfLists<String>,
+    callbackUri: String?,
+): Document =
+    if (isLegacyAsciiDocWiki(body)) {
+        CachedDocuments.asciidoc(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+    } else {
+        CachedDocuments.djot(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+    }.withoutLeadingTitle(event.title())
+
+/**
+ * A wiki article's body, drawn from its own format by the shared document renderer, translated and
+ * cropped behind "Show more" like a note.
+ */
+@Composable
+fun RenderWikiArticleBody(
+    event: WikiArticleEvent,
+    body: String,
+    id: String,
+    tags: ImmutableListOfLists<String>,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    callbackUri: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    TranslatableRichTextViewer(content = body, id = id, accountViewModel = accountViewModel) { text ->
+        ExpandableTextViewer(content = text, modifier = Modifier.fillMaxWidth(), backgroundColor = backgroundColor, id = id) { shown, modifier ->
+            val document = remember(event, shown, tags, callbackUri) { wikiArticleDocument(event, shown, tags, callbackUri) }
+            val state = remember(shown, tags, callbackUri) { CachedRichTextParser.parseText(shown, tags, callbackUri) }
+            RenderDocument(document, state, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav, modifier)
+        }
+    }
+}
+
+/**
+ * NIP-54 wikilinks: a reference-style link the article doesn't define points to the wiki article
+ * whose `d` tag is the link's text, normalized. Which version to read is the reader's choice; with
+ * no screen yet that lists every author's version of a topic, the link opens this author's own.
+ */
+private fun wikilinkResolver(event: WikiArticleEvent): (String) -> String? =
+    { label ->
+        WikiRedirectEvent
+            .normalizeSlug(label)
+            .ifEmpty { null }
+            ?.let { slug -> NAddress.createNostrUriOrNull(WikiArticleEvent.KIND, event.pubKey, slug, null) }
+    }
+
+// The body's first words as plain text, for a card without a summary tag. Only the start is parsed:
+// a card shows 200 characters, and a long article would otherwise cost a full parse per card.
+private fun wikiArticlePreview(event: WikiArticleEvent): String? =
+    (if (isLegacyAsciiDocWiki(event.content)) event.content else PlainText.of(DjotToDocument(NostrInlinePass.NONE).parse(event.content.take(1000))))
+        .replace('\n', ' ')
+        .trim()
+        .take(200)
+        .ifBlank { null }

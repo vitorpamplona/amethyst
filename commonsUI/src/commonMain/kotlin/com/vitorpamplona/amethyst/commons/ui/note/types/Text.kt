@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownTitle
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -49,6 +50,7 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitCodeLocationBanner
 import com.vitorpamplona.amethyst.commons.nip34Git.ui.GitReplyContext
 import com.vitorpamplona.amethyst.commons.nipsOnNostr.NipTextView
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.GenericLoadable
 import com.vitorpamplona.amethyst.commons.ui.components.ProvideMediaBleed
 import com.vitorpamplona.amethyst.commons.ui.components.SensitivityWarning
@@ -66,15 +68,16 @@ import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.buzz.stream.StreamMessageV2Event
 import com.vitorpamplona.quartz.experimental.nipsOnNostr.NipTextEvent
-import com.vitorpamplona.quartz.experimental.publications.PublicationContentEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hasHashtags
 import com.vitorpamplona.quartz.nip10Notes.BaseThreadedEvent
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
 import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
+import com.vitorpamplona.quartz.nip23LongContent.LongFormContentEvent
 import com.vitorpamplona.quartz.nip34Git.reply.GitReplyEvent
 import com.vitorpamplona.quartz.nip34Git.review.gitCodeLocation
+import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip57Zaps.ZapReceiptEvent
 import com.vitorpamplona.quartz.nipC7Chats.ChatEvent
 
@@ -93,18 +96,19 @@ enum class ReplyRenderType {
  * the same function — keying on the raw body instead would miss the entry for every
  * subject-carrying note and silently copy the untranslated text.
  *
- * A kind-30041 publication section is the other text whose screen string differs from its
- * content: it renders (and translates) the markdown its AsciiDoc body converts to, so that is
- * what this returns for one. A kind-30817 NIP is the third: its header already shows the
+ * Articles in another format (a wiki article's Djot, a publication section's AsciiDoc) translate
+ * and copy as their own source. A kind-30817 NIP is the exception: its header already shows the
  * title and status the content opens with, so this returns the body without them.
  */
 fun displayedNoteText(
     note: Note,
     body: String,
 ): String {
-    (note.event as? PublicationContentEvent)?.let { return publicationSectionMarkdown(it) }
     // A NIP's header shows its title and status, so the body drops the headings that repeat them.
     (note.event as? NipTextEvent)?.let { if (it.content == body) return NipTextView.of(it).body }
+
+    // An article's header shows its title: a first `# Title` line would say it twice.
+    (note.event as? LongFormContentEvent)?.let { return MarkdownTitle.withoutLeadingTitle(body, it.title()) }
 
     val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
     return if (subject != null && !body.contains(subject, ignoreCase = true)) {
@@ -254,28 +258,48 @@ fun RenderTextEvent(
                 val tags =
                     remember(note) { note.event?.tags?.toImmutableListOfLists() ?: EmptyTagList }
 
-                TranslatableRichTextViewer(
-                    content = eventContent,
-                    canPreview = canPreview && !makeItShort,
-                    quotesLeft = quotesLeft,
-                    modifier = Modifier.fillMaxWidth(),
-                    tags = tags,
-                    backgroundColor = backgroundColor,
-                    id =
-                        if (editState.value is GenericLoadable.Loaded) {
-                            (editState.value as GenericLoadable.Loaded<EditState>)
-                                .loaded.modificationToShow.value
-                                ?.idHex ?: note.idHex
-                        } else {
-                            note.idHex
-                        },
-                    callbackUri = callbackUri,
-                    // Lets a Blossom image that its server lost be found on the author's others.
-                    // PrefetchFeedMedia.warmRenderCache parses with the same author to share the cache entry.
-                    authorPubKey = note.author?.pubkeyHex,
-                    accountViewModel = accountViewModel,
-                    nav = nav,
-                )
+                if (noteEvent is WikiArticleEvent) {
+                    // Djot (NIP-54), drawn from its own document: the rich-text viewer would guess a
+                    // format, and Djot is not markdown.
+                    RenderWikiArticleBody(
+                        event = noteEvent,
+                        body = eventContent,
+                        id = note.idHex,
+                        tags = tags,
+                        canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
+                        backgroundColor = backgroundColor,
+                        callbackUri = callbackUri,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                    )
+                } else {
+                    TranslatableRichTextViewer(
+                        content = eventContent,
+                        canPreview = canPreview && !makeItShort,
+                        quotesLeft = quotesLeft,
+                        modifier = Modifier.fillMaxWidth(),
+                        tags = tags,
+                        backgroundColor = backgroundColor,
+                        id =
+                            if (editState.value is GenericLoadable.Loaded) {
+                                (editState.value as GenericLoadable.Loaded<EditState>)
+                                    .loaded.modificationToShow.value
+                                    ?.idHex ?: note.idHex
+                            } else {
+                                note.idHex
+                            },
+                        callbackUri = callbackUri,
+                        // Lets a Blossom image that its server lost be found on the author's others.
+                        // PrefetchFeedMedia.warmRenderCache parses with the same author to share the cache entry.
+                        authorPubKey = note.author?.pubkeyHex,
+                        accountViewModel = accountViewModel,
+                        nav = nav,
+                        // The kind's NIP decides markdown where it names a format (NIP-23 articles,
+                        // NIP-99 classifieds, ...); notes and comments keep the guess.
+                        rendering = TextRendering.of(noteEvent),
+                    )
+                }
             }
 
             if (noteEvent.hasHashtags()) {

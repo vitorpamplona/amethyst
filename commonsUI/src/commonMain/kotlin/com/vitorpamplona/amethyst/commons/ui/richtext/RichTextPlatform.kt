@@ -28,6 +28,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
+import com.vitorpamplona.amethyst.commons.ui.content.RenderMarkdownDocument
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 
@@ -52,7 +53,11 @@ interface RichTextPlatform {
         canPreview: Boolean,
     ): RichTextSegmentRenderer
 
-    /** Renders [content] that the parser recognised as markdown. */
+    /**
+     * Renders [content] as markdown: the shared document renderer on every platform, with this
+     * platform's [segmentRenderer] for the Nostr text in it. A platform overrides it only to wrap it
+     * (the desktop hands links to the system browser).
+     */
     @Composable
     fun Markdown(
         content: String,
@@ -63,7 +68,7 @@ interface RichTextPlatform {
         callbackUri: String?,
         accountViewModel: AccountViewModel,
         nav: INav,
-    )
+    ) = RenderMarkdownDocument(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
 
     /**
      * Renders a decoded secret message (text hidden in an emoji's variation selectors) with the
@@ -79,7 +84,7 @@ interface RichTextPlatform {
         nav: INav,
     )
 
-    /** Text for every platform segment, and markdown shown as its source. */
+    /** Text for every platform segment; markdown keeps its structure, with plain segments. */
     object Plain : RichTextPlatform {
         override fun segmentRenderer(
             accountViewModel: AccountViewModel,
@@ -88,18 +93,6 @@ interface RichTextPlatform {
             callbackUri: String?,
             canPreview: Boolean,
         ): RichTextSegmentRenderer = PlainTextSegmentRenderer
-
-        @Composable
-        override fun Markdown(
-            content: String,
-            tags: ImmutableListOfLists<String>,
-            canPreview: Boolean,
-            quotesLeft: Int,
-            backgroundColor: MutableState<Color>,
-            callbackUri: String?,
-            accountViewModel: AccountViewModel,
-            nav: INav,
-        ) = Text(content)
 
         @Composable
         override fun SecretMessage(

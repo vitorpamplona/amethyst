@@ -114,7 +114,6 @@ import com.vitorpamplona.amethyst.commons.resources.claude_code_question_title
 import com.vitorpamplona.amethyst.commons.resources.claude_code_question_waiting
 import com.vitorpamplona.amethyst.commons.resources.claude_code_questions_title
 import com.vitorpamplona.amethyst.commons.ui.components.HoverTooltip
-import com.vitorpamplona.amethyst.commons.ui.markdown.RenderMarkdown
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
@@ -396,12 +395,13 @@ private fun ChoiceAnswer(
                     val style = rememberChatMarkdownStyle(codeBackground = Color.Transparent)
                     val onLink = rememberChatLinks(nav = null)
                     withPreview.forEach { option ->
-                        RenderMarkdown(
+                        ChatMarkdown(
                             option.preview ?: "",
                             onLink,
                             Modifier.fillMaxWidth().graphicsLayer { alpha = if (option.label == shown.value) 1f else 0f },
                             style = style,
                             textStyle = MaterialTheme.typography.bodySmall,
+                            chips = false,
                         )
                     }
                 }

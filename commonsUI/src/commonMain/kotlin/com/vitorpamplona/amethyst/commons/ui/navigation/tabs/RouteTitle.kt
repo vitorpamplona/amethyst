@@ -28,6 +28,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.vitorpamplona.amethyst.commons.browser.BrowserChrome
+import com.vitorpamplona.amethyst.commons.content.PlainText
+import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownToDocument
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -63,6 +65,9 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.RootSiteEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 
 private const val MAX_TITLE = 40
+
+/** The most of a note's first line that is parsed for its title: a title shows [MAX_TITLE]. */
+private const val MAX_LINE = 400
 
 private val CamelCaseBoundary = Regex("(?<=[a-z0-9])(?=[A-Z])")
 
@@ -100,11 +105,15 @@ fun routeTitle(
                     ?.tags
                     ?.firstOrNull { it.size > 1 && it[0] == "title" && it[1].isNotBlank() }
                     ?.let { return it[1].trim().take(MAX_TITLE) }
+                // Its words, not its markup: "**bold**" reads "bold", "# Title" reads "Title".
                 event
                     ?.content
                     ?.lineSequence()
                     ?.firstOrNull { it.isNotBlank() }
-                    ?.let { return it.trim().take(MAX_TITLE) }
+                    ?.let { line ->
+                        val words = remember(line) { PlainText.of(MarkdownToDocument(null).parse(line.take(MAX_LINE))).ifBlank { line.trim() } }
+                        return words.take(MAX_TITLE)
+                    }
             }
         }
         // The community's name, so two communities open side by side are told apart: their tabs
