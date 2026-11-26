@@ -43,17 +43,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import com.halilibo.richtext.commonmark.CommonMarkdownParseOptions
-import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
-import com.halilibo.richtext.markdown.BasicMarkdown
-import com.halilibo.richtext.ui.RichTextStyle
-import com.halilibo.richtext.ui.material3.RichText
-import com.halilibo.richtext.ui.resolveDefaults
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -71,6 +66,7 @@ import com.vitorpamplona.amethyst.commons.resources.select_push_server
 import com.vitorpamplona.amethyst.commons.ui.components.SpinnerSelectionDialog
 import com.vitorpamplona.amethyst.commons.ui.components.TextSpinner
 import com.vitorpamplona.amethyst.commons.ui.components.TitleExplainer
+import com.vitorpamplona.amethyst.commons.ui.content.RenderPlainMarkdown
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.settings.SettingsBlockTile
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.service.notifications.PushDistributorHandler
@@ -138,18 +134,8 @@ fun SelectNotificationProvider(sharedPrefs: UiSettingsFlow) {
                             title = { Text(stringRes(Res.string.push_server_install_app)) },
                             text = {
                                 val content = stringRes(Res.string.push_server_install_app_description)
-
-                                val astNode =
-                                    remember {
-                                        CommonmarkAstNodeParser(CommonMarkdownParseOptions.MarkdownWithLinks).parse(content)
-                                    }
-
-                                RichText(
-                                    style = RichTextStyle().resolveDefaults(),
-                                    renderer = null,
-                                ) {
-                                    BasicMarkdown(astNode)
-                                }
+                                val uriHandler = LocalUriHandler.current
+                                RenderPlainMarkdown(content, onLinkClick = { runCatching { uriHandler.openUri(it) } })
                             },
                             confirmButton = {
                                 Row(

@@ -20,8 +20,11 @@
  */
 package com.vitorpamplona.amethyst.commons.ui.richtext
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material3.LocalContentColor
@@ -35,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.LinkAnnotation
@@ -137,16 +141,41 @@ private fun ImmutableList<CustomEmoji.Renderable>.buildInlineContent(
                         placeholderVerticalAlign = PlaceholderVerticalAlign.Center,
                     ),
                 ) {
-                    AsyncImage(
-                        model = value.url,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(imagePadding),
-                    )
+                    InlineEmojiImage(value.url, Modifier.fillMaxSize().padding(imagePadding))
                 }
         } else {
             null
         }
     }.associate { it.first to it.second }
+
+/**
+ * An emoji's image; one that fails to load leaves a faint tile in its place, so the sentence does
+ * not read as if a word were missing.
+ */
+@Composable
+private fun InlineEmojiImage(
+    url: String,
+    modifier: Modifier,
+) {
+    var failed by remember(url) { mutableStateOf(false) }
+    if (failed) {
+        Box(
+            modifier
+                .padding(2.dp)
+                .clip(EmojiTileShape)
+                .background(LocalContentColor.current.copy(alpha = 0.15f)),
+        )
+    } else {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            modifier = modifier,
+            onError = { failed = true },
+        )
+    }
+}
+
+private val EmojiTileShape = RoundedCornerShape(4.dp)
 
 /**
  * Calls [onEmojiText] with [text] split into text and emoji spans when it resolves any custom emoji

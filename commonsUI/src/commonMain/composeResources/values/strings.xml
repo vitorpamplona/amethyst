@@ -10890,4 +10890,9 @@
     <string name="dock_layout_name">Layout name</string>
     <string name="dock_forget_layout">Forget %1$s</string>
     <string name="dock_panel_waiting">%1$s is waiting for you</string>
+    <string name="callout_note">Note</string>
+    <string name="callout_tip">Tip</string>
+    <string name="callout_important">Important</string>
+    <string name="callout_warning">Warning</string>
+    <string name="callout_caution">Caution</string>
 </resources>

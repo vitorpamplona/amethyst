@@ -1,7 +1,7 @@
 ---
 title: "Content parsing: one document model, a parser per format, chosen by kind"
 type: refactor
-status: proposed
+status: in progress
 date: 2026-11-25
 owner: commons
 consumers: quartz, commons, commonsUI, cli, new djot-kmp, the compose-richtext fork
@@ -151,23 +151,97 @@ Steps 1–5 (about 6–7 weeks) are what iOS needs. They replace the markdown pa
 A4. The iOS slice (B3) does not wait for them: ordinary notes already use the shared parser.
 Steps 6 and 7 can follow in either order.
 
-**Step 6, first half (2026-11-25).** `djot-kmp` 0.1.0 is the parser (`djot`) and an HTML renderer
-(`djot-html`); Amethyst takes `djot` alone. Until step 3's document model exists, wiki pages go
-through a bridge like the AsciiDoc one: `commons/richtext/DjotToMarkdown.kt` walks the Djot AST and
-writes markdown for today's renderer, cached per event id. It resolves NIP-54 wikilinks to the same
-author's article with the normalized `d` tag (there is no topic screen listing every author's
-version yet), and sends a body whose first line is an AsciiDoc title (`= Title`, the previous
-NIP-54) to the AsciiDoc converter instead. What markdown cannot hold is dropped to its text: spans,
-attributes, highlight, insert, super/subscript, raw blocks. The bridge goes away when Djot maps into
-the document model.
+## Status (2026-11-26)
+
+All seven steps are in, on branches stacked in this order: `claude/djot-wiki` (Djot for wiki pages,
+PR vitorpamplona/amethyst#4906), `claude/content-format-rendering` (step 2), `claude/rich-text-model`
+(steps 3, 4, 6 and 7); quartz `claude/content-format` (step 1); compose-richtext `claude/ios-targets`
+(step 5).
+
+| # | What landed | Where it departs from the plan |
+|---|---|---|
+| 1 | `ContentFormat`, `FormattedContentEvent` on the 16 classes whose NIP names a format, `ContentFormats.KINDS` checked against every kind by `ContentFormatsTest`. | Needs a quartz release; Amethyst builds with `-PquartzDir` until then. |
+| 2 | `TextRendering`: a kind whose NIP says Markdown always renders as markdown; everything else keeps the guess. Passed where those kinds' bodies render. | Comments (1111), DMs (14) and public messages (24) keep the guess too (maintainer, 2026-11-25), not only kind 1. `callbackUri` stays in the parse: it is the note's own URI, carried by media items. |
+| 3 | `commons/content`: `Document`, core and format nodes, `NostrInlinePass` (RichTextParser over the text a format leaves plain), `MarkdownToDocument` on JetBrains markdown 0.7.18. | Parity, see Verification. Scheme-less file names (`photo.jpg`) are not media in documents. |
+| 4 | `commonsUI/content`: `RenderDocument` on `richtext-ui` in `commonMain` (blocks, code chips, Nostr segments through the platform's `RichTextSegmentRenderer`, section anchors), `DocumentRenderers` for formats' own blocks, `RenderPlainMarkdown` for text that is not Nostr's (the coding-agent chat, a string resource). `CachedDocuments` parses once per text and the feed prefetcher warms it. The commonmark path, `BareUrlExtension`, `InlineCodeChips`, `MarkdownMediaRenderer`, `richtext-markdown`, `richtext-commonmark`, commonmark and autolink are gone. | The cache is keyed by text (and tags, author, callback URI), not by event id: a translated or cropped body is a different document. |
+| 5 | The fork adds `iosArm64`/`iosSimulatorArm64` to `richtext-ui` and `-material3` and moves to Kotlin 2.4.21, CMP 1.12.2, AGP 9.5.0. | Stays on JitPack (maintainer, 2026-11-26). JitPack drops the classifier from the iOS metadata variant's file name in the Gradle module it serves; a component metadata rule in `settings.gradle.kts` points it at the real `-metadata.jar`. The two parser modules stay in the fork, unused by Amethyst. |
+| 6 | `DjotToDocument`: everything Djot has (highlight, insert, super/subscript, spans and divs with classes, definition lists, footnotes), NIP-54 wikilinks and `nostr:` targets. `DjotToMarkdown` is gone. | |
+| 7 | `AsciiDocToDocument`: sections, lists, checklists, description lists, admonitions as callouts, listing/literal/source, quote/sidebar/example/open blocks, tables, images, footnotes, xrefs, wikilinks, link macros without their attributes (`[Rupelian,role=orange]` showed the role). Publications and legacy wiki articles use it; `CachedAsciiDocToMarkdown` is gone. | quartz's `AsciiDocToMarkdown` is still there for other clients. |
+
+A translated or copied article is its own source now (Djot, AsciiDoc), not the markdown it used to
+convert to.
+
+Finishing touches found by running the app (2026-11-26):
+
+- **Callouts** (GitHub `> [!TIP]`, AsciiDoc `NOTE:` and `[WARNING]` blocks, Djot `::: warning`
+  divs) draw as a tinted panel with an accent bar and the kind's name, in the theme's colors.
+  richtext-ui's `InfoPanel` was a light pastel box that glared in dark mode.
+- **An article's first heading is dropped when it repeats the title tag**, which the header
+  already shows: wiki articles through `Document.withoutLeadingTitle` (a legacy AsciiDoc article's
+  `= Title` line is the usual case), NIP-23 articles through `MarkdownTitle.withoutLeadingTitle` on
+  a first `#`/`##` line.
+- **A note's tab title reads its words**, not its markup (`**bold**` reads "bold").
+- **Code blocks highlight 20-odd programming languages** (`ProgramHighlighter`: Kotlin, Java,
+  Swift, Rust, Go, C/C++, C#, JS/TS, Python, Ruby, shells, SQL, Lua, TOML, PHP, Dart, Scala):
+  keywords, types, calls, strings, numbers and comments. JSON and YAML keep `CodeHighlighter`.
+  `MarkdownChunks.split`, which existed only to pull code out for the old renderer, is gone.
+- **A custom emoji whose image fails** leaves a faint tile instead of a gap.
+- **Audit, 2026-11-26** (code review of the branch), fixed:
+  - Code blocks in quotes and list items kept the container's `> ` and indentation.
+  - Deep nesting overflowed the stack: each mapper now caps blocks and inlines together at
+    `Document.MAX_DEPTH` (32) and keeps only the words past it. Markdown's input is also capped at
+    32 quote markers per line, since JetBrains' parser ran out of memory on 20,000.
+  - AsciiDoc was quadratic on blank runs in lists, on unclosed marks and per character (a
+    substring per macro check). Closing marks and brackets are now found once each.
+  - `NostrInlinePass` rebuilt the `imeta` and emoji maps for every run of text: `TagContext`
+    builds them once per event.
+  - The prefetcher, copy and translation now see the same text the card draws (`displayedNoteText`).
+  - Ordered lists that start at 0, a cache hit that only compared the tags' hash, and chip spacing
+    in the chat with chips off.
+  `HostileInputTest` runs every format against deep quotes, lists and emphasis, unclosed marks
+  and long blank runs.
+- **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
+  dropped.
+- **Markdown footnotes** (GitHub's `[^label]` and `[^label]: text`), which both the old renderer
+  and JetBrains' parser left as literal text, found by the before/after captures.
+  `MarkdownFootnotes` takes the definitions out of the source before it is parsed (not inside
+  code fences), with their indented and lazy continuation lines. Each note is then parsed once,
+  numbered in the order it is first called, and drawn in the same `Footnotes` block as Djot's
+  and AsciiDoc's. A call with no note stays text, and a note nobody calls is not drawn.
+- **One code block for documents and the coding-agent chat** (`CodeBlockBody`): the chat's header
+  (the language and a copy button) and the documents' highlighting. Articles, wikis and long-form
+  notes gained the copy button; the chat's code gained highlighting. The chat wraps long lines in
+  its narrow column, documents scroll them sideways.
 
 ## Verification
 
 - **Parity harness (step 3):** fetch a few hundred real kind-30023 articles with `amy`, render
   each through the old and the new path, and report structural differences. Each difference is
   either a bug or a documented behavior change.
+  **Run 2026-11-26** on 400 recent articles: 395 with the same structure (headings, paragraphs,
+  lists and items, quotes, code, tables, rules, images, links, emphasis). The five left: three
+  plain emails (a mail link before, an email segment that renders as one now), a single-tilde
+  strikethrough (`~x~`, which JetBrains' parser does not read; it is subscript in Djot anyway) and
+  an escaped star before a closing `**`. The run found and fixed Windows line endings,
+  angle-bracketed link destinations (linked images were dropped), `<email>` autolinks, URLs and
+  hashtags detected again inside a link's own text, and file names read as images. The harness
+  (`MarkdownParityTest`) left with the old parser.
 - **Model tests** in `commonTest`, so CI runs them on the JVM and on the iOS simulator.
 - **Djot:** the official conformance suite in `djot-kmp`.
+- **Parse time, 2026-11-26** (JVM, warm, `commons:jvmTest`): a 28 KB markdown article 9.6 ms, a
+  15 KB Djot article 2.6 ms, 15 KB of AsciiDoc 2.2 ms, a 70-character note 24 µs. The feed
+  prefetcher parses on a background thread, so a card's first frame finds the document cached; a
+  long article opened from a link parses once in composition.
+- **Cache memory, 2026-11-26:** 60 real kind-30023 articles parsed five times over and kept: 15 KB
+  per document, about 3 bytes per character of source. `CachedDocuments` keeps 100, so about 1.5 MB
+  for typical articles and 4 to 5 MB if every one is long. It stays at 100; `trimToSize(4)` still
+  runs on memory pressure.
+- **Run 2026-11-26** in the headless desktop app against a local `amy serve` relay: a markdown
+  article (emphasis, code chips, hashtag, task list, ordered list, callout, quote, aligned table,
+  highlighted code, a broken image's error card), a Djot wiki (highlight, insert, sub/superscript,
+  wikilink, definition list, callout div, captioned table, footnotes), a legacy AsciiDoc wiki
+  (admonitions, checklist, titled table, footnote, `kbd:`), a NIP-23 article that opens with its
+  title, and a kind-1 note. No exceptions in the log.
 - **Benchmarks, before and after:** `RichTextParserBenchmark`; the desktop scroll benchmark
   (`-Damethyst.scrollBench`); parse time of long articles on an Android device; memory of the
   event-keyed cache at its chosen size.
@@ -188,5 +262,4 @@ the document model.
 
 ## Open
 
-1. **Cache size**, from the memory measurement.
-2. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).
+1. **Kind-1 layout:** whether plain Nostr text moves onto `RichTextString` (decision 8).

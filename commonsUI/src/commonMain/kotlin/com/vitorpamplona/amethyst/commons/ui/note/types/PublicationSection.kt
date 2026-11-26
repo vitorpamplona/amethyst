@@ -41,6 +41,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.CachedDocuments
+import com.vitorpamplona.amethyst.commons.content.asciidoc.AsciiDocToDocument
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
@@ -52,13 +54,13 @@ import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteEvent
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.publication_untitled_section
-import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.LoadNote
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.content.RenderDocument
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
-import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
@@ -77,11 +79,10 @@ import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
  * Unlike the kind-30040 index this one *is* prose, so it renders as a titled body.
  *
  * NKBIP-01 says the body may be **AsciiDoc**, and for this kind the reference implementation
- * treats it as AsciiDoc unconditionally rather than sniffing — so we do the same. The body goes
- * through [AsciiDocToMarkdown] and then the same CommonMark renderer that draws kind-30023
- * long-form, which brings media, imeta and `nostr:` link handling with it for free. See that
- * converter for what it does and does not cover; anything it does not recognize is passed
- * through as the plain text it already was.
+ * treats it as AsciiDoc unconditionally rather than sniffing, so we do the same. The body is parsed
+ * into the shared document model ([AsciiDocToDocument]) and drawn by the renderer every format
+ * uses, with media, imeta and `nostr:` links as in a note. Anything the parser does not recognize
+ * stays the plain text it already was.
  *
  * Like a kind-1 note, the body is offered for translation and cropped to a preview with
  * "Show More": a chapter runs to tens of KB, far past what a feed card should show unasked.
@@ -105,11 +106,7 @@ fun RenderPublicationSection(
 
     val title = remember(noteEvent) { noteEvent.titleOrIdentifier() }
 
-    // Cached across compositions, not just remembered: `remember` is dropped the moment the card
-    // leaves the lazy list, and at chapter size the conversion is far from free (worst measured
-    // 7.2ms on a desktop JVM for a 13.5 KB section, and a phone is slower), so scrolling back to
-    // a chapter would re-convert it on the composition thread every time.
-    val markdown = remember(noteEvent) { publicationSectionMarkdown(noteEvent) }
+    val body = noteEvent.content
 
     Column(Modifier.fillMaxWidth()) {
         // A chapter arrived at from a search, a mention or a wikilink has nothing around it to say
@@ -128,17 +125,15 @@ fun RenderPublicationSection(
             overflow = TextOverflow.Ellipsis,
         )
 
-        if (markdown.isNotBlank()) {
+        if (body.isNotBlank()) {
             val tags = remember(noteEvent) { noteEvent.tags.toImmutableListOfLists() }
             val callbackUri = remember(note) { note.toNostrUri() }
-            val platform = LocalRichTextPlatform.current
 
-            // Translated and cropped the way a kind-1 note is. The converted markdown is what gets
-            // translated, and the markdown renderer draws it directly: going through the rich-text
-            // viewer would re-detect the format on every crop, and a chapter whose first lines
-            // happen to carry no markdown syntax would render its emphasis as raw underscores.
+            // Translated and cropped the way a kind-1 note is: the AsciiDoc is what gets translated,
+            // and what shows is parsed from it, once per text (CachedDocuments), since a chapter runs
+            // to tens of KB and a card that scrolls back must not parse it again.
             TranslatableRichTextViewer(
-                content = markdown,
+                content = body,
                 id = noteEvent.id,
                 accountViewModel = accountViewModel,
             ) { text ->
@@ -148,18 +143,9 @@ fun RenderPublicationSection(
                     backgroundColor = backgroundColor,
                     id = noteEvent.id,
                 ) { shown, modifier ->
-                    Column(modifier) {
-                        platform.Markdown(
-                            content = shown,
-                            tags = tags,
-                            canPreview = canPreview && !makeItShort,
-                            quotesLeft = quotesLeft,
-                            backgroundColor = backgroundColor,
-                            callbackUri = callbackUri,
-                            accountViewModel = accountViewModel,
-                            nav = nav,
-                        )
-                    }
+                    val document = remember(shown, tags, callbackUri) { CachedDocuments.asciidoc(shown, tags, callbackUri, noteEvent.pubKey, wikilinkResolver(noteEvent)) }
+                    val state = remember(shown, tags, callbackUri) { CachedRichTextParser.parseText(shown, tags, callbackUri) }
+                    RenderDocument(document, state, canPreview && !makeItShort, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav, modifier)
                 }
             }
         }
@@ -171,13 +157,6 @@ fun RenderPublicationSection(
         }
     }
 }
-
-/**
- * The markdown a section's AsciiDoc body renders as. It is also the exact string handed to the
- * translator, and so the key the translation cache stores the result under: the copy-text menus
- * look the translation up through [displayedNoteText], which calls this for a section.
- */
-fun publicationSectionMarkdown(event: PublicationContentEvent): String = CachedAsciiDocToMarkdown.convert(event.id, event.content, wikilinkResolver(event))
 
 /**
  * The index a section belongs to, as one tappable line above the chapter title.

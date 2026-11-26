@@ -90,6 +90,7 @@ import com.vitorpamplona.amethyst.commons.resources.nip82_os_wasm
 import com.vitorpamplona.amethyst.commons.resources.nip82_os_windows
 import com.vitorpamplona.amethyst.commons.resources.nip82_section_downloads
 import com.vitorpamplona.amethyst.commons.resources.nip82_version_label
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.softwareapps.DownloadGroups
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareAssetDownloads
 import com.vitorpamplona.amethyst.commons.softwareapps.SoftwareCpu
@@ -405,6 +406,7 @@ private fun ReleaseNotes(
         authorPubKey = event.pubKey,
         accountViewModel = accountViewModel,
         nav = nav,
+        rendering = TextRendering.of(event),
     )
 }
 

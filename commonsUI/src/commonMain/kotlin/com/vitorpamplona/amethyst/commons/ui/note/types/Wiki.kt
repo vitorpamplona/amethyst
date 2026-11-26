@@ -29,6 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,14 +37,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.CachedDocuments
+import com.vitorpamplona.amethyst.commons.content.Document
+import com.vitorpamplona.amethyst.commons.content.NostrInlinePass
+import com.vitorpamplona.amethyst.commons.content.PlainText
+import com.vitorpamplona.amethyst.commons.content.djot.DjotToDocument
+import com.vitorpamplona.amethyst.commons.content.withoutLeadingTitle
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.preview_card_image_for
-import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
-import com.vitorpamplona.amethyst.commons.richtext.CachedDjotToMarkdown
-import com.vitorpamplona.amethyst.commons.richtext.DjotToMarkdown
+import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
+import com.vitorpamplona.amethyst.commons.ui.components.ExpandableTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalMediaCapture
 import com.vitorpamplona.amethyst.commons.ui.components.MyAsyncImage
+import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
+import com.vitorpamplona.amethyst.commons.ui.content.RenderDocument
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeader
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DefaultImageHeaderBackground
@@ -54,7 +63,6 @@ import com.vitorpamplona.amethyst.commons.ui.theme.StdVertSpacer
 import com.vitorpamplona.amethyst.commons.ui.theme.imageModifier
 import com.vitorpamplona.amethyst.commons.ui.theme.subtleBorder
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.publications.AsciiDocToMarkdown
 import com.vitorpamplona.quartz.nip19Bech32.entities.NAddress
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
 import com.vitorpamplona.quartz.nip54Wiki.WikiRedirectEvent
@@ -147,26 +155,56 @@ private fun WikiArticleHeader(
 }
 
 /**
- * The markdown a wiki article's Djot body (NIP-54) renders as. It is also the exact string handed
- * to the translator, and so the key the translation cache stores the result under: the copy-text
- * menus look the translation up through [displayedNoteText], which calls this for an article.
+ * Older articles are AsciiDoc, NIP-54's format before Djot: their first non-blank line is an
+ * AsciiDoc document title (`= Title`). That line means nothing in Djot, which has no `=` headings,
+ * so no Djot article starts with one.
  */
-fun wikiArticleMarkdown(
+fun isLegacyAsciiDocWiki(content: String): Boolean {
+    val first = content.lineSequence().firstOrNull { it.isNotBlank() } ?: return false
+    return first.startsWith("= ") && first.length > 2 && !first[2].isWhitespace()
+}
+
+/**
+ * A wiki article's [body] as a document: Djot (NIP-54), or the AsciiDoc of an older article. A first
+ * heading that repeats the title tag is left out, as the article's header already shows it.
+ */
+fun wikiArticleDocument(
     event: WikiArticleEvent,
-    body: String = event.content,
-): String =
-    when {
-        // Older articles are AsciiDoc, NIP-54's format before Djot: the publications' converter reads them.
-        DjotToMarkdown.isLegacyAsciiDoc(body) ->
-            if (body == event.content) {
-                CachedAsciiDocToMarkdown.convert(event.id, body, wikilinkResolver(event))
-            } else {
-                AsciiDocToMarkdown.convert(body, wikilinkResolver(event))
-            }
-        body == event.content -> CachedDjotToMarkdown.convert(event.id, body, wikilinkResolver(event))
-        // A body other than the event's own (an edit shown in its place) is not cached under its id.
-        else -> DjotToMarkdown.convert(body, wikilinkResolver(event))
+    body: String,
+    tags: ImmutableListOfLists<String>,
+    callbackUri: String?,
+): Document =
+    if (isLegacyAsciiDocWiki(body)) {
+        CachedDocuments.asciidoc(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+    } else {
+        CachedDocuments.djot(body, tags, callbackUri, event.pubKey, wikilinkResolver(event))
+    }.withoutLeadingTitle(event.title())
+
+/**
+ * A wiki article's body, drawn from its own format by the shared document renderer, translated and
+ * cropped behind "Show more" like a note.
+ */
+@Composable
+fun RenderWikiArticleBody(
+    event: WikiArticleEvent,
+    body: String,
+    id: String,
+    tags: ImmutableListOfLists<String>,
+    canPreview: Boolean,
+    quotesLeft: Int,
+    backgroundColor: MutableState<Color>,
+    callbackUri: String,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    TranslatableRichTextViewer(content = body, id = id, accountViewModel = accountViewModel) { text ->
+        ExpandableTextViewer(content = text, modifier = Modifier.fillMaxWidth(), backgroundColor = backgroundColor, id = id) { shown, modifier ->
+            val document = remember(event, shown, tags, callbackUri) { wikiArticleDocument(event, shown, tags, callbackUri) }
+            val state = remember(shown, tags, callbackUri) { CachedRichTextParser.parseText(shown, tags, callbackUri) }
+            RenderDocument(document, state, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav, modifier)
+        }
     }
+}
 
 /**
  * NIP-54 wikilinks: a reference-style link the article doesn't define points to the wiki article
@@ -184,7 +222,7 @@ private fun wikilinkResolver(event: WikiArticleEvent): (String) -> String? =
 // The body's first words as plain text, for a card without a summary tag. Only the start is parsed:
 // a card shows 200 characters, and a long article would otherwise cost a full parse per card.
 private fun wikiArticlePreview(event: WikiArticleEvent): String? =
-    (if (DjotToMarkdown.isLegacyAsciiDoc(event.content)) event.content else DjotToMarkdown.plainText(event.content.take(1000)))
+    (if (isLegacyAsciiDocWiki(event.content)) event.content else PlainText.of(DjotToDocument(NostrInlinePass.NONE).parse(event.content.take(1000))))
         .replace('\n', ' ')
         .trim()
         .take(200)

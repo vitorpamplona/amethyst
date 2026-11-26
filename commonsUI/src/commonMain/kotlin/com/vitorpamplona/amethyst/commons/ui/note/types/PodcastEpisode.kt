@@ -57,6 +57,7 @@ import com.vitorpamplona.amethyst.commons.resources.podcast_season
 import com.vitorpamplona.amethyst.commons.resources.podcast_season_episode
 import com.vitorpamplona.amethyst.commons.resources.podcast_transcript
 import com.vitorpamplona.amethyst.commons.resources.podcast_video
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.PodcastBadge
@@ -263,6 +264,7 @@ fun RenderPodcastEpisode(
                     callbackUri = callbackUri,
                     accountViewModel = accountViewModel,
                     nav = nav,
+                    rendering = TextRendering.of(noteEvent),
                 )
             }
         }
