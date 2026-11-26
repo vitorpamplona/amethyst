@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.service.http.KtorNip05Fetcher
 import com.vitorpamplona.amethyst.commons.service.http.KtorWebSocket
 import com.vitorpamplona.amethyst.commons.service.http.LoopbackProbe
 import com.vitorpamplona.amethyst.commons.service.http.RoleBasedKtorClients
+import com.vitorpamplona.amethyst.commons.service.http.SocketException
 import com.vitorpamplona.amethyst.commons.service.http.darwinHttpClient
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.pow.platformMinerWorkers
@@ -83,6 +84,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorService
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.socksReplyMessage
 import com.vitorpamplona.amethyst.commons.tor.supportedOn
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
@@ -107,6 +109,7 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.darwin.DarwinHttpRequestException
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsBytes
+import io.ktor.http.Url
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -125,6 +128,8 @@ import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSPOSIXErrorDomain
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSTemporaryDirectory
+import platform.Foundation.NSURLErrorBadServerResponse
+import platform.Foundation.NSURLErrorDomain
 import platform.Foundation.NSUserDomainMask
 import platform.posix.EPROTO
 import kotlin.coroutines.cancellation.CancellationException
@@ -252,6 +257,22 @@ class IosAppModules(
             // a bootstrap would otherwise meet the whole Tor-routed set with doomed dials.
             // RelayProxyClientConnector dials them the moment Tor is up. A session bypass ("use a
             // regular connection") sends them direct, so they may dial then.
+            // NSURLSession reports a Tor refusal as -1000 "bad URL"; Arti's log has the SOCKS reply,
+            // which becomes the SocketException Java's SOCKS client gives OkHttp on Android, so a
+            // dead domain is parked for minutes there and here alike.
+            // A relay that answered the upgrade with HTTP (403, 502, a Cloudflare page) is parked
+            // for minutes on Android, where OkHttp hands the relay client its status; NSURLSession
+            // only says the handshake failed (-1011), so it is reported with status 0 ("refused,
+            // status unknown") to get the same treatment.
+            refusedStatus = { e -> if (isDarwinWebSocketHandshakeRefusal(e)) UNKNOWN_REFUSAL_STATUS else null },
+            explainFailure = { url, _ ->
+                if (!torRelayState.shouldUseTorForRelay(url)) {
+                    null
+                } else {
+                    val address = Url(url.url)
+                    torService.connectFailures.explain(address.host, address.port)?.let { SocketException(socksReplyMessage(it.socksReply)) }
+                }
+            },
             canDial = { url ->
                 !torRelayState.shouldUseTorForRelay(url) || torManager.isTorReady() || torManager.sessionBypass.value
             },
@@ -526,6 +547,17 @@ private object UnavailableOts : BitcoinExplorer, RemoteCalendar {
 
     private fun fail(): Nothing = throw UnsupportedOperationException("OpenTimestamps on iOS comes with A2")
 }
+
+/** NSURLSession's "the server answered the WebSocket upgrade with something other than 101". */
+private fun isDarwinWebSocketHandshakeRefusal(e: Throwable): Boolean {
+    val origin = (e as? DarwinHttpRequestException)?.origin ?: return false
+    return origin.domain == NSURLErrorDomain &&
+        origin.code == NSURLErrorBadServerResponse &&
+        origin.userInfo.containsKey("_NSURLErrorWebSocketHandshakeFailureReasonKey")
+}
+
+/** The HTTP status of a refused upgrade whose real status NSURLSession does not report. */
+private const val UNKNOWN_REFUSAL_STATUS = 0
 
 /** The error Apple's networking reports for a frame it cannot parse: POSIX EPROTO. */
 private fun isDarwinProtocolError(e: Throwable): Boolean {

@@ -93,6 +93,9 @@ class TorService(
     private val nowMs: () -> Long = TimeUtils::nowMillis,
     private val listenerProbe: (suspend (port: Int) -> Boolean)? = null,
 ) : TorBackend {
+    /** Arti's recent per-host stream failures, for transports that cannot read its SOCKS reply. */
+    val connectFailures = TorFailureLedger()
+
     private var socksPort = DEFAULT_SOCKS_PORT
     private val initialized = AtomicBoolean(false)
     private val proxyRunning = AtomicBoolean(false)
@@ -330,6 +333,7 @@ class TorService(
                     // now sets Active deterministically once the proxy is bound.
                     engine.setLogCallback { text ->
                         trackGuardFailures(text)
+                        connectFailures.record(text)
                         Log.d("TorService") {
                             val newLine = text.indexOf('\n')
                             if (newLine > 1) {

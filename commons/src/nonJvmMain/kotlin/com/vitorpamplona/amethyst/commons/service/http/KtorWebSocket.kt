@@ -68,6 +68,8 @@ class KtorWebSocket(
     val out: WebSocketListener,
     private val scope: CoroutineScope,
     private val compression: Compression = Compression(),
+    private val explainFailure: (NormalizedRelayUrl, Throwable) -> Throwable? = { _, _ -> null },
+    private val refusedStatus: (Throwable) -> Int? = { null },
 ) : WebSocket {
     /**
      * The relays that get no compression offer, shared by every socket of one [Builder].
@@ -162,7 +164,20 @@ class KtorWebSocket(
             if (compression.isFailure(e) && compression.disable(url)) {
                 Log.i(TAG) { "${url.url} sent compressed frames this engine cannot read: dialing it without compression" }
             }
-            if (isCurrent(me)) out.onFailure(e, (e as? ResponseException)?.response?.status?.value, e.message)
+            if (isCurrent(me)) {
+                // The relay client reads the failure's type and message to tell a dead domain from a
+                // busy relay, as OkHttp reports them on Android; the engine's own error can hide that
+                // (NSURLSession says "bad URL" for every Tor refusal), so a better one wins.
+                val explained = explainFailure(url, e)
+                val status = (e as? ResponseException)?.response?.status?.value ?: refusedStatus(e)
+                if (explained != null) {
+                    out.onFailure(explained, null, null)
+                } else {
+                    // A response only when there was one: OkHttp passes null for a failure without
+                    // an HTTP answer, and the relay client labels anything else a misconfigured server.
+                    out.onFailure(e, status, if (status != null) e.message else null)
+                }
+            }
         } finally {
             outgoing.close()
             if (isCurrent(me)) session = null
@@ -201,11 +216,13 @@ class KtorWebSocket(
         private val scope: CoroutineScope,
         private val compression: Compression = Compression(),
         private val canDial: (NormalizedRelayUrl) -> Boolean = { true },
+        private val explainFailure: (NormalizedRelayUrl, Throwable) -> Throwable? = { _, _ -> null },
+        private val refusedStatus: (Throwable) -> Int? = { null },
     ) : WebsocketBuilder {
         override fun build(
             url: NormalizedRelayUrl,
             out: WebSocketListener,
-        ): WebSocket = KtorWebSocket(url, httpClient, out, scope, compression)
+        ): WebSocket = KtorWebSocket(url, httpClient, out, scope, compression, explainFailure, refusedStatus)
 
         override fun canConnect(url: NormalizedRelayUrl) = canDial(url)
     }
