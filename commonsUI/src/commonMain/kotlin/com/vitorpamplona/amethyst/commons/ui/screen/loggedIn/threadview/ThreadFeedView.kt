@@ -996,7 +996,7 @@ private fun FullBleedNoteCompose(
                     DisplayStarterPack(baseNote, false, accountViewModel, nav)
                 } else if (noteEvent is ReleaseArtifactSetEvent && noteEvent.isNip82SoftwareRelease()) {
                     // A plain NIP-51 release set has nothing extra to show here, so it takes the feed's list card.
-                    RenderSoftwareRelease(baseNote, backgroundColor, accountViewModel, nav, expanded = true)
+                    RenderSoftwareRelease(baseNote, canPreview, quotesLeft = 3, backgroundColor, accountViewModel, nav, expanded = true)
                 } else if (noteEvent is ProductCollectionEvent) {
                     // The collection's page: more of its products and shipping than a feed card.
                     RenderProductCollection(baseNote, false, accountViewModel, nav, isPage = true)
@@ -1004,7 +1004,7 @@ private fun FullBleedNoteCompose(
                     // The item's own page: a concept with a view of its own draws it (tier three).
                     RenderDListItem(baseNote, 3, backgroundColor, accountViewModel, nav, isPage = true)
                 } else if (noteEvent is DraftWrapEvent) {
-                    RenderDraft(baseNote, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
+                    RenderDraft(baseNote, false, canPreview, 3, ReplyRenderType.FULL, backgroundColor, accountViewModel, nav)
                 } else if (noteEvent is PublicationIndexEvent) {
                     // Uncapped here: the thread view is where a publication is actually read,
                     // so the whole table of contents is listed rather than a feed-sized taste.

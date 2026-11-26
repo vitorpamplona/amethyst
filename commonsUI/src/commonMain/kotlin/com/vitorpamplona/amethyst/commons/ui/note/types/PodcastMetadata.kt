@@ -71,6 +71,7 @@ fun RenderPodcastMetadata(
     note: Note,
     makeItShort: Boolean,
     canPreview: Boolean,
+    quotesLeft: Int,
     backgroundColor: MutableState<Color>,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -173,7 +174,7 @@ fun RenderPodcastMetadata(
                 TranslatableRichTextViewer(
                     content = it,
                     canPreview = canPreview,
-                    quotesLeft = 1,
+                    quotesLeft = quotesLeft,
                     modifier = Modifier.fillMaxWidth(),
                     tags = tags,
                     backgroundColor = backgroundColor,

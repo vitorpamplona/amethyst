@@ -95,12 +95,13 @@ object CodeNotificationComposer {
     ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_pr_update, aboutItem(event.parentPullRequestId(), event.content))
 
     // GitReplyEvent (kind 1622) is deprecated in favour of NIP-22 comments, but
-    // events already on relays still arrive and still have to be rendered.
+    // events already on relays still arrive and still have to be rendered. Like the
+    // feed card, the body names the issue or patch (its `root` `e`) the reply is in.
     @Suppress("DEPRECATION")
     fun compose(
         account: Account,
         event: GitReplyEvent,
-    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_reply, event.content)
+    ) = draft(account, event.id, event.createdAt, event.pubKey, Res.string.app_notification_code_channel_message_reply, aboutItem(event.rootIssueOrPatch(), event.content))
 
     fun compose(
         account: Account,
