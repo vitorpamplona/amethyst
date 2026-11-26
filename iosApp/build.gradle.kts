@@ -5,11 +5,48 @@
 // Kotlin/Native compiles this module's Kotlin on any host (`compileKotlinIosSimulatorArm64`), but
 // linking the framework needs Xcode, so `link*FrameworkIos*` runs only on a Mac.
 
+import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
+import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
+import org.jetbrains.kotlin.konan.target.HostManager
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.jetbrainsComposeCompiler)
     alias(libs.plugins.composeMultiplatform)
 }
+
+// Arti for iOS: tools/arti-build/build-arti-ios.sh builds the Rust wrapper as two static
+// archives (device, simulator) into tools/arti-build/out/ios, which git ignores: ~18 MB each,
+// rebuilt from the pinned sources like Android's .so but not committed. Needs macOS, Xcode and
+// rustup; Gradle runs it only for an executable that links Arti, and skips it while its inputs
+// are unchanged. See tools/arti-build/README.md -> "iOS".
+//
+// The cinterop needs the Apple SDK, so the Arti bindings (the cinterop and src/iosArtiMain) are
+// set up on a Mac only, and compiling :iosApp elsewhere keeps working without them.
+val withArti = HostManager.hostIsMac
+val artiBuildDir = rootProject.layout.projectDirectory.dir("tools/arti-build")
+val artiIosOut = artiBuildDir.dir("out/ios")
+val buildArtiIos =
+    tasks.register<Exec>("buildArtiIos") {
+        group = "build"
+        description = "Builds Arti's iOS static libraries (tools/arti-build/build-arti-ios.sh)."
+        workingDir(artiBuildDir)
+        commandLine("./build-arti-ios.sh")
+        inputs.dir(artiBuildDir.dir("src"))
+        inputs.dir(artiBuildDir.dir("include"))
+        inputs.files(
+            artiBuildDir.files(
+                "Cargo.toml",
+                "Cargo.lock",
+                "ARTI_VERSION",
+                "IOS_XCODE_VERSION",
+                "rust-toolchain.toml",
+                "repro-env.sh",
+                "build-arti-ios.sh",
+            ),
+        )
+        outputs.dir(artiIosOut)
+    }
 
 kotlin {
     compilerOptions {
@@ -20,6 +57,33 @@ kotlin {
         target.binaries.framework {
             baseName = "AmethystKit"
             isStatic = true
+        }
+
+        if (!withArti) return@forEach
+        // Arti, Tor in Rust (plans/2026-11-25-ios-tor.md B12a): the C ABI of tools/arti-build.
+        // The cinterop reads only the committed header, so compiling needs no Rust toolchain.
+        target.compilations.getByName("main").cinterops.create("arti") {
+            definitionFile.set(project.file("src/nativeInterop/cinterop/arti.def"))
+            includeDirs(artiBuildDir.dir("include"))
+            packageName = "com.vitorpamplona.amethyst.ios.tor.cinterop"
+        }
+        // Executables that run Arti link the archive build-arti-ios.sh writes. Only the test
+        // executables for now; the app (a static framework, which Xcode links) gets it in B12d.
+        val rustTarget = if (target.name == "iosArm64") "aarch64-apple-ios" else "aarch64-apple-ios-sim"
+        target.binaries.withType<TestExecutable>().configureEach {
+            // -liconv: the one system library in build-arti-ios.sh's native-static-libs
+            // (-liconv -lSystem -lc -lm) that a Kotlin/Native link does not already pass.
+            linkerOpts("-L${artiIosOut.dir(rustTarget).asFile.absolutePath}", "-larti", "-liconv")
+            // The B12a ATS experiment: embed an Info.plist into the test executable (a bare binary
+            // has none, and without one ATS lets plain http:// through).
+            providers.gradleProperty("amethyst.ios.testInfoPlist").orNull?.let { plist ->
+                linkerOpts("-sectcreate", "__TEXT", "__info_plist", plist)
+            }
+            // The archive as an input too, or a rebuilt libarti.a leaves the executable stale.
+            linkTaskProvider.configure {
+                dependsOn(buildArtiIos)
+                inputs.file(artiIosOut.file("$rustTarget/libarti.a"))
+            }
         }
     }
 
@@ -45,6 +109,34 @@ kotlin {
             }
         getByName("iosArm64Main").dependsOn(iosMain)
         getByName("iosSimulatorArm64Main").dependsOn(iosMain)
+        if (withArti) iosMain.kotlin.srcDir("src/iosArtiMain/kotlin")
+
+        // Simulator-only: the Arti spike tests (B12a) run on the simulator, never on a device.
+        getByName("iosSimulatorArm64Test") {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
+    }
+}
+
+// Arti's tests that need the Tor network (check.torproject.org, a public relay, an onion
+// service) are off unless asked for, so a test run never depends on Tor being reachable:
+//   ./gradlew :iosApp:iosSimulatorArm64Test -Pamethyst.arti.network=true
+//
+// HTTPS needs a booted simulator: in Kotlin/Native's default standalone mode every TLS handshake
+// fails trust evaluation (-1200/-1202, a direct one too; measured 2026-11-25). Boot one and name it:
+//   xcrun simctl boot <udid>
+//   ./gradlew :iosApp:iosSimulatorArm64Test -Pamethyst.arti.network=true -Pamethyst.ios.testSimulator=<udid>
+val artiNetworkTests = providers.gradleProperty("amethyst.arti.network").map { it.toBoolean() }.orElse(false)
+val testSimulator = providers.gradleProperty("amethyst.ios.testSimulator")
+tasks.withType<KotlinNativeSimulatorTest>().configureEach {
+    if (!artiNetworkTests.get()) {
+        filter.excludeTestsMatching("*TorNetworkSpikeTest*")
+    }
+    if (testSimulator.isPresent) {
+        device.set(testSimulator)
+        standalone.set(false)
     }
 }
 

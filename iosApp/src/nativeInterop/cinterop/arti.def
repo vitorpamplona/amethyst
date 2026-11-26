@@ -1,0 +1,8 @@
+# Arti's C ABI (tools/arti-build/src/ffi.rs), plans/2026-11-25-ios-tor.md B12a.
+#
+# Header only: the include dir is set in iosApp/build.gradle.kts, and the static library is not
+# named here, so the cinterop (and so compiling :iosApp) needs only the committed header, not a
+# Rust toolchain. The executables that call into Arti link tools/arti-build/out/ios/<triple>/libarti.a
+# themselves (see buildArtiIos in iosApp/build.gradle.kts).
+headers = arti_ffi.h
+headerFilter = arti_ffi.h

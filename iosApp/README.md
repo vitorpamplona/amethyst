@@ -29,6 +29,21 @@ Xcode's pre-build step runs `./gradlew :iosApp:embedAndSignAppleFrameworkForXcod
 simulator and press Run. CI's `build-ios-app` job links the framework and builds the project
 unsigned on every pull request.
 
+## Tor (Arti)
+
+The Rust Tor client from `tools/arti-build` is bound through a cinterop
+(`src/nativeInterop/cinterop/arti.def`, Kotlin side in `src/iosArtiMain/…/ios/tor/ArtiNative.kt`),
+set up on macOS hosts only. Nothing in the app calls it yet (plan
+[`commons/plans/2026-11-25-ios-tor.md`](../commons/plans/2026-11-25-ios-tor.md), B12a done, B12d
+wires it). The simulator tests link it; `:iosApp:buildArtiIos` builds the static libraries first,
+which needs rustup (see `tools/arti-build/README.md`, "iOS"):
+
+```bash
+./gradlew :iosApp:iosSimulatorArm64Test                          # Arti lifecycle, no network
+xcrun simctl boot <udid>                                         # HTTPS needs a booted simulator
+./gradlew :iosApp:iosSimulatorArm64Test -Pamethyst.arti.network=true -Pamethyst.ios.testSimulator=<udid>
+```
+
 ## What is not wired yet
 
 Each of these throws or stays off, and names the plan step that fills it: Blossom and Cordn blobs,
