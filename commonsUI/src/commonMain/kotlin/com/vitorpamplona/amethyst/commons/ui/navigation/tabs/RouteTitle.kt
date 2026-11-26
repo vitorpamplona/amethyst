@@ -42,11 +42,11 @@ import com.vitorpamplona.amethyst.commons.relayClient.user.observeUserInfo
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.ai_code_title
 import com.vitorpamplona.amethyst.commons.resources.amethyst_assistant
-import com.vitorpamplona.amethyst.commons.resources.android_devices_title
 import com.vitorpamplona.amethyst.commons.resources.application_preferences
 import com.vitorpamplona.amethyst.commons.resources.claude_code_changes
 import com.vitorpamplona.amethyst.commons.resources.claude_code_create_pr
 import com.vitorpamplona.amethyst.commons.resources.claude_code_pull_requests
+import com.vitorpamplona.amethyst.commons.resources.devices_title
 import com.vitorpamplona.amethyst.commons.resources.event_kind_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_devices_title
 import com.vitorpamplona.amethyst.commons.resources.marmot_link_title_existing
@@ -154,7 +154,7 @@ fun routeTitle(
         // Short enough for a tab: "Agentic Coding changes" was cut to "Agentic Coding chan…".
         is Route.ClaudeCodeChanges -> return stringRes(Res.string.claude_code_changes)
         is Route.ClaudeCodePullRequests -> return stringRes(Res.string.claude_code_pull_requests)
-        is Route.AndroidDevices -> return stringRes(Res.string.android_devices_title)
+        is Route.Devices -> return stringRes(Res.string.devices_title)
         // The screen's own title; spelled out, its name read "Nip46 connected apps".
         is Route.Nip46ConnectedApps -> return stringRes(Res.string.nip46_signer_manage_apps)
         // The screens' own titles; spelled out, they read "Marmot devices settings".

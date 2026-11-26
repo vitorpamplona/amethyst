@@ -23,8 +23,8 @@ package com.vitorpamplona.androiddevice
 import com.vitorpamplona.androiddevice.emulator.EmulatorController
 import com.vitorpamplona.androiddevice.emulator.EmulatorDiscovery
 import com.vitorpamplona.androiddevice.emulator.EmulatorJwtAuth
-import com.vitorpamplona.androiddevice.emulator.PixelFormat
-import com.vitorpamplona.androiddevice.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.screen.PixelFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
