@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.okHttpClientForRelay
 import com.vitorpamplona.amethyst.commons.util.restrictToOwner
 import com.vitorpamplona.amethyst.desktop.napplet.DesktopNip46Consent
 import com.vitorpamplona.amethyst.desktop.network.runSleepResumeMonitor
@@ -130,6 +131,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.NostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.normalizeRelayUrlOrNull
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
@@ -174,6 +176,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.OkHttpClient
 import okio.Path
 import okio.Path.Companion.toOkioPath
 import java.io.File
@@ -322,7 +325,10 @@ class DesktopAppModules(
         )
     }
 
-    val torEvaluatorFlow = TorRelayState(okHttpClients, torPrefs.value, applicationIOScope)
+    val torEvaluatorFlow = TorRelayState(torPrefs.value, applicationIOScope)
+
+    // A relay's own HTTP endpoints (NIP-11, NIP-86) go through Tor exactly when its socket does.
+    fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = torEvaluatorFlow.okHttpClientForRelay(okHttpClients, url)
 
     // Relay sockets have their own pair of clients: longer timeouts, no per-request interceptors.
     val okHttpClientForRelays =
@@ -363,7 +369,7 @@ class DesktopAppModules(
         )
     }
 
-    val nip11Cache by lazy { Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay) }
+    val nip11Cache by lazy { Nip11CachedRetriever(::okHttpClientForRelay) }
 
     init {
         cache.appHost = DesktopLocalCacheHost(this, isDebug)

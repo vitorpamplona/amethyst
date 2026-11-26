@@ -21,10 +21,10 @@
 package com.vitorpamplona.amethyst.commons.tor
 
 import androidx.compose.runtime.Stable
-import com.vitorpamplona.amethyst.commons.service.http.DualHttpClientManager
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
@@ -33,11 +33,14 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import okhttp3.OkHttpClient
 
+/**
+ * Which relays go through Tor, for every platform. It holds no HTTP client: the JVM picks its
+ * OkHttp client with the `okHttpClientForRelay` extension (jvmAndroid), and a platform without
+ * OkHttp asks [shouldUseTorForRelay] and picks its own.
+ */
 @Stable
 class TorRelayState(
-    val okHttpClient: DualHttpClientManager,
     val torSettingsFlow: TorSettingsFlow,
     val scope: CoroutineScope,
 ) : MoneyOpRelayRouting,
@@ -209,6 +212,4 @@ class TorRelayState(
      * very next connection attempt, with no dependency on the combine pipeline having propagated yet.
      */
     fun shouldUseTorForRelay(relay: NormalizedRelayUrl) = TorRelayEvaluation(currentSettings(), currentClassification()).useTor(relay)
-
-    fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = okHttpClient.getHttpClient(shouldUseTorForRelay(url))
 }

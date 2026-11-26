@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
+import kotlin.concurrent.Volatile
 
 /**
  * Pushes the relay classifications [TorRelayState] needs — which relays are DM, trusted, guessed,

@@ -30,6 +30,7 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -40,12 +41,19 @@ import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
-import okhttp3.OkHttpClient
 
+/**
+ * Re-dials the relays whose transport changed: a new network, a new Tor or clear client, a Tor
+ * policy flip, or a relay moving between classifications.
+ *
+ * [torConnection] and [clearConnection] are route tokens, compared only by identity (`!==`). A
+ * platform emits a new token whenever it rebuilds the client relays use for that route; on the
+ * JVM the tokens are the relay `OkHttpClient`s themselves. Nothing here makes a request with them.
+ */
 class RelayProxyClientConnector(
     val torEvaluator: StateFlow<TorRelayEvaluation>,
-    val torConnection: StateFlow<OkHttpClient>,
-    val clearConnection: StateFlow<OkHttpClient>,
+    val torConnection: StateFlow<Any>,
+    val clearConnection: StateFlow<Any>,
     val connectivityStatus: StateFlow<ConnectivityStatus>,
     /**
      * Whether Tor can build circuits right now. A change re-runs [apply], which reconnects the
@@ -65,8 +73,8 @@ class RelayProxyClientConnector(
 ) {
     data class RelayServiceInfra(
         val evaluator: TorRelayEvaluation,
-        val torConnection: OkHttpClient,
-        val clearConnection: OkHttpClient,
+        val torConnection: Any,
+        val clearConnection: Any,
         val connectivity: ConnectivityStatus,
         val torBootstrapped: Boolean,
     )
@@ -81,8 +89,8 @@ class RelayProxyClientConnector(
     // rebuilt when something connection-relevant changes (Tor's SOCKS port appears,
     // wifi<->cellular switch), so comparing them tells us whether a wakeup is a real
     // transport change or just noise (Tor bootstrap status churn, connectivity blips).
-    private var lastTorConnection: OkHttpClient? = null
-    private var lastClearConnection: OkHttpClient? = null
+    private var lastTorConnection: Any? = null
+    private var lastClearConnection: Any? = null
 
     // The network we were last on. The OkHttp clients above are rebuilt off the metered
     // bit, so they only tell us about wifi<->cellular; they say nothing about wifi A ->

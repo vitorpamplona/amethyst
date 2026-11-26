@@ -141,6 +141,7 @@ import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
 import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
+import com.vitorpamplona.amethyst.commons.tor.okHttpClientForRelay
 import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
 import com.vitorpamplona.amethyst.connectedApps.consent.Nip46ConsentBridge
 import com.vitorpamplona.amethyst.model.nip60Cashu.CashuPreferences
@@ -194,6 +195,7 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.limits.RelayLimitsTracker
 import com.vitorpamplona.quartz.nip01Core.relay.client.reqs.stats.RelayReqStats
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.filters.Filter
+import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.BasicOkHttpWebSocket
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDns
 import com.vitorpamplona.quartz.nip01Core.relay.sockets.okhttp.SurgeDnsStore
@@ -241,6 +243,7 @@ import kotlinx.coroutines.flow.transform
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import java.io.File
 
@@ -641,10 +644,12 @@ class AppModules(
 
     val torEvaluatorFlow =
         TorRelayState(
-            okHttpClients,
             torPrefs.value,
             applicationIOScope,
         )
+
+    // A relay's own HTTP endpoints (NIP-11, NIP-86) go through Tor exactly when its socket does.
+    fun okHttpClientForRelay(url: NormalizedRelayUrl): OkHttpClient = torEvaluatorFlow.okHttpClientForRelay(okHttpClients, url)
 
     // manages all relay connections
     val okHttpClientForRelays =
@@ -1322,7 +1327,7 @@ class AppModules(
     // cache for NIP-11 documents
     val nip11Cache: Nip11CachedRetriever by lazy {
         Log.d("AppModules", "Nip11CachedRetriever Init")
-        Nip11CachedRetriever(torEvaluatorFlow::okHttpClientForRelay)
+        Nip11CachedRetriever(::okHttpClientForRelay)
     }
 
     fun setImageLoader() {

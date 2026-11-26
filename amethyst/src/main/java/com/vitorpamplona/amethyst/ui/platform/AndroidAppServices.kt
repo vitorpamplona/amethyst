@@ -126,7 +126,7 @@ object AndroidAppServices : AppServices {
 
     override val nip46ClientStore: Nip46ClientStore get() = Amethyst.instance.nip46ClientStore
 
-    override val nip86Executor: Nip86Executor by lazy { Nip86Retriever(Amethyst.instance.torEvaluatorFlow::okHttpClientForRelay) }
+    override val nip86Executor: Nip86Executor by lazy { Nip86Retriever(Amethyst.instance::okHttpClientForRelay) }
 
     override val blossomServerFinder: BlossomServerFinder = AndroidBlossomServerFinder
 

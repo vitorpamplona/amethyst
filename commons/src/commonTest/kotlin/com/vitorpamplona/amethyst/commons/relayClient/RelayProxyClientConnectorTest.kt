@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.service.relayClient
+package com.vitorpamplona.amethyst.commons.relayClient
 
-import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector
 import com.vitorpamplona.amethyst.commons.relayClient.RelayProxyClientConnector.RelayServiceInfra
 import com.vitorpamplona.amethyst.commons.service.connectivity.ConnectivityStatus
 import com.vitorpamplona.amethyst.commons.tor.RelayClassification
@@ -30,14 +29,12 @@ import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.nip01Core.relay.client.EmptyNostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.client.INostrClient
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
-import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import okhttp3.OkHttpClient
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Guards the decision table in [RelayProxyClientConnector.apply]: which environment changes
@@ -92,10 +89,10 @@ class RelayProxyClientConnectorTest {
         }
     }
 
-    // Only reference identity matters, and building a real OkHttpClient pulls in
-    // android.util.Log, which is not usable in JVM unit tests.
-    private val torClient = mockk<OkHttpClient>()
-    private val clearClient = mockk<OkHttpClient>()
+    // Only reference identity matters: the connector takes route tokens (the relay OkHttpClients
+    // on the JVM), so a plain object stands in for each client on every platform.
+    private val torClient = Any()
+    private val clearClient = Any()
 
     private val client = RecordingClient()
 
@@ -124,8 +121,8 @@ class RelayProxyClientConnectorTest {
     private fun infra(
         networkId: Long = 1L,
         isMobile: Boolean = false,
-        tor: OkHttpClient = torClient,
-        clear: OkHttpClient = clearClient,
+        tor: Any = torClient,
+        clear: Any = clearClient,
         evaluation: TorRelayEvaluation = evaluation(),
         torBootstrapped: Boolean = false,
     ) = RelayServiceInfra(
@@ -154,13 +151,13 @@ class RelayProxyClientConnectorTest {
         connector.apply(infra(networkId = 2L))
 
         assertTrue(
-            "A different network must forgive backoffs earned on the previous one",
             client.sawBackoffForgiven(),
+            "A different network must forgive backoffs earned on the previous one",
         )
         assertTrue(
+            client.sawFullRebuild(),
             "Sockets bound to the old interface are dead; the pool must be rebuilt, not " +
                 "merely asked to reconnect what needsToReconnect() can see",
-            client.sawFullRebuild(),
         )
     }
 
@@ -177,9 +174,9 @@ class RelayProxyClientConnectorTest {
         )
 
         assertEquals(
-            "A relay whose transport just flipped must not wait out a backoff earned on the other transport",
             1,
             client.backoffResets,
+            "A relay whose transport just flipped must not wait out a backoff earned on the other transport",
         )
         assertEquals(listOf(true to true), client.reconnects)
     }
@@ -215,9 +212,9 @@ class RelayProxyClientConnectorTest {
         connector.apply(infra(networkId = 1L, evaluation = released))
 
         assertEquals(
-            "The relays we stopped guessing about must be asked to re-dial onto their real policy",
             listOf(true to true),
             client.reconnects,
+            "The relays we stopped guessing about must be asked to re-dial onto their real policy",
         )
     }
 
@@ -229,11 +226,11 @@ class RelayProxyClientConnectorTest {
         connector.apply(infra(networkId = 1L, torBootstrapped = true))
 
         assertEquals(
-            "Backoff must survive unrelated infrastructure events, or dead relays get hammered",
             0,
             client.backoffResets,
+            "Backoff must survive unrelated infrastructure events, or dead relays get hammered",
         )
-        assertTrue("No full rebuild for noise", !client.sawFullRebuild())
+        assertTrue(!client.sawFullRebuild(), "No full rebuild for noise")
         assertEquals(listOf(true to false), client.reconnects)
     }
 
@@ -242,7 +239,7 @@ class RelayProxyClientConnectorTest {
         settleOnFirstNetwork()
 
         // Tor's SOCKS port came up: the Tor-routed OkHttpClient is a new instance.
-        connector.apply(infra(networkId = 1L, tor = mockk<OkHttpClient>()))
+        connector.apply(infra(networkId = 1L, tor = Any()))
 
         assertEquals(1, client.backoffResets)
         assertEquals(listOf(true to true), client.reconnects)
@@ -260,15 +257,15 @@ class RelayProxyClientConnectorTest {
         connector.apply(
             RelayServiceInfra(evaluation(), torClient, clearClient, ConnectivityStatus.Off, false),
         )
-        assertEquals("Losing the network must pause the pool", 1, client.disconnects)
+        assertEquals(1, client.disconnects, "Losing the network must pause the pool")
         client.clear()
 
         // back online, on a different network than the one we lost.
         connector.apply(infra(networkId = 7L))
 
         assertTrue(
-            "connect() already dials every relay from a clean backoff; no rebuild needed",
             !client.sawFullRebuild(),
+            "connect() already dials every relay from a clean backoff; no rebuild needed",
         )
         assertEquals(0, client.backoffResets)
     }
