@@ -54,6 +54,12 @@ class TorWaitTest {
         assertEquals(listOf(dmRelay, newRelay), evaluation.waitingForTor(all, TorServiceStatus.Error("no route")))
     }
 
+    /** A bound proxy still downloading the directory: the websocket gate waits for a ready Tor. */
+    @Test
+    fun torRoutedRelaysWaitWhileTheDirectoryDownloads() {
+        assertEquals(listOf(dmRelay, newRelay), evaluation.waitingForTor(all, TorServiceStatus.Bootstrapping(9050)))
+    }
+
     @Test
     fun nothingWaitsOnceTorIsReady() {
         assertEquals(emptyList(), evaluation.waitingForTor(all, TorServiceStatus.Active(9050)))
@@ -117,6 +123,22 @@ class TorWaitTest {
             advanceTimeBy(TOR_STUCK_AFTER_MS * 2)
             runCurrent()
             assertEquals(listOf(false), seen)
+        }
+
+    @Test
+    fun aDownloadThatNeverFinishesReadsStuck() =
+        runTest {
+            val status = MutableStateFlow<TorServiceStatus>(TorServiceStatus.Bootstrapping(9050))
+            val seen = mutableListOf<Boolean>()
+            status
+                .stuckAfter(TOR_STUCK_AFTER_MS)
+                .distinctUntilChanged()
+                .onEach { seen += it }
+                .launchIn(backgroundScope)
+
+            advanceTimeBy(TOR_STUCK_AFTER_MS + 1)
+            runCurrent()
+            assertEquals(listOf(false, true), seen)
         }
 
     @Test

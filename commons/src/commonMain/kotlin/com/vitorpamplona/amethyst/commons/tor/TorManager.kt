@@ -18,15 +18,15 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
-import com.vitorpamplona.amethyst.commons.tor.TorPreferencesPort
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * There should be only one instance of the Tor binding per app.
@@ -61,7 +62,7 @@ class TorManager(
     val service: TorBackend,
     private val scope: CoroutineScope,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val nowMs: () -> Long = System::currentTimeMillis,
+    private val nowMs: () -> Long = TimeUtils::nowMillis,
 ) {
     /**
      * In-memory only — when true, the manager emits [TorServiceStatus.Off] regardless of

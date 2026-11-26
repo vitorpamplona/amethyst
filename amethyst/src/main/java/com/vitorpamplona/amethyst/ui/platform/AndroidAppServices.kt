@@ -49,16 +49,15 @@ import com.vitorpamplona.amethyst.commons.service.namecoin.NamecoinClients
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.BlossomMirrorQueue
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.tor.TorSettingsFlow
 import com.vitorpamplona.amethyst.service.ai.MLKitImageLabelService
 import com.vitorpamplona.amethyst.service.calendar.CalendarReminderWorker
 import com.vitorpamplona.amethyst.service.location.CachedReversedGeoLocations
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
 import com.vitorpamplona.cordn.client.CordnBlobStore
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus as SharedTorServiceStatus
 
 /**
  * [AppServices] over the main process's app modules. Every member is a getter, so installing
@@ -82,15 +81,9 @@ object AndroidAppServices : AppServices {
         Amethyst.instance.torManager.status
             .map { it.isFullyBootstrapped }
 
-    override val torStatus: Flow<SharedTorServiceStatus> get() =
-        Amethyst.instance.torManager.status
-            .map {
-                when (it) {
-                    is TorServiceStatus.Active -> SharedTorServiceStatus.Active(it.port)
-                    is TorServiceStatus.Bootstrapping, TorServiceStatus.Connecting -> SharedTorServiceStatus.Connecting
-                    TorServiceStatus.Off -> SharedTorServiceStatus.Off
-                }
-            }
+    // The manager's own status: one TorServiceStatus for every front end now, Bootstrapping
+    // included (the shared UI treats it as still connecting, see isHoldingRelays).
+    override val torStatus: Flow<TorServiceStatus> get() = Amethyst.instance.torManager.status
 
     // The failure the 60s Tor dialog shows. It already measures across the self-heal restarts,
     // which pass through Off and would restart a plain timer on the status.

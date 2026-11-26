@@ -33,10 +33,10 @@ import com.vitorpamplona.quartz.utils.TimeUtils
  * Detects the "Tor is Active but every circuit is dead" state and asks [onCircuitsDead] to
  * self-heal it.
  *
- * Tor can reach [com.vitorpamplona.amethyst.ui.tor.TorServiceStatus.Active] — SOCKS proxy up,
+ * Tor can reach [com.vitorpamplona.amethyst.commons.tor.TorServiceStatus.Active] — SOCKS proxy up,
  * bootstrap "succeeded" off cached consensus — while no exit circuit actually works (the
  * `ExitTimeout` / `RESOLVEFAILED` barrage). The lifecycle watchdogs in
- * [com.vitorpamplona.amethyst.ui.tor.TorManager] can't see this: they only arm while status is
+ * [com.vitorpamplona.amethyst.commons.tor.TorManager] can't see this: they only arm while status is
  * `Connecting`. The relay layer is the only place that has both halves of the signal — per-relay
  * success ([RelayConnectionListener.onConnected]) and failure
  * ([RelayConnectionListener.onCannotConnect]) — plus knowledge of which relays are Tor-routed.

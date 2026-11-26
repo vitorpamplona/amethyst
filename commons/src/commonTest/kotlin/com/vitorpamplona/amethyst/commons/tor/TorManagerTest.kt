@@ -18,10 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
-import com.vitorpamplona.amethyst.commons.tor.TorPreferencesPort
-import com.vitorpamplona.amethyst.commons.tor.TorType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
@@ -36,11 +34,11 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
 
 /**
  * Unit tests for [TorManager]'s self-heal logic. Drives the manager with in-memory
@@ -144,7 +142,7 @@ class TorManagerTest {
 
             assertFalse(manager.sessionBypass.value)
             assertEquals(0L, prefs.lastBypassApprovalMs)
-            assertTrue("onNetworkChange should reset backend at least once", backend.resetCount >= 1)
+            assertTrue(backend.resetCount >= 1, "onNetworkChange should reset backend at least once")
         }
 
     @Test
@@ -189,10 +187,10 @@ class TorManagerTest {
 
             // Exit failures are exit-side: warm reset (keep guards + cache) to rotate exits,
             // never a state wipe (which only forces a 60s cold bootstrap).
-            assertEquals("Active-but-failing recovery rotates exits warm", resetCountBefore + 1, backend.resetCount)
-            assertEquals("must not wipe state for an exit-side failure", 0, backend.resetWithCleanStateCount)
+            assertEquals(resetCountBefore + 1, backend.resetCount, "Active-but-failing recovery rotates exits warm")
+            assertEquals(0, backend.resetWithCleanStateCount, "must not wipe state for an exit-side failure")
             // resetEpoch bump re-enters INTERNAL → start() runs again.
-            assertTrue("re-init should call start() again", backend.startCount >= 2)
+            assertTrue(backend.startCount >= 2, "re-init should call start() again")
         }
 
     @Test
@@ -208,7 +206,7 @@ class TorManagerTest {
             manager.onTorCircuitsDead()
             advanceUntilIdle()
 
-            assertEquals("no rotation while not Active", resetCountBefore, backend.resetCount)
+            assertEquals(resetCountBefore, backend.resetCount, "no rotation while not Active")
             assertEquals(0, backend.resetWithCleanStateCount)
         }
 
@@ -227,7 +225,7 @@ class TorManagerTest {
             manager.onTorCircuitsDead()
             advanceUntilIdle()
 
-            assertEquals("no rotation while bypassing", resetCountBefore, backend.resetCount)
+            assertEquals(resetCountBefore, backend.resetCount, "no rotation while bypassing")
             assertEquals(0, backend.resetWithCleanStateCount)
         }
 
@@ -252,7 +250,7 @@ class TorManagerTest {
             advanceUntilIdle()
             manager.onTorCircuitsDead()
             advanceUntilIdle()
-            assertEquals("cooldown should suppress the second self-heal", resetCountBefore + 1, backend.resetCount)
+            assertEquals(resetCountBefore + 1, backend.resetCount, "cooldown should suppress the second self-heal")
 
             // Past the cooldown it can fire again.
             clockNow += TorManager.SELF_HEAL_COOLDOWN_MS + 1_000L
@@ -260,8 +258,8 @@ class TorManagerTest {
             advanceUntilIdle()
             manager.onTorCircuitsDead()
             advanceUntilIdle()
-            assertEquals("after cooldown elapses, self-heal fires again", resetCountBefore + 2, backend.resetCount)
-            assertEquals("exit-side rotations never wipe state", 0, backend.resetWithCleanStateCount)
+            assertEquals(resetCountBefore + 2, backend.resetCount, "after cooldown elapses, self-heal fires again")
+            assertEquals(0, backend.resetWithCleanStateCount, "exit-side rotations never wipe state")
         }
 
     // ------------------------------------------------------------------
@@ -285,7 +283,7 @@ class TorManagerTest {
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
 
-            assertEquals("gentle reset only — no state wipe before first Active", 1, backend.resetCount)
+            assertEquals(1, backend.resetCount, "gentle reset only — no state wipe before first Active")
             assertEquals(0, backend.resetWithCleanStateCount)
         }
 
@@ -305,7 +303,7 @@ class TorManagerTest {
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
 
-            assertEquals("seeded from disk: must wipe stale/poisoned state, not gentle-reset", 0, backend.resetCount)
+            assertEquals(0, backend.resetCount, "seeded from disk: must wipe stale/poisoned state, not gentle-reset")
             assertEquals(1, backend.resetWithCleanStateCount)
         }
 
@@ -329,7 +327,7 @@ class TorManagerTest {
             runCurrent()
 
             assertEquals(0, backend.resetCount)
-            assertEquals("after Active, watchdog wipes state too", 1, backend.resetWithCleanStateCount)
+            assertEquals(1, backend.resetWithCleanStateCount, "after Active, watchdog wipes state too")
         }
 
     @Test
@@ -371,7 +369,7 @@ class TorManagerTest {
             // 45s of virtual time — clock has barely moved, so cooldown must block.
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
-            assertEquals("cooldown should suppress the second fire", 1, backend.resetCount)
+            assertEquals(1, backend.resetCount, "cooldown should suppress the second fire")
         }
 
     @Test
@@ -394,7 +392,7 @@ class TorManagerTest {
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
 
-            assertEquals("after cooldown elapses, watchdog fires again", 2, backend.resetCount)
+            assertEquals(2, backend.resetCount, "after cooldown elapses, watchdog fires again")
         }
 
     // ------------------------------------------------------------------
@@ -414,7 +412,7 @@ class TorManagerTest {
         }
 
     @Test
-    fun `status emits Active(port) for EXTERNAL with valid port`() =
+    fun `status emits Active on the port for EXTERNAL with valid port`() =
         runTest(UnconfinedTestDispatcher()) {
             val prefs = FakeTorPreferences(initialTorType = TorType.EXTERNAL, initialPort = 9150)
             val manager = buildManager(prefs = prefs)
@@ -510,8 +508,8 @@ class TorManagerTest {
             runCurrent()
 
             assertTrue(
-                "expected repeated bootstrap retries over 10 stuck minutes, got ${backend.startCount}",
                 backend.startCount >= 4,
+                "expected repeated bootstrap retries over 10 stuck minutes, got ${backend.startCount}",
             )
             sub.cancel()
         }
@@ -545,7 +543,7 @@ class TorManagerTest {
             advanceTimeBy(TorManager.SELF_HEAL_AFTER_MS + 1_000L)
             runCurrent()
 
-            assertTrue("watchdog should fire once the attempt returned", backend.resetCount >= 1)
+            assertTrue(backend.resetCount >= 1, "watchdog should fire once the attempt returned")
             sub.cancel()
         }
 
@@ -566,8 +564,8 @@ class TorManagerTest {
             runCurrent()
 
             assertTrue(
-                "expected more than one retry inside 3 watchdog windows, got ${backend.resetCount}",
                 backend.resetCount >= 2,
+                "expected more than one retry inside 3 watchdog windows, got ${backend.resetCount}",
             )
             sub.cancel()
         }
@@ -592,9 +590,9 @@ class TorManagerTest {
             runCurrent()
 
             assertEquals(
-                "post-bootstrap self-heal must stay on the long cooldown",
                 1,
                 backend.resetWithCleanStateCount - before,
+                "post-bootstrap self-heal must stay on the long cooldown",
             )
             sub.cancel()
         }
@@ -636,25 +634,25 @@ class TorManagerTest {
 
             advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS * 2)
             runCurrent()
-            assertFalse("must not prompt while the attempt is still running", fail.contains(true))
+            assertFalse(fail.contains(true), "must not prompt while the attempt is still running")
 
             // The first attempt returning without connecting triggers the automatic restart.
             val resetsBefore = backend.resetCount + backend.resetWithCleanStateCount
             backend.finishBootstrapAttempt()
             advanceTimeBy(1_000L)
             runCurrent()
-            assertFalse("the first failure restarts Tor instead of prompting", fail.contains(true))
+            assertFalse(fail.contains(true), "the first failure restarts Tor instead of prompting")
             assertEquals(resetsBefore + 1, backend.resetCount + backend.resetWithCleanStateCount)
 
             // The restarted attempt is held in flight too, so it must also be waited on.
             advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS * 2)
             runCurrent()
-            assertFalse("must not prompt while the restarted attempt is still running", fail.contains(true))
+            assertFalse(fail.contains(true), "must not prompt while the restarted attempt is still running")
 
             backend.finishBootstrapAttempt()
             advanceTimeBy(1_000L)
             runCurrent()
-            assertTrue("must prompt once the restarted attempt returned without connecting", fail.contains(true))
+            assertTrue(fail.contains(true), "must prompt once the restarted attempt returned without connecting")
 
             sub.cancel()
             subFail.cancel()
@@ -680,14 +678,14 @@ class TorManagerTest {
             advanceUntilIdle()
 
             assertTrue(
-                "start() should leave us routable but not bootstrapped",
                 manager.status.value is TorServiceStatus.Bootstrapping,
+                "start() should leave us routable but not bootstrapped",
             )
 
             advanceTimeBy(TorManager.BOOTSTRAP_STALL_MS + 2L * TorManager.SELF_HEAL_AFTER_MS)
             runCurrent()
 
-            assertTrue("watchdog must arm on Bootstrapping, not just Connecting", backend.resetCount >= 1)
+            assertTrue(backend.resetCount >= 1, "watchdog must arm on Bootstrapping, not just Connecting")
             sub.cancel()
         }
 
@@ -709,8 +707,8 @@ class TorManagerTest {
             runCurrent()
 
             assertTrue(
-                "the prompt must survive the self-heal watchdog restarting the status span at 45s",
                 fail.contains(true),
+                "the prompt must survive the self-heal watchdog restarting the status span at 45s",
             )
             sub.cancel()
             subFail.cancel()
@@ -794,8 +792,8 @@ class TorManagerTest {
                 runCurrent()
             }
 
-            assertEquals("a progressing download must never be reset", 0, backend.resetCount)
-            assertEquals("and never wiped", 0, backend.resetWithCleanStateCount)
+            assertEquals(0, backend.resetCount, "a progressing download must never be reset")
+            assertEquals(0, backend.resetWithCleanStateCount, "and never wiped")
             sub.cancel()
         }
 
@@ -817,11 +815,11 @@ class TorManagerTest {
             advanceTimeBy(TorManager.BOOTSTRAP_STALL_MS + TorManager.SELF_HEAL_AFTER_MS)
             runCurrent()
 
-            assertTrue("a stalled download must be escaped", backend.resetCount >= 1)
+            assertTrue(backend.resetCount >= 1, "a stalled download must be escaped")
             assertEquals(
-                "but the consensus cache is what it is trying to fetch — never wipe it",
                 0,
                 backend.resetWithCleanStateCount,
+                "but the consensus cache is what it is trying to fetch — never wipe it",
             )
             sub.cancel()
         }
@@ -846,8 +844,8 @@ class TorManagerTest {
             runCurrent()
 
             assertTrue(
-                "gentle resets alone never clear corrupt state; expected an escalation",
                 backend.resetWithCleanStateCount >= 1,
+                "gentle resets alone never clear corrupt state; expected an escalation",
             )
             sub.cancel()
         }
@@ -870,7 +868,7 @@ class TorManagerTest {
 
             advanceTimeBy(2 * TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
             runCurrent()
-            assertTrue("prompt should be up", manager.connectionFailure.value)
+            assertTrue(manager.connectionFailure.value, "prompt should be up")
 
             // Drive several watchdog cycles; the prompt must not drop back to false.
             val raisedAt = seen.size
@@ -878,8 +876,8 @@ class TorManagerTest {
             runCurrent()
 
             assertFalse(
-                "prompt blinked off during a self-heal cycle",
                 seen.drop(raisedAt).contains(false),
+                "prompt blinked off during a self-heal cycle",
             )
             sub.cancel()
             subFail.cancel()
@@ -908,19 +906,19 @@ class TorManagerTest {
 
             advanceTimeBy(2_000L)
             runCurrent()
-            assertFalse("the first timeout must not prompt", seen.contains(true))
-            assertEquals("no client came up, so the restart wipes state", wipesBefore + 1, backend.resetWithCleanStateCount)
-            assertTrue("the restart re-inits Tor", backend.startCount > startsBefore)
+            assertFalse(seen.contains(true), "the first timeout must not prompt")
+            assertEquals(wipesBefore + 1, backend.resetWithCleanStateCount, "no client came up, so the restart wipes state")
+            assertTrue(backend.startCount > startsBefore, "the restart re-inits Tor")
 
             // The restarted attempt gets a full timeout of its own...
             advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS - 2_000L)
             runCurrent()
-            assertFalse("prompted before the restarted attempt timed out", seen.contains(true))
+            assertFalse(seen.contains(true), "prompted before the restarted attempt timed out")
 
             // ...and only when it also fails is the user asked.
             advanceTimeBy(2_000L)
             runCurrent()
-            assertTrue("the restarted attempt failed too, so the user must be asked", manager.connectionFailure.value)
+            assertTrue(manager.connectionFailure.value, "the restarted attempt failed too, so the user must be asked")
 
             sub.cancel()
             subFail.cancel()
@@ -950,7 +948,7 @@ class TorManagerTest {
             val resetsBefore = backend.resetCount + backend.resetWithCleanStateCount
             advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
             runCurrent()
-            assertFalse("a new outage must be restarted before prompting", manager.connectionFailure.value)
+            assertFalse(manager.connectionFailure.value, "a new outage must be restarted before prompting")
             assertTrue(backend.resetCount + backend.resetWithCleanStateCount > resetsBefore)
 
             sub.cancel()
@@ -973,21 +971,21 @@ class TorManagerTest {
 
             advanceTimeBy(2 * TorManager.BOOTSTRAP_TIMEOUT_MS + 1_000L)
             runCurrent()
-            assertTrue("prompt should be up", manager.connectionFailure.value)
+            assertTrue(manager.connectionFailure.value, "prompt should be up")
             val startsBefore = backend.startCount
             val resetsBefore = backend.resetCount + backend.resetWithCleanStateCount
 
             manager.restartTor()
             runCurrent()
 
-            assertFalse("restart should close the prompt", manager.connectionFailure.value)
+            assertFalse(manager.connectionFailure.value, "restart should close the prompt")
             assertEquals(resetsBefore + 1, backend.resetCount + backend.resetWithCleanStateCount)
-            assertTrue("re-init should call start() again", backend.startCount > startsBefore)
+            assertTrue(backend.startCount > startsBefore, "re-init should call start() again")
 
             // The new attempt earns a full timeout of its own before the prompt can return.
             advanceTimeBy(TorManager.BOOTSTRAP_TIMEOUT_MS - 1_000L)
             runCurrent()
-            assertFalse("prompt came back before the new attempt timed out", manager.connectionFailure.value)
+            assertFalse(manager.connectionFailure.value, "prompt came back before the new attempt timed out")
 
             sub.cancel()
             subFail.cancel()
@@ -1008,7 +1006,7 @@ class TorManagerTest {
             runCurrent()
 
             assertEquals(resetsBefore + 1, backend.resetCount)
-            assertEquals("must not wipe a partial consensus", 0, backend.resetWithCleanStateCount)
+            assertEquals(0, backend.resetWithCleanStateCount, "must not wipe a partial consensus")
             sub.cancel()
         }
 

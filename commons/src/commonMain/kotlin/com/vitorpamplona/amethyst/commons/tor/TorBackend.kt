@@ -18,15 +18,16 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The slice of [TorService] that [TorManager] drives. Extracted so the manager
- * can be unit-tested without booting Arti via JNI — production wires
- * `TorService(context)`, tests wire an in-memory fake.
+ * can be unit-tested without booting Arti — production wires a [TorService] over
+ * the platform's [ArtiBridge] (JNI on Android, the C ABI on iOS), tests wire an
+ * in-memory fake.
  */
 interface TorBackend {
     val status: StateFlow<TorServiceStatus>

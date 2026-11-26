@@ -18,11 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
-import org.junit.Assert.assertFalse
-import org.junit.Assert.assertTrue
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class ArtiGuardStateTest {
     private fun load(resource: String): String =
@@ -40,12 +40,12 @@ class ArtiGuardStateTest {
         val root = ArtiGuardState.parse(load("/tor/guards-confirmed-with-poisoned.json"))
 
         assertTrue(
-            "device sample has confirmed guards → prior bootstrap proven",
             ArtiGuardState.hasConfirmedGuard(root),
+            "device sample has confirmed guards → prior bootstrap proven",
         )
         assertFalse(
-            "2 disabled of 22 guards is not a total wipeout → not wedged by the AllGuardsDown check",
             ArtiGuardState.hasNoUsableGuards(root),
+            "2 disabled of 22 guards is not a total wipeout → not wedged by the AllGuardsDown check",
         )
     }
 
@@ -95,7 +95,7 @@ class ArtiGuardStateTest {
                 """.trimIndent(),
             )
 
-        assertTrue("every guard unusable → wedged", ArtiGuardState.hasNoUsableGuards(root))
+        assertTrue(ArtiGuardState.hasNoUsableGuards(root), "every guard unusable → wedged")
         // Even when fully wedged, prior confirmation is still proven.
         assertTrue(ArtiGuardState.hasConfirmedGuard(root))
     }
@@ -121,8 +121,8 @@ class ArtiGuardStateTest {
         val root = ArtiGuardState.parse(guards)
 
         assertTrue(
-            "1 usable of 60 is unrecoverable in practice → must wipe",
             ArtiGuardState.hasNoUsableGuards(root),
+            "1 usable of 60 is unrecoverable in practice → must wipe",
         )
     }
 
@@ -145,8 +145,8 @@ class ArtiGuardStateTest {
             )
 
         assertFalse(
-            "1 usable of 3 is a young sample Arti is still filling → leave it alone",
             ArtiGuardState.hasNoUsableGuards(root),
+            "1 usable of 3 is a young sample Arti is still filling → leave it alone",
         )
     }
 
@@ -164,8 +164,8 @@ class ArtiGuardStateTest {
             }
 
         assertFalse(
-            "20 usable of 21 is healthy",
             ArtiGuardState.hasNoUsableGuards(ArtiGuardState.parse(guards)),
+            "20 usable of 21 is healthy",
         )
     }
 

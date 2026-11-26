@@ -38,6 +38,10 @@ import com.vitorpamplona.amethyst.commons.resources.tor_progress_ready
 import com.vitorpamplona.amethyst.commons.resources.tor_progress_starting
 import com.vitorpamplona.amethyst.commons.resources.tor_splash_connecting
 import com.vitorpamplona.amethyst.commons.resources.tor_status_connected
+import com.vitorpamplona.amethyst.commons.tor.TorBackend
+import com.vitorpamplona.amethyst.commons.tor.TorManager
+import com.vitorpamplona.amethyst.commons.tor.TorProgressNotice
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
 import com.vitorpamplona.amethyst.commons.ui.loadStringRes
 import com.vitorpamplona.amethyst.ui.MainActivity
 import com.vitorpamplona.quartz.utils.Log
@@ -46,47 +50,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
-
-/** What the Tor progress notification should show. Pure, so the mapping is unit-testable. */
-sealed class TorProgressNotice {
-    /** Opted out, or Tor is off: no notification. */
-    data object Hidden : TorProgressNotice()
-
-    /** The native client is being created; no proxy yet. */
-    data object Starting : TorProgressNotice()
-
-    /** The proxy is up and the directory is downloading. [percent] is null before Arti reports any. */
-    data class Downloading(
-        val percent: Int?,
-    ) : TorProgressNotice()
-
-    /** Fully bootstrapped. */
-    data object Ready : TorProgressNotice()
-
-    val isInProgress: Boolean get() = this is Starting || this is Downloading
-
-    companion object {
-        /**
-         * @param permille Arti's directory-download progress, 0-1000, or negative when unknown
-         *   (see [TorBackend.bootstrapProgress]).
-         */
-        fun from(
-            enabled: Boolean,
-            status: TorServiceStatus,
-            permille: Int,
-        ): TorProgressNotice =
-            if (!enabled) {
-                Hidden
-            } else {
-                when (status) {
-                    TorServiceStatus.Off -> Hidden
-                    TorServiceStatus.Connecting -> Starting
-                    is TorServiceStatus.Bootstrapping -> Downloading(if (permille >= 0) (permille / 10).coerceIn(0, 100) else null)
-                    is TorServiceStatus.Active -> Ready
-                }
-            }
-    }
-}
 
 /**
  * Opt-in notification ([com.vitorpamplona.amethyst.commons.tor.TorSettings.progressNotification],

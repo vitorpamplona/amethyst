@@ -46,7 +46,7 @@ import kotlin.system.measureTimeMillis
  * and the Gradle test task sets `java.library.path` to point at it.
  *
  * **Layered safety net for our Tor stack:**
- *   - [TorManagerTest] — fast unit tests, no Arti, virtual time. Covers Kotlin
+ *   - `TorManagerTest` and `TorServiceTest` (commons commonTest) — fast unit tests, no Arti, virtual time. Cover Kotlin
  *     self-heal logic.
  *   - This file (smoke) — JNI bridge loads, version JNI call works. Always runs
  *     on Linux x86_64 hosts. ~10ms. Catches build/link regressions in the .so.

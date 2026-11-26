@@ -18,10 +18,10 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.tor
+package com.vitorpamplona.amethyst.commons.tor
 
-import org.junit.Assert.assertEquals
-import org.junit.Test
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class TorProgressNoticeTest {
     @Test
@@ -56,6 +56,11 @@ class TorProgressNoticeTest {
     @Test
     fun `out-of-range progress is clamped`() {
         assertEquals(TorProgressNotice.Downloading(100), TorProgressNotice.from(true, TorServiceStatus.Bootstrapping(9050), 1500))
+    }
+
+    @Test
+    fun `an error from a backend without progress hides the notification`() {
+        assertEquals(TorProgressNotice.Hidden, TorProgressNotice.from(true, TorServiceStatus.Error("no route"), -1))
     }
 
     @Test

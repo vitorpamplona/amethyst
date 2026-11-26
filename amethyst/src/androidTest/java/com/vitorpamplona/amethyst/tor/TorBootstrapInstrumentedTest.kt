@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.tor
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
-import com.vitorpamplona.amethyst.ui.tor.TorService
-import com.vitorpamplona.amethyst.ui.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.commons.tor.TorServiceStatus
+import com.vitorpamplona.amethyst.ui.tor.androidTorService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -83,7 +83,7 @@ class TorBootstrapInstrumentedTest {
      * assertion below would hang until its timeout.
      */
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val torService = TorService(context, scope)
+    private val torService = androidTorService(context, scope)
 
     @After
     fun tearDown() =

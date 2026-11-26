@@ -41,6 +41,7 @@ import com.vitorpamplona.amethyst.commons.resources.tor_connection_failed_title
 import com.vitorpamplona.amethyst.commons.resources.tor_continue_without_for_session
 import com.vitorpamplona.amethyst.commons.resources.tor_keep_waiting
 import com.vitorpamplona.amethyst.commons.resources.tor_restart
+import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 
 /**

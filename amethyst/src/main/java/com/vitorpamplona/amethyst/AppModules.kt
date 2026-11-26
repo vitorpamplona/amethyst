@@ -138,6 +138,7 @@ import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.BlossomSe
 import com.vitorpamplona.amethyst.commons.service.upload.blossom.bud10.LocalBlossomCacheProbe
 import com.vitorpamplona.amethyst.commons.state.UiSettingsState
 import com.vitorpamplona.amethyst.commons.tor.AccountsTorStateConnector
+import com.vitorpamplona.amethyst.commons.tor.TorManager
 import com.vitorpamplona.amethyst.commons.tor.TorRelayState
 import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.ui.playback.pip.BackgroundMedia
@@ -180,9 +181,8 @@ import com.vitorpamplona.amethyst.service.uploads.blossom.BlossomSyncForegroundS
 import com.vitorpamplona.amethyst.service.uploads.nip95.Nip95CacheFactory
 import com.vitorpamplona.amethyst.service.wot.TrustNetworkSyncWorker
 import com.vitorpamplona.amethyst.ui.resourceCacheInit
-import com.vitorpamplona.amethyst.ui.tor.TorManager
 import com.vitorpamplona.amethyst.ui.tor.TorProgressNotifier
-import com.vitorpamplona.amethyst.ui.tor.TorService
+import com.vitorpamplona.amethyst.ui.tor.androidTorService
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -390,7 +390,7 @@ class AppModules(
         UiSettingsState(uiPrefs.value, connManager.isMobileOrFalse, applicationIOScope)
     }
 
-    private val torService = TorService(appContext, applicationIOScope)
+    private val torService = androidTorService(appContext, applicationIOScope)
     val torManager = TorManager(torPrefs, torService, applicationIOScope)
 
     // Opt-in Tor startup-progress notification (TorSettings.progressNotification). Watches the
