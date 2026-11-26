@@ -45,7 +45,6 @@ import com.vitorpamplona.amethyst.commons.content.CodeBlock
 import com.vitorpamplona.amethyst.commons.ui.content.LocalDocumentChipColor
 import com.vitorpamplona.amethyst.commons.ui.content.LocalDocumentCodeBlock
 import com.vitorpamplona.amethyst.commons.ui.content.RenderPlainMarkdown
-import com.vitorpamplona.amethyst.commons.ui.theme.isLight
 
 /**
  * The chat's reading text, a Claude reply read like a document: lines close enough (1.4) that a
@@ -56,18 +55,9 @@ internal val ChatTextStyle: TextStyle
     @Composable @ReadOnlyComposable
     get() = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp, lineHeight = 21.sp, letterSpacing = 0.sp)
 
-/** The color of inline code's rounded chips in the chat; pairs with [rememberChatMarkdownStyle]. */
-@Composable
-internal fun rememberChatChipColor(): Color {
-    // Translucent, so the chip reads on the page and on the gray of the user's bubble alike; a
-    // stronger tint on a dark page, where 6% of a light ink barely shows against black.
-    val colors = MaterialTheme.colorScheme
-    return colors.onSurface.copy(alpha = if (colors.isLight) 0.06f else 0.12f)
-}
-
 /**
  * Markdown in the chat: the shared document renderer with the chat's look. Inline code sits on
- * rounded chips ([chips]); with [codeBlocks], code blocks go across the column with a copy button.
+ * the documents' rounded chips ([chips]); with [codeBlocks], code blocks go across the column with a copy button.
  */
 @Composable
 internal fun ChatMarkdown(
@@ -79,7 +69,8 @@ internal fun ChatMarkdown(
     chips: Boolean = true,
     codeBlocks: Boolean = false,
 ) {
-    val chipColor = if (chips) rememberChatChipColor() else Color.Transparent
+    // The documents' own chip (null) or none at all.
+    val chipColor = if (chips) null else Color.Transparent
     CompositionLocalProvider(
         LocalDocumentChipColor provides chipColor,
         LocalDocumentCodeBlock provides if (codeBlocks) ChatCodeBlocks else null,
