@@ -29,18 +29,14 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.ImageComposeScene
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Density
-import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
-import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.DefaultInlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.InlineQuoteRenderer
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
-import com.vitorpamplona.amethyst.commons.ui.components.RichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.richtext.DefaultRichTextSegmentRenderer
 import com.vitorpamplona.amethyst.commons.ui.richtext.LocalRichTextPlatform
@@ -284,9 +280,9 @@ class NoteQuoteBudgetTest {
 
     /**
      * The front ends' segment renderer, which turns a `nostr:` mention into a quote (the default
-     * platform prints it as text). A kind whose NIP says Markdown (NIP-82's releases) always goes
-     * to [Markdown]: drawn here as Nostr text, so its quotes spend the same budget. Secret messages
-     * are not exercised.
+     * platform prints it as text). A kind whose NIP says Markdown (NIP-82's releases) goes to the
+     * shared document renderer, the platform's default [RichTextPlatform.Markdown], so its quotes
+     * are counted there too. Secret messages are not exercised.
      */
     private object QuotingPlatform : RichTextPlatform {
         override fun segmentRenderer(
@@ -296,18 +292,6 @@ class NoteQuoteBudgetTest {
             callbackUri: String?,
             canPreview: Boolean,
         ): RichTextSegmentRenderer = DefaultRichTextSegmentRenderer(accountViewModel, nav, backgroundColor, callbackUri, canPreview)
-
-        @Composable
-        override fun Markdown(
-            content: String,
-            tags: ImmutableListOfLists<String>,
-            canPreview: Boolean,
-            quotesLeft: Int,
-            backgroundColor: MutableState<Color>,
-            callbackUri: String?,
-            accountViewModel: AccountViewModel,
-            nav: INav,
-        ) = RichTextViewer(content, canPreview, quotesLeft, Modifier, tags, backgroundColor, callbackUri, null, accountViewModel, nav, TextRendering.GUESS)
 
         @Composable
         override fun SecretMessage(
