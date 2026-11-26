@@ -60,6 +60,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -71,6 +72,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextDirection
@@ -145,6 +147,7 @@ import com.vitorpamplona.amethyst.commons.ui.text.onUiThread
 import com.vitorpamplona.amethyst.commons.ui.theme.Size10dp
 import com.vitorpamplona.amethyst.commons.ui.theme.Size5dp
 import com.vitorpamplona.amethyst.commons.ui.theme.SuggestionListDefaultHeightPage
+import com.vitorpamplona.amethyst.commons.ui.theme.grayText
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -387,17 +390,26 @@ private fun MarkdownPostScreenBody(
                 }
 
                 if (postViewModel.showPreview) {
-                    // Markdown preview
+                    // The article as readers will see it: its title and summary, then the body with
+                    // its emoji and attached files.
                     val backgroundColor = remember { mutableStateOf(Color.Transparent) }
+                    val body = AttachedMediaState.stripMarkers(postViewModel.message.text.toString())
+                    val previewTags by produceState(EmptyTagList, body) { value = postViewModel.previewTags() }
                     Column(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
                                 .padding(Size10dp),
                     ) {
+                        postViewModel.title.text.ifBlank { null }?.let {
+                            Text(it, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(bottom = 4.dp))
+                        }
+                        postViewModel.summary.text.ifBlank { null }?.let {
+                            Text(it, color = MaterialTheme.colorScheme.grayText, modifier = Modifier.padding(bottom = 8.dp))
+                        }
                         LocalRichTextPlatform.current.Markdown(
-                            content = AttachedMediaState.stripMarkers(postViewModel.message.text.toString()),
-                            tags = EmptyTagList,
+                            content = body,
+                            tags = previewTags,
                             canPreview = true,
                             quotesLeft = 1,
                             backgroundColor = backgroundColor,

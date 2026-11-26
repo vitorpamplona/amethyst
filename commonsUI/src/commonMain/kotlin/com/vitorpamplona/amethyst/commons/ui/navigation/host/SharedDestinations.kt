@@ -305,6 +305,8 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.webBookmarks.WebBoo
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.NewWorkoutScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.workouts.WorkoutsScreen
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.amethyst.commons.wiki.ui.WikiPostScreen
+import com.vitorpamplona.amethyst.commons.wiki.ui.WikiTopicScreen
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip34Git.review.GitCodeLocation
 
@@ -537,6 +539,8 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.Note> { ThreadScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.Nip> { OfficialNipScreen(it.number, it.anchor, accountViewModel, nav) }
     composableFromEndArgs<Route.EventKind> { EventKindScreen(it.kind, accountViewModel, nav) }
+    composableFromEndArgs<Route.WikiTopic> { WikiTopicScreen(it.slug, it.from, accountViewModel, nav) }
+    composerArgs<Route.WikiPost>(ComposerSize.FORM) { WikiPostScreen(it.topic, it.base, accountViewModel, nav) }
     composableFromEnd<Route.Nips> { NipsScreen(accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsQr> { ShareNoteAsQrScreen(it.id, accountViewModel, nav) }
     composableFromEndArgs<Route.ShareNoteAsImage> { ShareNoteAsImageScreen(it.id, accountViewModel, nav) }

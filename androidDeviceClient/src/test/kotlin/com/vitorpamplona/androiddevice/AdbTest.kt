@@ -21,8 +21,10 @@
 package com.vitorpamplona.androiddevice
 
 import com.vitorpamplona.androiddevice.adb.Adb
-import com.vitorpamplona.androiddevice.adb.DeviceKey
-import com.vitorpamplona.androiddevice.adb.ScreenSize
+import com.vitorpamplona.devicecore.CommandResult
+import com.vitorpamplona.devicecore.CommandRunner
+import com.vitorpamplona.devicecore.input.DeviceKey
+import com.vitorpamplona.devicecore.screen.ScreenSize
 import kotlinx.coroutines.runBlocking
 import java.io.ByteArrayOutputStream
 import java.io.File

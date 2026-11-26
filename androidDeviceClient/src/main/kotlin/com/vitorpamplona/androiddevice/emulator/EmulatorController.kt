@@ -20,32 +20,32 @@
  */
 package com.vitorpamplona.androiddevice.emulator
 
-import com.vitorpamplona.androiddevice.grpc.GrpcChannel
-import com.vitorpamplona.androiddevice.grpc.ProtoField
-import com.vitorpamplona.androiddevice.grpc.ProtoReader
-import com.vitorpamplona.androiddevice.grpc.ProtoWriter
-import com.vitorpamplona.androiddevice.grpc.bytes
-import com.vitorpamplona.androiddevice.grpc.message
-import com.vitorpamplona.androiddevice.grpc.messages
-import com.vitorpamplona.androiddevice.grpc.string
-import com.vitorpamplona.androiddevice.grpc.varint
+import com.vitorpamplona.devicecore.grpc.GrpcChannel
+import com.vitorpamplona.devicecore.grpc.ProtoField
+import com.vitorpamplona.devicecore.grpc.ProtoReader
+import com.vitorpamplona.devicecore.grpc.ProtoWriter
+import com.vitorpamplona.devicecore.grpc.bytes
+import com.vitorpamplona.devicecore.grpc.message
+import com.vitorpamplona.devicecore.grpc.messages
+import com.vitorpamplona.devicecore.grpc.string
+import com.vitorpamplona.devicecore.grpc.varint
+import com.vitorpamplona.devicecore.screen.PixelFormat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.io.IOException
 
-/** How the pixels of an [EmulatorImage] are laid out. */
-enum class PixelFormat(
-    val wire: Int,
-) {
-    PNG(0),
-    RGBA8888(1),
-    RGB888(2),
-    ;
+/** The emulator's `ImageFormat.ImgFormat` number for [this]: PNG 0, RGBA8888 1, RGB888 2. */
+val PixelFormat.wire: Int
+    get() =
+        when (this) {
+            PixelFormat.PNG -> 0
+            PixelFormat.RGBA8888 -> 1
+            PixelFormat.RGB888 -> 2
+            PixelFormat.JPEG -> throw IllegalArgumentException("The emulator has no JPEG frames")
+        }
 
-    companion object {
-        fun of(wire: Int) = entries.firstOrNull { it.wire == wire } ?: PNG
-    }
-}
+/** The [PixelFormat] the emulator's number names; PNG for one it doesn't. */
+fun pixelFormatOf(wire: Int): PixelFormat = PixelFormat.entries.firstOrNull { it != PixelFormat.JPEG && it.wire == wire } ?: PixelFormat.PNG
 
 /**
  * One picture of the emulator's display, as `getScreenshot`/`streamScreenshot` send it. [rotation]
@@ -248,7 +248,7 @@ class EmulatorController(
             val width = format.varint(3).takeIf { it > 0 } ?: fields.varint(2)
             val height = format.varint(4).takeIf { it > 0 } ?: fields.varint(3)
             return EmulatorImage(
-                format = PixelFormat.of(format.varint(1).toInt()),
+                format = pixelFormatOf(format.varint(1).toInt()),
                 width = width.toInt(),
                 height = height.toInt(),
                 rotation = format.message(2).varint(1).toInt() and 3,

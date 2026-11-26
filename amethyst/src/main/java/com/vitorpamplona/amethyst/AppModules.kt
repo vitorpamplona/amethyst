@@ -37,6 +37,7 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.DataStoreNostrSignerPermissionStore
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.DataStoreNip46ClientStore
+import com.vitorpamplona.amethyst.commons.content.CachedDocuments
 import com.vitorpamplona.amethyst.commons.cordn.KeyStoreCordnBlobCipher
 import com.vitorpamplona.amethyst.commons.domain.nip46.RemoteSignerAuthPrompts
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
@@ -90,7 +91,6 @@ import com.vitorpamplona.amethyst.commons.relays.health.FileRelayHealthPersisten
 import com.vitorpamplona.amethyst.commons.relays.health.RelayLatencyMonitor
 import com.vitorpamplona.amethyst.commons.relays.health.TorCircuitHealthTracker
 import com.vitorpamplona.amethyst.commons.relays.nip11RelayInfo.Nip11CachedRetriever
-import com.vitorpamplona.amethyst.commons.richtext.CachedAsciiDocToMarkdown
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.robohash.CachedRobohash
 import com.vitorpamplona.amethyst.commons.routstr.DataStoreRoutstrPurchaseStore
@@ -1698,7 +1698,7 @@ class AppModules(
                     // from scratch. memoryCache is byte-sized (Coil), the rest are entry counts.
                     memoryCache.trimToSize(memoryCache.maxSize / 10)
                     CachedRichTextParser.trimToSize(10)
-                    CachedAsciiDocToMarkdown.trimToSize(4)
+                    CachedDocuments.trimToSize(4)
                     CachedRobohash.trimToSize(20)
                     nip11Cache.trimToSize(10)
                 }

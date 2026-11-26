@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.richtext.HashTagSegment
 import com.vitorpamplona.amethyst.commons.richtext.ParagraphState
 import com.vitorpamplona.amethyst.commons.richtext.RichTextViewerState
 import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableTextPrimary
 import com.vitorpamplona.amethyst.commons.ui.components.CrossfadeIfEnabled
 import com.vitorpamplona.amethyst.commons.ui.components.LocalInlineQuoteRenderer
@@ -114,11 +115,12 @@ fun RichTextViewer(
     authorPubKey: String? = null,
     accountViewModel: AccountViewModel,
     nav: INav,
+    rendering: TextRendering = TextRendering.GUESS,
 ) {
     val platform = LocalRichTextPlatform.current
 
     Column(modifier = modifier) {
-        if (remember(content) { CachedRichTextParser.isMarkdown(content) }) {
+        if (remember(content, rendering) { rendering.isMarkdown(content) }) {
             // Markdown hands the bleed only to the media on its top-level lines, not to lists or quotes.
             platform.Markdown(content, tags, canPreview, quotesLeft, backgroundColor, callbackUri, accountViewModel, nav)
             return@Column

@@ -34,6 +34,7 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.drawing.RenderedDrawing
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
+import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -47,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiPackState.EmojiMedia
 import com.vitorpamplona.amethyst.commons.model.nip30CustomEmojis.EmojiSuggestionState
+import com.vitorpamplona.amethyst.commons.model.toImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.service.pow.PoWReplay
 import com.vitorpamplona.amethyst.commons.service.upload.MediaUploadTracker
 import com.vitorpamplona.amethyst.commons.service.upload.SuspendableConfirmation
@@ -429,6 +431,22 @@ class LongFormPostViewModel :
             val template = createTemplate() ?: return
             accountViewModel.account.createAndSendDraftIgnoreErrors(draftTag.current, template)
         }
+    }
+
+    /**
+     * The tags the preview needs to draw the body as it will be published: the custom emoji it uses
+     * and the `imeta` of the files attached to it.
+     */
+    suspend fun previewTags(): ImmutableListOfLists<String> {
+        val text = AttachedMediaState.stripMarkers(message.text.toString())
+        val emojis = account.emoji.findEmojiTags(text)
+        val used = iMetaAttachments.filterIsIn(findURLs(text).toSet())
+        return LongFormContentEvent
+            .build(description = text, title = "", dTag = "preview") {
+                emojis(emojis)
+                imetas(used)
+            }.tags
+            .toImmutableListOfLists()
     }
 
     @OptIn(ExperimentalUuidApi::class)

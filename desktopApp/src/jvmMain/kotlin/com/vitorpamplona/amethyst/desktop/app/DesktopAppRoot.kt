@@ -39,9 +39,9 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.IntOffset
 import com.vitorpamplona.amethyst.commons.account.AccountSessionManager
-import com.vitorpamplona.amethyst.commons.androiddevices.ui.DevicesDockPanel
 import com.vitorpamplona.amethyst.commons.appupdate.AppUpdateController
-import com.vitorpamplona.amethyst.commons.claudecode.AndroidSdk
+import com.vitorpamplona.amethyst.commons.devices.Devices
+import com.vitorpamplona.amethyst.commons.devices.ui.DevicesDockPanel
 import com.vitorpamplona.amethyst.commons.keystorage.KeyStorageController
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -209,8 +209,8 @@ class DesktopAppRoot(
 
     /** The assistant beside the screen, as an IDE's tool window. */
     override fun dockPanels(accountViewModel: AccountViewModel): List<DockPanelSpec> =
-        // The device panel only where there is an Android SDK to drive devices with.
-        listOfNotNull(AssistantDockPanel, DevicesDockPanel.takeIf { hasAndroidSdk })
+        // The device panel only where there are devices to drive: an Android SDK, or Xcode's simulators.
+        listOfNotNull(AssistantDockPanel, DevicesDockPanel.takeIf { hasDevices })
 
     override val supportsPanelWindows: Boolean = true
 
@@ -398,4 +398,4 @@ private fun KeyNotKeptDialog(modules: DesktopAppModules) {
 internal const val PINNED_WEB_APP = "pinned:"
 
 /** Looked up once: the dock's panel list is asked for on every composition of the shell. */
-private val hasAndroidSdk: Boolean by lazy { AndroidSdk.home() != null }
+private val hasDevices: Boolean by lazy { Devices.supported }
