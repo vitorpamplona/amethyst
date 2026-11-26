@@ -31,7 +31,7 @@ import androidx.lifecycle.ViewModel
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
 import com.vitorpamplona.amethyst.commons.model.composer.NewMessageTagger
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
-import com.vitorpamplona.quartz.experimental.forks.parseForkedAddress
+import com.vitorpamplona.quartz.experimental.forks.forkOf
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.signers.EventTemplate
 import com.vitorpamplona.quartz.nip01Core.tags.hashtags.hashtags
@@ -39,7 +39,6 @@ import com.vitorpamplona.quartz.nip01Core.tags.references.references
 import com.vitorpamplona.quartz.nip10Notes.content.findHashtags
 import com.vitorpamplona.quartz.nip10Notes.content.findNostrUris
 import com.vitorpamplona.quartz.nip10Notes.content.findURLs
-import com.vitorpamplona.quartz.nip10Notes.tags.MarkedETag
 import com.vitorpamplona.quartz.nip18Reposts.quotes.quotes
 import com.vitorpamplona.quartz.nip30CustomEmoji.emojis
 import com.vitorpamplona.quartz.nip54Wiki.WikiArticleEvent
@@ -131,7 +130,7 @@ class WikiPostViewModel : ViewModel() {
         tagger.run()
         val text = tagger.message
         val emojis = accountViewModel.account.emoji.findEmojiTags(text)
-        val forkOf = base?.takeIf { isFork }
+        val forkedFrom = base?.takeIf { isFork }
 
         return WikiArticleEvent.build(
             description = text,
@@ -144,18 +143,7 @@ class WikiPostViewModel : ViewModel() {
             references(findURLs(text))
             quotes(findNostrUris(text))
             emojis(emojis)
-            if (forkOf != null) {
-                add(forkedAddressTag(forkOf.address()))
-                add(MarkedETag.assemble(forkOf.id, null, MarkedETag.MARKER.FORK, forkOf.pubKey))
-            }
+            forkedFrom?.let { forkOf(it) }
         }
-    }
-
-    companion object {
-        /**
-         * NIP-54's fork pointer, `["a", <address>, "", "fork"]`: the tag [parseForkedAddress] reads.
-         * quartz has the parser but no builder yet; this belongs beside it.
-         */
-        fun forkedAddressTag(address: Address): Array<String> = arrayOf("a", address.toValue(), "", MarkedETag.MARKER.FORK.code)
     }
 }
