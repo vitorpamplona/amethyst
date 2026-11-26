@@ -20,13 +20,13 @@
  */
 package com.vitorpamplona.androiddevice
 
-import com.vitorpamplona.androiddevice.adb.ScreenSize
 import com.vitorpamplona.androiddevice.avd.Avds
 import com.vitorpamplona.androiddevice.device.EmulatorScreen
 import com.vitorpamplona.androiddevice.emulator.EmulatorDiscovery
 import com.vitorpamplona.androiddevice.emulator.EmulatorLauncher
 import com.vitorpamplona.androiddevice.emulator.LaunchOptions
 import com.vitorpamplona.androiddevice.emulator.displayAvailable
+import com.vitorpamplona.devicecore.screen.ScreenSize
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test

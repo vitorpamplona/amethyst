@@ -212,6 +212,12 @@ Finishing touches found by running the app (2026-11-26):
   custom emoji and attached files' `imeta`, so the body renders as it will be published.
 - **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
   dropped.
+- **Markdown footnotes** (GitHub's `[^label]` and `[^label]: text`), which both the old renderer
+  and JetBrains' parser left as literal text, found by the before/after captures.
+  `MarkdownFootnotes` takes the definitions out of the source before it is parsed (not inside
+  code fences), with their indented and lazy continuation lines. Each note is then parsed once,
+  numbered in the order it is first called, and drawn in the same `Footnotes` block as Djot's
+  and AsciiDoc's. A call with no note stays text, and a note nobody calls is not drawn.
 
 ## Verification
 
