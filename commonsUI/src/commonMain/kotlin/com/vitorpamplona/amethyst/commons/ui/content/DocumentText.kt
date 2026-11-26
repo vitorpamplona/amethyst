@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.ui.content
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -145,8 +146,18 @@ fun RichTextScope.RenderInlines(
     // A transparent chip color (the chat's `chips = false`) means no chips, and so no room for them.
     val pad = if (chip.alpha > 0f) with(density) { ChipSide.toSp() } else null
     val built = remember(inlines, context, pad, highlight, bold, italic) { buildText(inlines, context, pad, highlight, bold, italic) }
+    // Text that calls footnotes is where their notes' `↩` returns to.
+    val footnotes = LocalFootnoteTargets.current
+    val callsHere =
+        if (footnotes != null && built.footnoteCalls.isNotEmpty()) {
+            val anchor = remember { FootnoteAnchor() }
+            RegisterFootnoteCalls(footnotes, built.footnoteCalls, anchor)
+            Modifier.footnoteAnchor(anchor)
+        } else {
+            Modifier
+        }
     if (built.codeRuns.isEmpty()) {
-        Text(text = built.text)
+        Text(text = built.text, modifier = callsHere)
         return
     }
     // Worked out once per layout, so drawing (on every frame that redraws) only paints.
@@ -162,7 +173,7 @@ fun RichTextScope.RenderInlines(
             val radius = with(density) { CornerRadius(ChipCorner.toPx()) }
             Modifier.drawBehind { chips.forEach { drawRoundRect(chip, it.topLeft, it.size, radius) } }
         }
-    Text(text = built.text, modifier = drawChips, onTextLayout = onLayout)
+    Text(text = built.text, modifier = callsHere.then(drawChips), onTextLayout = onLayout)
 }
 
 /** A code block. JSON-like code gets the highlighter's colors; all code keeps its lines and scrolls sideways. */
@@ -197,6 +208,8 @@ private val ChipCorner = 4.dp
 private class BuiltText(
     val text: RichTextString,
     val codeRuns: List<CodeRun>,
+    /** The footnotes this text calls, by number. */
+    val footnoteCalls: List<Int>,
 )
 
 /** A code run's characters, and whether letter spacing made room for the chip before it. */
@@ -220,7 +233,7 @@ private fun buildText(
     text.inlines(inlines)
     italicized?.let { builder.pop(it) }
     bolded?.let { builder.pop(it) }
-    return BuiltText(builder.toRichTextString(), text.codeRuns)
+    return BuiltText(builder.toRichTextString(), text.codeRuns, text.footnoteCalls)
 }
 
 /**
@@ -235,6 +248,7 @@ private class TextBuilder(
     val highlight: Color,
 ) {
     val codeRuns = mutableListOf<CodeRun>()
+    val footnoteCalls = mutableListOf<Int>()
 
     // The last character appended, while it is known: inline content has none.
     private var last: Char? = null
@@ -274,7 +288,7 @@ private class TextBuilder(
                 } else {
                     equation(MathSegment("$" + inline.latex + "$", inline.latex, false))
                 }
-            is FootnoteReference -> builder.withFormat(RichTextString.Format.Superscript) { append(inline.number.toString()) }
+            is FootnoteReference -> footnote(inline.number)
             is NostrInline -> nostr(inline.segment)
             // An inline this renderer does not know: its children, so no text is lost.
             is InlineContainer -> inlines(inline.children)
@@ -309,6 +323,14 @@ private class TextBuilder(
             // A link whose text is its own address previews like a bare one.
             label == link.destination && context.canPreview && link.destination.startsWith("http") -> linkPreview(link.destination)
             else -> linked(link.destination) { inlines(link.children) }
+        }
+    }
+
+    /** A call to a note: its number, raised, and a link to the note. */
+    private fun footnote(number: Int) {
+        if (number !in footnoteCalls) footnoteCalls.add(number)
+        linked(FootnoteTargets.linkTo(number)) {
+            builder.withFormat(RichTextString.Format.Superscript) { append(number.toString()) }
         }
     }
 
@@ -421,7 +443,8 @@ private class TextBuilder(
             is NowhereLinkSegment -> fullWidth { segments.NowhereLink(segment, context.canPreview, Modifier) }
             is WebxdcSegment -> fullWidth { WebxdcPostCard(segment.app, segment.postUri, null) }
             is TimestampSegment -> inlineFit { LocalTimestampText(segment) }
-            is SecretEmoji -> fullWidth { segments.SecretMessage(segment, state, context.canPreview, context.quotesLeft, Modifier) }
+            // The emoji and, once tapped, its message: two pieces, stacked in the one slot.
+            is SecretEmoji -> fullWidth { Column { segments.SecretMessage(segment, state, context.canPreview, context.quotesLeft, Modifier) } }
             else -> append(segment.segmentText)
         }
     }

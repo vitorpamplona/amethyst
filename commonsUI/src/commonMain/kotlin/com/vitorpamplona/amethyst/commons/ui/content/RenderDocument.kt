@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.ui.content
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -48,6 +49,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -95,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.callout_important
 import com.vitorpamplona.amethyst.commons.resources.callout_note
 import com.vitorpamplona.amethyst.commons.resources.callout_tip
 import com.vitorpamplona.amethyst.commons.resources.callout_warning
+import com.vitorpamplona.amethyst.commons.resources.footnote_back_to_text
 import com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.LinkSegment
@@ -215,11 +219,13 @@ fun RenderDocument(
         }
 
     val anchors = LocalMarkdownAnchors.current
+    val footnotes = rememberFootnoteTargets(document)
     val uriHandler = LocalUriHandler.current
-    val onClick = remember(uriHandler, accountViewModel, nav, anchors) { DocumentUriHandler(uriHandler, accountViewModel, nav, anchors) }
+    val onClick = remember(uriHandler, accountViewModel, nav, anchors, footnotes) { DocumentUriHandler(uriHandler, accountViewModel, nav, anchors, footnotes) }
 
     CompositionLocalProvider(
         LocalUriHandler provides onClick,
+        LocalFootnoteTargets provides footnotes,
         LocalRichTextSegmentRenderer provides segments,
         LocalRichTextInteractions provides interactions,
     ) {
@@ -262,10 +268,11 @@ fun RenderPlainMarkdown(
 ) {
     val document = remember(content) { CachedDocuments.plainMarkdown(content) }
     val context = remember { DocumentContext(null, false, 0, null, null, null, null, 0.dp) }
-    val uriHandler = remember(onLinkClick) { PlainUriHandler(onLinkClick) }
+    val footnotes = rememberFootnoteTargets(document)
+    val uriHandler = remember(onLinkClick, footnotes) { PlainUriHandler(onLinkClick, footnotes) }
     val density = LocalDensity.current
     val scaled = remember(fontScale, density) { if (fontScale == 1.0f) density else Density(density.density * fontScale, density.fontScale) }
-    CompositionLocalProvider(LocalUriHandler provides uriHandler, LocalDensity provides scaled) {
+    CompositionLocalProvider(LocalUriHandler provides uriHandler, LocalDensity provides scaled, LocalFootnoteTargets provides footnotes) {
         val render: @Composable () -> Unit = {
             RichText(modifier = modifier, style = style ?: RichTextStyle()) {
                 document.blocks.forEach { RenderBlock(it, context, topLevel = true) }
@@ -278,8 +285,13 @@ fun RenderPlainMarkdown(
 /** Hands a link to the screen; only schemes that open something safe (web, mail). */
 private class PlainUriHandler(
     val onLinkClick: (String) -> Unit,
+    val footnotes: FootnoteTargets,
 ) : UriHandler {
     override fun openUri(uri: String) {
+        FootnoteTargets.numberOf(uri)?.let {
+            footnotes.jumpToNote(it)
+            return
+        }
         if (uri.substringBefore(':').lowercase() in PLAIN_SCHEMES) onLinkClick(uri)
     }
 }
@@ -295,8 +307,14 @@ private class DocumentUriHandler(
     val accountViewModel: AccountViewModel,
     val nav: INav,
     val anchors: MarkdownAnchors?,
+    val footnotes: FootnoteTargets,
 ) : UriHandler {
     override fun openUri(uri: String) {
+        // A call to a footnote: its note, in this document.
+        FootnoteTargets.numberOf(uri)?.let {
+            footnotes.jumpToNote(it)
+            return
+        }
         val section = anchors?.anchorOfLink(uri)
         if (section != null && anchors.jumpTo(section)) return
         val route = uriToRoute(uri, accountViewModel.account)
@@ -527,9 +545,34 @@ private fun RichTextScope.RenderFootnotes(
     context: DocumentContext,
 ) {
     HorizontalRule()
+    val targets = LocalFootnoteTargets.current
     FormattedList(listType = ListType.Ordered, items = footnotes.notes, startIndex = (footnotes.notes.firstOrNull()?.number ?: 1) - 1) { note ->
-        RenderBlocks(note.blocks, context)
+        if (targets == null) {
+            RenderBlocks(note.blocks, context)
+        } else {
+            val anchor = remember { FootnoteAnchor() }
+            RegisterFootnote(targets, note.number, anchor)
+            Row(Modifier.footnoteAnchor(anchor), verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) { RenderBlocks(note.blocks, context) }
+                FootnoteBackLink { targets.jumpToCall(note.number) }
+            }
+        }
     }
+}
+
+/** The `↩` after a note: back to the text that called it. */
+@Composable
+private fun FootnoteBackLink(onClick: () -> Unit) {
+    val label = stringRes(Res.string.footnote_back_to_text)
+    Text(
+        text = "\u21A9",
+        color = MaterialTheme.colorScheme.primary,
+        modifier =
+            Modifier
+                .padding(start = 8.dp)
+                .clickable(onClickLabel = label, onClick = onClick)
+                .semantics { contentDescription = label },
+    )
 }
 
 internal val TaskWeight = FontWeight.Medium
