@@ -1684,6 +1684,13 @@
     <string name="active_subs_scope_algo">A favorite algo feed</string>
     <string name="notification_tab_following">Following</string>
     <string name="notification_tab_everyone">Everyone</string>
+    <string name="notification_tab_web_of_trust">Web of Trust</string>
+    <string name="notification_tab_mode_menu">Choose who shows on this tab</string>
+    <string name="notification_tab_mode_trust_description">Your follows and the people your trust provider ranks. Zaps always show.</string>
+    <string name="notification_tab_mode_everyone_description">Anyone who tags you</string>
+    <string name="notification_tab_mode_trust_inactive">Not active yet. Open Web of Trust settings</string>
+    <string name="everyone_notifications_trust_setting_title">Web of Trust on Everyone</string>
+    <string name="everyone_notifications_trust_setting_description">With split notifications, the Everyone tab and push hide people outside your Web of Trust. Zaps still show. No effect until a trust provider is active.</string>
     <string name="battery_optimization_title">Battery optimization active</string>
     <string name="battery_optimization_description">Android may restrict relay connections in the background. Disable battery optimization for Amethyst to ensure reliable notifications.</string>
     <string name="battery_optimization_fix_now">Fix now</string>

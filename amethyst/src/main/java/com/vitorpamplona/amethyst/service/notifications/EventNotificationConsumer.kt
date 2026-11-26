@@ -34,7 +34,6 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.isMutedPublicChatMessage
-import com.vitorpamplona.amethyst.commons.model.topNavFeeds.TopFilter
 import com.vitorpamplona.amethyst.commons.nipACWebRtcCalls.CallManager
 import com.vitorpamplona.amethyst.commons.notifications.NotificationDraft
 import com.vitorpamplona.amethyst.commons.notifications.composers.ChessNotificationComposer
@@ -48,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_challenge_accepted
 import com.vitorpamplona.amethyst.commons.resources.app_notification_chess_your_turn
 import com.vitorpamplona.amethyst.commons.wot.curatedHidesByTrust
+import com.vitorpamplona.amethyst.commons.wot.pushNotificationsApplyTrust
 import com.vitorpamplona.amethyst.isDebug
 import com.vitorpamplona.amethyst.service.call.notification.CallNotifier
 import com.vitorpamplona.amethyst.service.notifications.renderers.BuzzDmNotification
@@ -229,10 +229,11 @@ class EventNotificationConsumer(
             }
         }
 
-        // Curated notifications apply the Web of Trust to push as well, with the in-app feed's
-        // exemptions (curatedHidesByTrust). A process just woken by this push may not have read
-        // the network index yet, so wait for it (tens of ms) before deciding.
-        if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
+        // Push applies the Web of Trust wherever the in-app feed does (Curated, or the split Everyone
+        // tab with its filter on), with the same exemptions (curatedHidesByTrust). A process just
+        // woken by this push may not have read the network index yet, so wait for it (tens of ms)
+        // before deciding.
+        if (account.pushNotificationsApplyTrust()) {
             account.trustNetwork.awaitLoaded()
             val inJoinedCommunity = LocalCache.getNoteIfExists(event)?.let { account.isConcordActivity(it) } == true
             if (account.curatedHidesByTrust(event, inJoinedCommunity = inJoinedCommunity)) return

@@ -669,11 +669,28 @@ class AccountFeedContentStates(
                     builtWith = it
                     dmKnown.invalidateData()
                     dmNew.invalidateData()
-                    // Only Curated reads the verdicts; picking it later changes the feed key, and
-                    // that rebuilds it.
-                    if (account.settings.defaultNotificationFollowList.value is TopFilter.Selected) {
-                        notifications.clear()
-                        notifications.invalidateData()
+                    // Only feeds that apply the Web of Trust read the verdicts; switching one on
+                    // later changes its feed key, and that rebuilds it.
+                    listOf(notifications, notificationsEveryone).forEach { feed ->
+                        if ((feed.localFilter as? NotificationFeedFilter)?.appliesTrust() == true) {
+                            feed.clear()
+                            feed.invalidateData()
+                        }
+                    }
+                }
+        }
+
+        // The Everyone tab's Web of Trust switch removes cards, not just adds them: clear first so
+        // the refresh rebuilds instead of taking the additive path. Not part of the feed key, as the
+        // relay pages stay valid either way (the filter is local), so a flip keeps the paging. While
+        // no network is active the switch hides nobody: nothing to rebuild.
+        scope.launch(Dispatchers.IO) {
+            account.settings.everyoneNotificationsUseTrust
+                .drop(1)
+                .collect {
+                    if (account.trustVerdicts.value.isActive) {
+                        notificationsEveryone.clear()
+                        notificationsEveryone.invalidateData()
                     }
                 }
         }

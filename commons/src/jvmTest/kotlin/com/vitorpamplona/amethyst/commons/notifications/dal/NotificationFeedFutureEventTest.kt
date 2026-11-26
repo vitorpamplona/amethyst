@@ -84,7 +84,8 @@ class NotificationFeedFutureEventTest {
             )
         }
 
-    // Global: every event that tags me, so the follow and trust checks stay out of the way.
+    // Global: every event that tags me, so the follow check stays out of the way (and with no trust
+    // network active, the Everyone tab's Web of Trust filter hides nobody).
     private val filter = NotificationFeedFilter(account, TopFilter.Global)
 
     @AfterTest
