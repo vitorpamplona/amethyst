@@ -1,6 +1,6 @@
 # iOS napplets and nSites (NIP-5D, NIP-5A) on WKWebView, with Tor
 
-Status: N0 done (spike + this plan), 2026-11-26. Branch `feat/ios-napplets`.
+Status: N0–N4 done, 2026-11-26 (what changed from §5 while doing them: §5.7). Branch `feat/ios-napplets`.
 Builds on `commons/plans/2026-10-09-ios-app.md` §B9 and `commons/plans/2026-11-25-ios-tor.md`.
 Security baseline: `commons/plans/2026-10-31-embed-security-review.md`,
 `amethyst/plans/archive/2026-06-22-napplet-nsite-security.md`.
@@ -413,6 +413,31 @@ object NappletWebContract {
   not our origin, so it stays.
 - `shim.js` and `shell.html` contain no scheme or `napplet.local` checks (grepped), so neither
   changes.
+
+### 5.7 As built (N1–N4)
+
+- `NappletFiles`/`PaperFiles` moved with the blobs in N3, not N2: they return `NappletBlobStore.Blob`.
+- The port is `NappletHttp.get(NappletHttpRequest): NappletHttpResponse`. The request carries `url`,
+  `viaTor`, `maxBytes`, `timeoutMs`, `followRedirects` and `publicOnly`. The response holds the
+  status, `location`, the body as bytes (a 2xx one within the cap), `tooLarge` and `received`.
+  Timeouts throw `NappletHttpTimeoutException`, refused addresses `NappletHttpBlockedException`. Bodies
+  come back whole rather than as a `Source`: every caller reads the whole capped body anyway.
+- `OkHttpNappletHttp` (jvmAndroid) runs a plain request on the given client as it is, and a request
+  that is `publicOnly` or doesn't follow redirects on the fetcher's hardened copy. `KtorNappletHttp`
+  (nonJvmMain) follows redirects itself, hop by hop. `iosNappletHttp(DualKtorClients)` (iosMain) adds the
+  `getaddrinfo` check.
+- `NappletPublicAddress` (commonMain, raw bytes) is pinned to the JVM's `NappletInetAddresses` by a
+  jvmTest.
+- `NappletBlobPrefetcher` stays in jvmAndroid on `NappletBlobHttp`. iOS has no prefetch yet.
+- Gaps against the JVM, in `KtorNappletHttp`'s KDoc: the DNS check runs before NSURLSession resolves
+  again (rebinding window), and there is no check of the address actually connected to. In the
+  other direction, the JVM fetcher's hardened client never checks an IP literal (OkHttp asks no `Dns`
+  for one), so `https://192.168.1.1/` passes there and is refused on iOS. That was left as it was
+  (behaviour must not change on Android/Desktop); it is worth a separate fix.
+- `IosNappletHost` (iosApp `napplet/`, `IosAppModules.nappletHost`, lazy) holds the broker per account,
+  `NappletPromptQueues`, `NsiteNetworkChoices`, storage, ledgers, the blob cache (Caches) and the
+  `NappletHttp`. It offers no upload or notify domain yet. The INC bus, live subscriptions and
+  attendance are typed to the iOS session, so they come with N5.
 
 ## 6. Tor
 

@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerConse
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionLedger
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.SignerOpGrant
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountIdentityReader
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletOutboxGateway
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletRelayGateway
@@ -39,7 +40,6 @@ import com.vitorpamplona.amethyst.commons.napplet.ui.buildConnectInfo
 import com.vitorpamplona.amethyst.commons.napplet.ui.buildSignerConsentInfo
 import com.vitorpamplona.quartz.nip89AppHandlers.clientTag.withoutClientTag
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -56,8 +56,9 @@ private val CONSENT_TIMEOUT = 120.seconds
  * comes in: the [theme], and the [upload] and [notify] domains a host offers (a host without them
  * leaves them out of `window.napplet`).
  *
- * [useTor] says whether an app's resource fetches go through Tor; [httpClient] gives the client for
- * either route.
+ * [useTor] says whether an app's resource fetches go through Tor; [http] makes them, on either route
+ * (OkHttp's `OkHttpNappletHttp` on the app-wide clients on Android and Desktop, the Darwin clients'
+ * `iosNappletHttp` on iOS).
  */
 fun buildAccountNappletBroker(
     account: Account,
@@ -65,7 +66,7 @@ fun buildAccountNappletBroker(
     ledger: NappletPermissionLedger,
     signerLedger: NostrSignerPermissionLedger?,
     storage: NappletStorage,
-    httpClient: (useProxy: Boolean) -> OkHttpClient,
+    http: NappletHttp,
     useTor: suspend (coordinate: String) -> Boolean,
     prompts: NappletPrompts,
     theme: NappletThemeGateway,
@@ -75,7 +76,7 @@ fun buildAccountNappletBroker(
     // Takes the account so the consent dialog can diff a proposed replaceable list (follows, relays,
     // mutes) against the copy already cached, and say what actually changes.
     val summary = NappletConsentSummary(browserIcons, account)
-    val resources = NappletResourceFetcher(account, httpClient, useTor)
+    val resources = NappletResourceFetcher(account, http, useTor)
     val identity = AccountIdentityReader(account)
     val recentEncryptions = NappletRecentEncryptions()
 

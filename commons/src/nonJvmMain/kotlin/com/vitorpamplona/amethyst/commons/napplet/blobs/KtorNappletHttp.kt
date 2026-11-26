@@ -34,7 +34,7 @@ import io.ktor.http.URLBuilder
 import io.ktor.http.Url
 import io.ktor.http.contentLength
 import io.ktor.http.takeFrom
-import io.ktor.utils.io.readRemaining
+import io.ktor.utils.io.readBuffer
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.io.readByteArray
 
@@ -123,7 +123,7 @@ class KtorNappletHttp(
         val location = response.headers[HttpHeaders.Location]
         if (status !in 200..299) return NappletHttpResponse(status, location, null, tooLarge = false, received = 0)
         if ((response.contentLength() ?: -1L) > maxBytes) return NappletHttpResponse(status, location, null, tooLarge = true, received = 0)
-        val bytes = response.bodyAsChannel().readRemaining(maxBytes + 1).readByteArray()
+        val bytes = response.bodyAsChannel().readBuffer(maxBytes + 1).readByteArray()
         val received = bytes.size.toLong()
         return if (received > maxBytes) {
             NappletHttpResponse(status, location, null, tooLarge = true, received = received)

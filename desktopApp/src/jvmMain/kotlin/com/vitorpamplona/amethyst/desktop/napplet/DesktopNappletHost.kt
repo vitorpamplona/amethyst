@@ -38,6 +38,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
 import com.vitorpamplona.amethyst.commons.napplet.NsiteNetworkChoices
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobCache
 import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
@@ -609,7 +610,7 @@ class DesktopNappletHost(
             ledger = modules.nappletPermissionLedger.forAccount(account.pubKey),
             signerLedger = signerLedger,
             storage = storage.forAccount(account.pubKey),
-            httpClient = { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
+            http = OkHttpNappletHttp { useProxy -> modules.okHttpClients.getHttpClient(useProxy) },
             useTor = { coordinate ->
                 networkChoices.awaitReady()
                 torEnabled() && networkChoices.useTor(coordinate)

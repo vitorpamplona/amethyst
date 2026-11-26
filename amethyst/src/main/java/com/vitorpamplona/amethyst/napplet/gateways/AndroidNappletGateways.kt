@@ -39,6 +39,7 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletNotifyGateway
 import com.vitorpamplona.amethyst.commons.napplet.NappletPrompts
 import com.vitorpamplona.amethyst.commons.napplet.NappletStorage
 import com.vitorpamplona.amethyst.commons.napplet.NappletThemeGateway
+import com.vitorpamplona.amethyst.commons.napplet.blobs.OkHttpNappletHttp
 import com.vitorpamplona.amethyst.commons.napplet.buildAccountNappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.gateways.AccountNappletUploadGateway
@@ -119,7 +120,7 @@ class AndroidNappletGateways(
             // Reuse the app-wide HTTP client so napplet blob fetches inherit the same Tor
             // routing, Onion-Location discovery/rewriting, Blossom cache and pool as the
             // rest of the app, instead of a private client that has to re-wire all of it.
-            httpClient = httpClient,
+            http = OkHttpNappletHttp(httpClient),
             useTor = { coordinate ->
                 NsiteNetworkRegistry.awaitReady()
                 NsiteNetworkRegistry.useTor(coordinate)

@@ -92,6 +92,7 @@ import com.vitorpamplona.amethyst.commons.tor.TorSettings
 import com.vitorpamplona.amethyst.commons.tor.socksReplyMessage
 import com.vitorpamplona.amethyst.commons.tor.supportedOn
 import com.vitorpamplona.amethyst.commons.ui.components.animated.AnimatedImageFetcher
+import com.vitorpamplona.amethyst.ios.napplet.IosNappletHost
 import com.vitorpamplona.amethyst.ios.playback.IosPlaybackPlatform
 import com.vitorpamplona.amethyst.ios.playback.NowPlaying
 import com.vitorpamplona.amethyst.ios.playback.cache.IosVideoCache
@@ -469,6 +470,9 @@ class IosAppModules(
         val accountScope = { sessionManager.loggedInAccount()?.pubKey ?: "" }
         NappletPermissionLedger(DataStoreNappletPermissionStore(appStores.getDataStore("napplet_permissions"), accountScope), accountScope)
     }
+
+    /** Napplets' and nSites' brokers, consent, network choices and blob cache. Built when one first opens. */
+    val nappletHost by lazy { IosNappletHost(this) }
 
     // Scheduled posts are hidden on iOS (B13): the store exists, empty, and nothing publishes from it.
     val scheduledPostStore = ScheduledPostStore(filesPath / "scheduled_posts.json")
