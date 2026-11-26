@@ -130,7 +130,8 @@ fun RichTextScope.RenderParagraph(
     val density = LocalDensity.current
     val chip = LocalDocumentChipColor.current ?: MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
     val highlight = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
-    val pad = with(density) { ChipSide.toSp() }
+    // A transparent chip color (the chat's `chips = false`) means no chips, and so no room for them.
+    val pad = if (chip.alpha > 0f) with(density) { ChipSide.toSp() } else null
     val built = remember(paragraph, context, pad, highlight) { buildText(paragraph.inlines, context, pad, highlight) }
     if (built.codeRuns.isEmpty()) {
         Text(text = built.text)
@@ -227,7 +228,7 @@ private class CodeRun(
 private fun buildText(
     inlines: List<Inline>,
     context: DocumentContext,
-    chipPadding: TextUnit,
+    chipPadding: TextUnit?,
     highlight: Color,
 ): BuiltText {
     val builder = RichTextString.Builder()
@@ -341,11 +342,11 @@ private class TextBuilder(
             linked(image.url) { append(image.alt.ifBlank { image.url }) }
             return
         }
-        val imetas = state.tags.lists.imetasByUrl()
         val description = image.alt.ifBlank { image.title } ?: image.title
+        // The note's own parse already knows most images; only one it missed reads the tags.
         val media =
             state.mediaForPager[image.url]
-                ?: RichTextParser().createMediaContent(fullUrl = image.url, eventTags = imetas, description = description, callbackUri = context.callbackUri)
+                ?: RichTextParser().createMediaContent(fullUrl = image.url, eventTags = state.tags.lists.imetasByUrl(), description = description, callbackUri = context.callbackUri)
                 ?: MediaUrlImage(url = image.url, description = description)
         fullWidth {
             val bleed = LocalMediaBleed.current

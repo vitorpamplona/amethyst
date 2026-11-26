@@ -26,6 +26,7 @@ import com.vitorpamplona.amethyst.commons.richtext.ImageSegment
 import com.vitorpamplona.amethyst.commons.richtext.RegularTextSegment
 import com.vitorpamplona.amethyst.commons.richtext.RichTextParser
 import com.vitorpamplona.amethyst.commons.richtext.Segment
+import com.vitorpamplona.amethyst.commons.richtext.TagContext
 import com.vitorpamplona.amethyst.commons.richtext.VideoSegment
 
 /**
@@ -44,6 +45,9 @@ class NostrInlinePass(
     private val authorPubKey: String? = null,
 ) {
     private val parser = RichTextParser()
+
+    /** The `imeta` and emoji maps, built on the first run of text and shared by every run after. */
+    private val context by lazy { TagContext(tags) }
 
     /** [text] as inlines. Spaces at either end are kept; a run of spaces inside becomes one. */
     fun inlines(text: String): List<Inline> {
@@ -70,7 +74,7 @@ class NostrInlinePass(
         var first = true
         // Markup collapses a run of spaces to one, and the parser keeps whatever spaces it is given.
         val words = WHITESPACE.replace(text.trim(), " ")
-        parser.parseText(words, tags, callbackUri, authorPubKey).paragraphs.forEach { paragraph ->
+        parser.parseText(words, context, callbackUri, authorPubKey).paragraphs.forEach { paragraph ->
             paragraph.words.forEach { word ->
                 if (word.segmentText.isNotEmpty()) {
                     if (!first) pending.append(' ')

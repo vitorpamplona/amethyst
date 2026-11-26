@@ -40,6 +40,13 @@ data class Document(
 ) {
     companion object {
         val EMPTY = Document(emptyList())
+
+        /**
+         * The deepest a document nests, blocks and inlines together. Text comes from strangers, and a
+         * note of 20,000 `>` would overflow the stack of every recursive walk, the renderer's
+         * included: past this depth the mappers keep only the words.
+         */
+        const val MAX_DEPTH = 32
     }
 }
 

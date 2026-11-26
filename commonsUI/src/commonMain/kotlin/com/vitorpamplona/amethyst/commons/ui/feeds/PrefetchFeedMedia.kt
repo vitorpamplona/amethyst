@@ -54,13 +54,13 @@ import com.vitorpamplona.amethyst.commons.richtext.TextRendering
 import com.vitorpamplona.amethyst.commons.richtext.UrlParser
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LocalNotePlatform
 import com.vitorpamplona.amethyst.commons.ui.note.platform.NotePlatform
+import com.vitorpamplona.amethyst.commons.ui.note.types.displayedNoteText
 import com.vitorpamplona.amethyst.commons.util.ConcurrentSet
 import com.vitorpamplona.amethyst.commons.video.isHlsMedia
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.tags.references.HttpUrlFormatter
 import com.vitorpamplona.quartz.nip10Notes.TextNoteEvent
-import com.vitorpamplona.quartz.nip14Subject.subject
 import com.vitorpamplona.quartz.nip22Comments.CommentEvent
 import com.vitorpamplona.quartz.nip71Video.image
 import com.vitorpamplona.quartz.nip73ExternalIds.scope
@@ -543,16 +543,8 @@ private fun Note.warmRenderCache(ev: Event): RichTextViewerState? {
 /** The body RenderTextEvent draws for a text note or a comment, or null for any other kind. */
 private fun renderedTextBody(ev: Event): String? =
     when (ev) {
-        is TextNoteEvent -> {
-            // Matches RenderTextEvent: a subject is prepended when not already in the body.
-            val subject = ev.subject()?.ifBlank { null }
-            if (subject != null && !ev.content.contains(subject, ignoreCase = true)) {
-                "$subject\n\n${ev.content}"
-            } else {
-                ev.content
-            }
-        }
-        is CommentEvent -> ev.content
+        // displayedNoteText adds a subject line, as RenderTextEvent does.
+        is TextNoteEvent, is CommentEvent -> ev.content
         else -> null
     }
 
@@ -564,7 +556,10 @@ private fun renderedTextBody(ev: Event): String? =
  */
 private fun Note.warmMarkdown(ev: Event) {
     val rendering = TextRendering.of(ev)
-    val body = renderedTextBody(ev) ?: if (rendering == TextRendering.MARKDOWN) ev.content else return
+    val raw = renderedTextBody(ev) ?: if (rendering == TextRendering.MARKDOWN) ev.content else return
+    // The text the card draws (a subject line, an article without its repeated title), or the
+    // cache fills with entries no card reads.
+    val body = displayedNoteText(this, raw)
     val shown = body.take(ExpandableTextCutOffCalculator.indexToCutOff(body))
     if (!rendering.isMarkdown(shown)) return
     val tags = ev.tags.toImmutableListOfLists()

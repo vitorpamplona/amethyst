@@ -37,8 +37,11 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.halilibo.richtext.ui.BlockQuoteGutter.BarGutter
 import com.halilibo.richtext.ui.HeadingStyle
+import com.halilibo.richtext.ui.OrderedMarkers
+import com.halilibo.richtext.ui.RichTextScope
 import com.halilibo.richtext.ui.RichTextStyle
 import com.halilibo.richtext.ui.resolveDefaults
+import com.halilibo.richtext.ui.textOrderedMarkers
 
 val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
     when (level) {
@@ -108,6 +111,21 @@ val DefaultHeadingStyle: HeadingStyle = { level, textStyle ->
 
 val RichTextDefaults = RichTextStyle().resolveDefaults()
 
+/**
+ * richtext-ui's own numbering (`1.`, `a.`, `1)`, `a)` by level), for any start: a list may start at
+ * 0, which is index -1, and the default letters threw on a negative index.
+ */
+private val ListNumbers: RichTextScope.() -> OrderedMarkers = {
+    textOrderedMarkers(
+        { "${it + 1}." },
+        { letter(it) + "." },
+        { "${it + 1})" },
+        { letter(it) + ")" },
+    )
+}
+
+private fun letter(index: Int): Char = 'a' + index.mod(26)
+
 val MarkDownStyleOnDark =
     RichTextDefaults.copy(
         paragraphSpacing = DefaultParagraphSpacing,
@@ -115,6 +133,7 @@ val MarkDownStyleOnDark =
         listStyle =
             RichTextDefaults.listStyle?.copy(
                 itemSpacing = 10.sp,
+                orderedMarkers = ListNumbers,
             ),
         blockQuoteGutter =
             BarGutter(
@@ -172,6 +191,7 @@ val MarkDownStyleOnLight =
         listStyle =
             RichTextDefaults.listStyle?.copy(
                 itemSpacing = 10.sp,
+                orderedMarkers = ListNumbers,
             ),
         blockQuoteGutter =
             BarGutter(

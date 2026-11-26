@@ -73,7 +73,7 @@ class MarkdownToDocument(
     fun parse(markdown: String): Document {
         // CommonMark ends a line at \r\n and \r too; this parser only at \n, so a document written
         // with Windows line endings would be one paragraph.
-        val src = if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown
+        val src = capQuoteDepth(if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown)
         val root = parser.buildMarkdownTreeFromString(src)
         val context = Context(src, linkDefinitions(src, root))
         return Document(context.blocks(root.children))
@@ -85,7 +85,23 @@ class MarkdownToDocument(
     ) {
         fun text(node: ASTNode) = src.substring(node.startOffset, node.endOffset)
 
-        fun blocks(nodes: List<ASTNode>): List<Block> = nodes.mapNotNull { block(it) }
+        /** Blocks and inlines entered and not yet left: past [Document.MAX_DEPTH], only words. */
+        var depth = 0
+
+        fun blocks(nodes: List<ASTNode>): List<Block> {
+            if (depth >= Document.MAX_DEPTH) return flatParagraph(nodes)
+            depth++
+            try {
+                return nodes.mapNotNull { block(it) }
+            } finally {
+                depth--
+            }
+        }
+
+        /** What [nodes] say, as one paragraph of their source with its spaces collapsed. */
+        fun flatText(nodes: List<ASTNode>): String = WHITESPACE.replace(nodes.joinToString("") { text(it) }, " ").trim()
+
+        fun flatParagraph(nodes: List<ASTNode>): List<Block> = flatText(nodes).let { if (it.isEmpty()) emptyList() else listOf(Paragraph(listOf(Text(it)))) }
 
         fun block(node: ASTNode): Block? =
             when (val type = node.type) {
@@ -172,27 +188,46 @@ class MarkdownToDocument(
 
         fun fence(node: ASTNode): Block {
             val language = node.children.firstOrNull { it.type == MarkdownTokenTypes.FENCE_LANG }?.let { text(it).trim().split(' ').first() }
-            // The content is every line between the opening line and the closing fence.
+            // The code is the content tokens of every line after the opening one, so a fence inside
+            // a quote or a list item loses the `> ` and the indentation its container puts before
+            // each line. CommonMark also takes the opening fence's own indentation off each line.
             val children = node.children
             val firstEol = children.indexOfFirst { it.type == MarkdownTokenTypes.EOL }
-            val end = children.indexOfLast { it.type == MarkdownTokenTypes.CODE_FENCE_END }.let { if (it < 0) children.size else it }
-            val code =
-                if (firstEol < 0 || firstEol + 1 >= end) {
-                    ""
-                } else {
-                    src.substring(children[firstEol + 1].startOffset, children[end - 1].endOffset).removeSuffix("\n")
+            if (firstEol < 0) return CodeBlock("", language?.ifEmpty { null })
+            val fenceIndent = children.firstOrNull { it.type == MarkdownTokenTypes.CODE_FENCE_START }?.let { leadingSpaces(text(it)) } ?: 0
+            val code = StringBuilder()
+            for (i in firstEol + 1 until children.size) {
+                val child = children[i]
+                when (child.type) {
+                    MarkdownTokenTypes.CODE_FENCE_CONTENT -> code.append(dropSpaces(text(child), fenceIndent))
+                    MarkdownTokenTypes.EOL -> code.append('\n')
+                    MarkdownTokenTypes.CODE_FENCE_END -> break
                 }
-            return CodeBlock(code, language?.ifEmpty { null })
+            }
+            return CodeBlock(code.toString().removeSuffix("\n"), language?.ifEmpty { null })
         }
 
         fun indentedCode(node: ASTNode): Block {
-            val code =
-                text(node)
-                    .split('\n')
-                    .joinToString("\n") { line -> dropIndent(line) }
-                    .trimEnd('\n')
-            return CodeBlock(code)
+            val code = StringBuilder()
+            node.children.forEach { child ->
+                when (child.type) {
+                    MarkdownTokenTypes.CODE_LINE -> code.append(dropIndent(text(child)))
+                    MarkdownTokenTypes.EOL -> code.append('\n')
+                }
+            }
+            return CodeBlock(code.toString().trimEnd('\n'))
         }
+
+        private fun leadingSpaces(line: String): Int {
+            var i = 0
+            while (i < line.length && line[i] == ' ') i++
+            return i
+        }
+
+        private fun dropSpaces(
+            line: String,
+            count: Int,
+        ): String = line.substring(minOf(leadingSpaces(line), count))
 
         private fun dropIndent(line: String): String {
             var i = 0
@@ -251,6 +286,19 @@ class MarkdownToDocument(
         fun inlines(
             nodes: List<ASTNode>,
             inLink: Boolean = false,
+        ): List<Inline> {
+            if (depth >= Document.MAX_DEPTH) return flatText(nodes).let { if (it.isEmpty()) emptyList() else listOf(Text(it)) }
+            depth++
+            try {
+                return inlineRun(nodes, inLink)
+            } finally {
+                depth--
+            }
+        }
+
+        private fun inlineRun(
+            nodes: List<ASTNode>,
+            inLink: Boolean,
         ): List<Inline> {
             val out = ArrayList<Inline>()
             val pending = StringBuilder()
@@ -451,6 +499,45 @@ class MarkdownToDocument(
         val title: String?,
     )
 
+    /**
+     * The parser keeps state per quote level on every line, so 20,000 nested `>` ran it out of
+     * memory. No reader follows quotes [Document.MAX_DEPTH] deep: a line's markers past that are
+     * dropped before parsing.
+     */
+    private fun capQuoteDepth(src: String): String {
+        if (!src.contains(">>") && !src.contains("> >")) return src
+        var changed = false
+        val out = StringBuilder(src.length)
+        var lineStart = 0
+        while (lineStart <= src.length) {
+            val lineEnd = src.indexOf('\n', lineStart).let { if (it < 0) src.length else it }
+            var i = lineStart
+            var markers = 0
+            var cut = -1
+            while (i < lineEnd) {
+                val c = src[i]
+                if (c == '>') {
+                    markers++
+                    if (markers == Document.MAX_DEPTH) cut = i + 1
+                } else if (c != ' ' && c != '\t') {
+                    break
+                }
+                i++
+            }
+            if (markers > Document.MAX_DEPTH && cut >= 0) {
+                changed = true
+                out.append(src, lineStart, cut).append(' ')
+                // The rest of the line after its last marker.
+                out.append(src, i, lineEnd)
+            } else {
+                out.append(src, lineStart, lineEnd)
+            }
+            if (lineEnd < src.length) out.append('\n')
+            lineStart = lineEnd + 1
+        }
+        return if (changed) out.toString() else src
+    }
+
     /** Every `[label]: destination "title"`, by normalized label. The first definition of a label wins. */
     private fun linkDefinitions(
         src: String,
@@ -458,7 +545,12 @@ class MarkdownToDocument(
     ): Map<String, LinkDefinition> {
         val found = HashMap<String, LinkDefinition>()
 
-        fun visit(node: ASTNode) {
+        // A stack, not recursion: lists and quotes can nest as deep as a stranger types them.
+        // Children go on in reverse, so definitions come off in document order and the first wins.
+        val stack = ArrayList<ASTNode>()
+        stack.add(root)
+        while (stack.isNotEmpty()) {
+            val node = stack.removeAt(stack.size - 1)
             if (node.type == MarkdownElementTypes.LINK_DEFINITION) {
                 val label = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_LABEL }
                 val destination = node.children.firstOrNull { it.type == MarkdownElementTypes.LINK_DESTINATION }
@@ -470,10 +562,9 @@ class MarkdownToDocument(
                     }
                 }
             } else {
-                node.children.forEach { visit(it) }
+                for (i in node.children.indices.reversed()) stack.add(node.children[i])
             }
         }
-        visit(root)
         return found
     }
 

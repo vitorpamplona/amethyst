@@ -150,7 +150,23 @@ class DjotToDocument(
             return Document(blocks)
         }
 
+        /** Blocks and inlines entered and not yet left: past [Document.MAX_DEPTH], only words. */
+        var depth = 0
+
         fun blocks(nodes: List<AstNode>): List<Block> {
+            if (depth >= Document.MAX_DEPTH) return flatText(nodes).let { if (it.isEmpty()) emptyList() else listOf(Paragraph(listOf(Text(it)))) }
+            depth++
+            try {
+                return blockRun(nodes)
+            } finally {
+                depth--
+            }
+        }
+
+        /** What [nodes] say, without their markup; djot-kmp walks them with a stack, not recursion. */
+        fun flatText(nodes: List<AstNode>): String = WHITESPACE.replace(nodes.joinToString(" ") { getStringContent(it) }, " ").trim()
+
+        private fun blockRun(nodes: List<AstNode>): List<Block> {
             val out = ArrayList<Block>()
             nodes.forEach { node ->
                 when (node) {
@@ -226,6 +242,19 @@ class DjotToDocument(
         fun inlines(
             nodes: List<DjotInline>,
             inLink: Boolean = false,
+        ): List<Inline> {
+            if (depth >= Document.MAX_DEPTH) return flatText(nodes).let { if (it.isEmpty()) emptyList() else listOf(Text(it)) }
+            depth++
+            try {
+                return inlineRun(nodes, inLink)
+            } finally {
+                depth--
+            }
+        }
+
+        private fun inlineRun(
+            nodes: List<DjotInline>,
+            inLink: Boolean,
         ): List<Inline> {
             val out = ArrayList<Inline>()
             val pending = StringBuilder()
@@ -349,6 +378,7 @@ class DjotToDocument(
 
     companion object {
         private val NO_WARNINGS = WarningHandler { }
+        private val WHITESPACE = Regex("[ \\t\\r\\n]+")
     }
 }
 

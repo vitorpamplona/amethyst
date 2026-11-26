@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.content
 import com.vitorpamplona.amethyst.commons.content.asciidoc.AsciiDocToDocument
 import com.vitorpamplona.amethyst.commons.content.djot.DjotToDocument
 import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownToDocument
+import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
 
@@ -34,33 +35,44 @@ import com.vitorpamplona.quartz.utils.cache.ConcurrentLruCache
  * Keyed as [com.vitorpamplona.amethyst.commons.richtext.CachedRichTextParser] keys a note: the text,
  * the tags (custom emoji and `imeta` change the result), and what the Nostr pass is given. Every hit
  * re-checks the inputs, since a 32-bit hash collides. Keyed by text rather than event id because the
- * same event arrives translated, cropped by "Show more" or split at its code blocks, each a
- * different document.
+ * same event arrives translated or cropped by "Show more", each a different document.
  */
 object CachedDocuments {
     private class Entry(
         val format: Int,
         val text: String,
+        val tags: ImmutableListOfLists<String>,
         val tagsHash: Int,
         val callbackUri: String?,
         val authorPubKey: String?,
         val document: Document,
     ) {
+        // The hash first, then the tags themselves: the same list (the usual hit) or equal ones.
         fun matches(
             format: Int,
             text: String,
+            tags: ImmutableListOfLists<String>,
             tagsHash: Int,
             callbackUri: String?,
             authorPubKey: String?,
-        ) = this.format == format && this.tagsHash == tagsHash && this.callbackUri == callbackUri && this.authorPubKey == authorPubKey && this.text == text
+        ) = this.format == format &&
+            this.tagsHash == tagsHash &&
+            this.callbackUri == callbackUri &&
+            this.authorPubKey == authorPubKey &&
+            this.text == text &&
+            (this.tags === tags || this.tags.lists.contentDeepEquals(tags.lists))
     }
 
     // Articles are the documents worth keeping: a long one is the costly parse.
     private val cache = ConcurrentLruCache<Int, Entry>(100)
 
+    // Its own: a streamed agent reply is a new text per token, and those would push articles out.
+    private val plainCache = ConcurrentLruCache<Int, Entry>(64)
+
     private const val MARKDOWN = 1
     private const val DJOT = 2
     private const val ASCIIDOC = 3
+    private const val PLAIN_MARKDOWN = 4
 
     private fun key(
         format: Int,
@@ -84,7 +96,7 @@ object CachedDocuments {
         authorPubKey: String? = null,
     ): Document? {
         val tagsHash = tags.contentHash()
-        return cache.get(key(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey))?.takeIf { it.matches(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey) }?.document
+        return cache.get(key(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey))?.takeIf { it.matches(MARKDOWN, markdown, tags, tagsHash, callbackUri, authorPubKey) }?.document
     }
 
     /** [markdown] as a [Document], parsed once for the same inputs. */
@@ -96,9 +108,9 @@ object CachedDocuments {
     ): Document {
         val tagsHash = tags.contentHash()
         val key = key(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey)
-        cache.get(key)?.takeIf { it.matches(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
+        cache.get(key)?.takeIf { it.matches(MARKDOWN, markdown, tags, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
         val document = MarkdownToDocument(NostrInlinePass(tags, callbackUri, authorPubKey)).parse(markdown)
-        cache.put(key, Entry(MARKDOWN, markdown, tagsHash, callbackUri, authorPubKey, document))
+        cache.put(key, Entry(MARKDOWN, markdown, tags, tagsHash, callbackUri, authorPubKey, document))
         return document
     }
 
@@ -116,9 +128,9 @@ object CachedDocuments {
     ): Document {
         val tagsHash = tags.contentHash()
         val key = key(DJOT, djot, tagsHash, callbackUri, authorPubKey)
-        cache.get(key)?.takeIf { it.matches(DJOT, djot, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
+        cache.get(key)?.takeIf { it.matches(DJOT, djot, tags, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
         val document = DjotToDocument(NostrInlinePass(tags, callbackUri, authorPubKey), resolveWikilink).parse(djot)
-        cache.put(key, Entry(DJOT, djot, tagsHash, callbackUri, authorPubKey, document))
+        cache.put(key, Entry(DJOT, djot, tags, tagsHash, callbackUri, authorPubKey, document))
         return document
     }
 
@@ -135,11 +147,26 @@ object CachedDocuments {
     ): Document {
         val tagsHash = tags.contentHash()
         val key = key(ASCIIDOC, asciidoc, tagsHash, callbackUri, authorPubKey)
-        cache.get(key)?.takeIf { it.matches(ASCIIDOC, asciidoc, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
+        cache.get(key)?.takeIf { it.matches(ASCIIDOC, asciidoc, tags, tagsHash, callbackUri, authorPubKey) }?.let { return it.document }
         val document = AsciiDocToDocument(NostrInlinePass(tags, callbackUri, authorPubKey), resolveWikilink).parse(asciidoc)
-        cache.put(key, Entry(ASCIIDOC, asciidoc, tagsHash, callbackUri, authorPubKey, document))
+        cache.put(key, Entry(ASCIIDOC, asciidoc, tags, tagsHash, callbackUri, authorPubKey, document))
         return document
     }
 
-    fun trimToSize(maxItems: Int) = cache.trimToSize(maxItems)
+    /**
+     * Markdown that is not Nostr's (an agent's reply, a README), as [MarkdownToDocument] reads it
+     * with no Nostr pass: a chat list that scrolls a message back into view finds it parsed.
+     */
+    fun plainMarkdown(markdown: String): Document {
+        val key = key(PLAIN_MARKDOWN, markdown, 0, null, null)
+        plainCache.get(key)?.takeIf { it.matches(PLAIN_MARKDOWN, markdown, EmptyTagList, 0, null, null) }?.let { return it.document }
+        val document = MarkdownToDocument(nostr = null).parse(markdown)
+        plainCache.put(key, Entry(PLAIN_MARKDOWN, markdown, EmptyTagList, 0, null, null, document))
+        return document
+    }
+
+    fun trimToSize(maxItems: Int) {
+        cache.trimToSize(maxItems)
+        plainCache.trimToSize(maxItems)
+    }
 }

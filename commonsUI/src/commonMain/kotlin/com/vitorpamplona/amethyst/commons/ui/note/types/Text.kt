@@ -104,6 +104,9 @@ fun displayedNoteText(
     // A NIP's header shows its title and status, so the body drops the headings that repeat them.
     (note.event as? NipTextEvent)?.let { if (it.content == body) return NipTextView.of(it).body }
 
+    // An article's header shows its title: a first `# Title` line would say it twice.
+    (note.event as? LongFormContentEvent)?.let { return MarkdownTitle.withoutLeadingTitle(body, it.title()) }
+
     val subject = (note.event as? TextNoteEvent)?.subject()?.ifBlank { null }
     return if (subject != null && !body.contains(subject, ignoreCase = true)) {
         "$subject\n\n$body"
@@ -248,15 +251,8 @@ fun RenderTextEvent(
                         nav = nav,
                     )
                 } else {
-                    // An article's header shows its title: a first `# Title` line would repeat it.
-                    val shownContent =
-                        if (noteEvent is LongFormContentEvent) {
-                            remember(eventContent) { MarkdownTitle.withoutLeadingTitle(eventContent, noteEvent.title()) }
-                        } else {
-                            eventContent
-                        }
                     TranslatableRichTextViewer(
-                        content = shownContent,
+                        content = eventContent,
                         canPreview = canPreview && !makeItShort,
                         quotesLeft = quotesLeft,
                         modifier = Modifier.fillMaxWidth(),

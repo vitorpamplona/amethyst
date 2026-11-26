@@ -21,6 +21,7 @@
 package com.vitorpamplona.amethyst.commons.content.markdown
 
 import com.vitorpamplona.amethyst.commons.content.DocumentDump
+import com.vitorpamplona.amethyst.commons.content.Heading
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -94,6 +95,18 @@ class MarkdownToDocumentTest {
             """.trimIndent(),
             dump("> quote **b**\n> more\n\n---\n\n```kotlin\nval x = 1\n\nval y = 2\n```\n\n    indented\n      more\n\n| a | b | c | d |\n|:--|--:|:-:|---|\n| 1 | **2** | 3 | 4 |"),
         )
+    }
+
+    /** The code blocks of [markdown], as the dump writes them, wherever they nest. */
+    private fun codes(markdown: String) = dump(markdown).lines().map { it.trim() }.filter { it.startsWith("CODE") }
+
+    @Test
+    fun codeInsideQuotesAndListsLosesTheContainersPrefix() {
+        assertEquals(listOf("CODE()\"code\\n  more\""), codes("> ```\n> code\n>   more\n> ```"))
+        assertEquals(listOf("CODE()\"code\\nmore\""), codes(">     code\n>     more"))
+        assertEquals(listOf("CODE()\"code\\n  line2\""), codes("- item\n\n  ```\n  code\n    line2\n  ```"))
+        // CommonMark takes the opening fence's indentation off each line, and no more.
+        assertEquals(listOf("CODE()\"a\\n b\\nc\""), codes("  ```\n  a\n   b\n c\n  ```"))
     }
 
     @Test
@@ -204,7 +217,7 @@ class MarkdownToDocumentTest {
     @Test
     fun headingsGetAnchors() {
         val doc = MarkdownToDocument().parse("## Getting Started!\n\ntext")
-        val heading = doc.blocks.first() as com.vitorpamplona.amethyst.commons.content.Heading
+        val heading = doc.blocks.first() as Heading
         assertEquals("getting-started", heading.anchor)
     }
 

@@ -186,6 +186,20 @@ Finishing touches found by running the app (2026-11-26):
   keywords, types, calls, strings, numbers and comments. JSON and YAML keep `CodeHighlighter`.
   `MarkdownChunks.split`, which existed only to pull code out for the old renderer, is gone.
 - **A custom emoji whose image fails** leaves a faint tile instead of a gap.
+- **Audit, 2026-11-26** (code review of the branch), fixed:
+  - Code blocks in quotes and list items kept the container's `> ` and indentation.
+  - Deep nesting overflowed the stack: each mapper now caps blocks and inlines together at
+    `Document.MAX_DEPTH` (32) and keeps only the words past it. Markdown's input is also capped at
+    32 quote markers per line, since JetBrains' parser ran out of memory on 20,000.
+  - AsciiDoc was quadratic on blank runs in lists, on unclosed marks and per character (a
+    substring per macro check). Closing marks and brackets are now found once each.
+  - `NostrInlinePass` rebuilt the `imeta` and emoji maps for every run of text: `TagContext`
+    builds them once per event.
+  - The prefetcher, copy and translation now see the same text the card draws (`displayedNoteText`).
+  - Ordered lists that start at 0, a cache hit that only compared the tags' hash, and chip spacing
+    in the chat with chips off.
+  `HostileInputTest` runs every format against deep quotes, lists and emphasis, unclosed marks
+  and long blank runs.
 - **Table columns keep their alignment** (`:-:` centered, `--:` right), which the old renderer
   dropped.
 

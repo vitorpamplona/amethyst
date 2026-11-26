@@ -106,8 +106,35 @@ class AsciiDocToDocument(
         val footnotes = ArrayList<Footnote>()
         var documentHardbreaks = false
 
+        /** Blocks and inlines entered and not yet left: past [Document.MAX_DEPTH], only words. */
+        var depth = 0
+
+        /** For each line, the first line at or after it that is not blank ([lines].size if none). */
+        val nextNonBlank: IntArray by lazy {
+            val next = IntArray(lines.size + 1)
+            next[lines.size] = lines.size
+            for (i in lines.indices.reversed()) next[i] = if (lines[i].isNotBlank()) i else next[i + 1]
+            next
+        }
+
         /** The blocks in lines [from] until [to]. */
         fun blocks(
+            from: Int,
+            to: Int,
+        ): List<Block> {
+            if (depth >= Document.MAX_DEPTH) {
+                val words = WHITESPACE.replace(lines.subList(from, to.coerceIn(from, lines.size)).joinToString(" "), " ").trim()
+                return if (words.isEmpty()) emptyList() else listOf(Paragraph(listOf(Text(words))))
+            }
+            depth++
+            try {
+                return blockRun(from, to)
+            } finally {
+                depth--
+            }
+        }
+
+        private fun blockRun(
             from: Int,
             to: Int,
         ): List<Block> {
@@ -346,7 +373,8 @@ class AsciiDocToDocument(
             val line = lines[index]
             if (line.isBlank()) {
                 // A blank line between two items of the same list does not end it.
-                val next = (index + 1 until to).firstOrNull { lines[it].isNotBlank() } ?: return false
+                val next = nextNonBlank[index + 1]
+                if (next >= to) return false
                 return listMarker(lines[next].trim()) != null
             }
             val trimmed = line.trim()
@@ -497,7 +525,18 @@ class AsciiDocToDocument(
         fun inlines(
             text: String,
             inLink: Boolean = false,
-        ): List<Inline> = InlineParser(text, inLink).parse()
+        ): List<Inline> {
+            if (depth >= Document.MAX_DEPTH) {
+                val words = WHITESPACE.replace(text, " ").trim()
+                return if (words.isEmpty()) emptyList() else listOf(Text(words))
+            }
+            depth++
+            try {
+                return InlineParser(text, inLink).parse()
+            } finally {
+                depth--
+            }
+        }
 
         private inner class InlineParser(
             val text: String,
@@ -505,6 +544,46 @@ class AsciiDocToDocument(
         ) {
             val out = ArrayList<Inline>()
             val pending = StringBuilder()
+
+            /**
+             * Each search for a closing mark remembers its answer: an unclosed mark repeated along a
+             * line would otherwise rescan the rest of the line once per occurrence.
+             */
+            private val finders = HashMap<String, NextIndex>()
+
+            fun next(
+                token: String,
+                from: Int,
+            ): Int = finders.getOrPut(token) { NextIndex { start -> text.indexOf(token, start) } }.find(from)
+
+            private val constrainedClosers = HashMap<Char, NextIndex>()
+
+            /** The first [mark] at or after [from] that closes a constrained span, or -1. */
+            fun nextConstrainedClose(
+                mark: Char,
+                from: Int,
+            ): Int =
+                constrainedClosers
+                    .getOrPut(mark) {
+                        NextIndex { start ->
+                            var j = start
+                            while (j < text.length && !(text[j] == mark && closesConstrained(j))) j++
+                            if (j < text.length) j else -1
+                        }
+                    }.find(from)
+
+            /** Each `[`'s matching `]`, worked out in one pass, or -1. */
+            private val closingBracket: IntArray by lazy {
+                val pairs = IntArray(text.length) { -1 }
+                val open = ArrayList<Int>()
+                for (j in text.indices) {
+                    when (text[j]) {
+                        '[' -> open.add(j)
+                        ']' -> if (open.isNotEmpty()) pairs[open.removeAt(open.size - 1)] = j
+                    }
+                }
+                pairs
+            }
 
             fun flush() {
                 if (pending.isEmpty()) return
@@ -558,7 +637,9 @@ class AsciiDocToDocument(
 
             /** Links, images, cross references, wikilinks and footnotes. */
             fun macro(i: Int): Int? {
-                val rest = text.substring(i)
+                val c = text[i]
+                // Cheap first: most characters start no macro, and a regex per character is not.
+                if (c != 'i' && c != 'l' && c != 'h' && c != 'f' && c != 'm' && c != 'k' && c != 'p' && c != '<' && c != '[') return null
                 // Only at a word's start: `name_link:` is a word, not a macro.
                 val atWordStart = i == 0 || !text[i - 1].isLetterOrDigit()
                 if (atWordStart) {
@@ -584,7 +665,7 @@ class AsciiDocToDocument(
                         return m.range.last + 1
                     }
                 }
-                if (rest.startsWith("footnote:[")) {
+                if (text.startsWith("footnote:[", i)) {
                     val close = matchingBracket(i + "footnote:".length) ?: return null
                     val note = text.substring(i + "footnote:[".length, close)
                     val number = footnotes.size + 1
@@ -594,18 +675,18 @@ class AsciiDocToDocument(
                     add(FootnoteReference(number.toString(), number))
                     return close + 1
                 }
-                if (rest.startsWith("kbd:[")) {
+                if (text.startsWith("kbd:[", i)) {
                     val close = matchingBracket(i + "kbd:".length) ?: return null
                     add(Code(text.substring(i + "kbd:[".length, close)))
                     return close + 1
                 }
-                if (rest.startsWith("pass:[")) {
+                if (text.startsWith("pass:[", i)) {
                     val close = matchingBracket(i + "pass:".length) ?: return null
                     pending.append(text, i + "pass:[".length, close)
                     return close + 1
                 }
-                if (rest.startsWith("<<")) {
-                    val close = text.indexOf(">>", i + 2)
+                if (text.startsWith("<<", i)) {
+                    val close = next(">>", i + 2)
                     if (close < 0) return null
                     val inner = text.substring(i + 2, close)
                     val id = inner.substringBefore(',').trim()
@@ -613,8 +694,8 @@ class AsciiDocToDocument(
                     add(Link("#" + id, inlines(label, inLink = true)))
                     return close + 2
                 }
-                if (rest.startsWith("[[")) {
-                    val close = text.indexOf("]]", i + 2)
+                if (text.startsWith("[[", i)) {
+                    val close = next("]]", i + 2)
                     if (close < 0) return null
                     val inner = text.substring(i + 2, close)
                     if (inner.isBlank() || inner.contains('[')) return null
@@ -627,19 +708,7 @@ class AsciiDocToDocument(
                 return null
             }
 
-            fun matchingBracket(open: Int): Int? {
-                var depth = 0
-                for (j in open until text.length) {
-                    when (text[j]) {
-                        '[' -> depth++
-                        ']' -> {
-                            depth--
-                            if (depth == 0) return j
-                        }
-                    }
-                }
-                return null
-            }
+            fun matchingBracket(open: Int): Int? = closingBracket.getOrNull(open)?.takeIf { it >= 0 }
 
             /**
              * `**x**` anywhere, or `*x*` at word boundaries (AsciiDoc's constrained form): its content
@@ -652,23 +721,17 @@ class AsciiDocToDocument(
             ): Int {
                 val double = i + 1 < text.length && text[i + 1] == mark
                 if (double) {
-                    val close = text.indexOf("$mark$mark", i + 2)
+                    val close = next("$mark$mark", i + 2)
                     if (close > i + 2) {
                         add(wrap(inlines(text.substring(i + 2, close), inLink)))
                         return close + 2
                     }
                 }
                 if (!opensConstrained(i)) return i
-                var j = i + 1
-                while (j < text.length) {
-                    if (text[j] == mark && closesConstrained(j)) {
-                        if (j == i + 1) return i
-                        add(wrap(inlines(text.substring(i + 1, j), inLink)))
-                        return j + 1
-                    }
-                    j++
-                }
-                return i
+                val j = nextConstrainedClose(mark, i + 1)
+                if (j <= i + 1) return i
+                add(wrap(inlines(text.substring(i + 1, j), inLink)))
+                return j + 1
             }
 
             fun opensConstrained(i: Int): Boolean {
@@ -687,9 +750,9 @@ class AsciiDocToDocument(
             fun code(i: Int): Int {
                 val double = i + 1 < text.length && text[i + 1] == '`'
                 val open = if (double) "``" else "`"
-                val close = text.indexOf(open, i + open.length)
-                if (close < 0 || close == i + open.length) return i
                 if (!double && !opensConstrained(i)) return i
+                val close = next(open, i + open.length)
+                if (close < 0 || close == i + open.length) return i
                 add(Code(text.substring(i + open.length, close)))
                 return close + open.length
             }
@@ -700,7 +763,7 @@ class AsciiDocToDocument(
                 mark: Char,
                 wrap: (List<Inline>) -> Inline,
             ): Int {
-                val close = text.indexOf(mark, i + 1)
+                val close = next(mark.toString(), i + 1)
                 if (close <= i + 1) return i
                 val inner = text.substring(i + 1, close)
                 if (inner.any { it.isWhitespace() }) return i
@@ -713,7 +776,7 @@ class AsciiDocToDocument(
                 val triple = text.startsWith("+++", i)
                 val mark = if (triple) "+++" else "+"
                 if (!triple && !opensConstrained(i)) return i
-                val close = text.indexOf(mark, i + mark.length)
+                val close = next(mark, i + mark.length)
                 if (close < 0 || close == i + mark.length) return i
                 pending.append(text, i + mark.length, close)
                 return close + mark.length
@@ -722,6 +785,7 @@ class AsciiDocToDocument(
     }
 
     companion object {
+        private val WHITESPACE = Regex("[ \\t\\n]+")
         private val HEADING = Regex("""^(={1,6})\s+(\S.*)$""")
         private val ATTRIBUTE_ENTRY = Regex("""^:([A-Za-z0-9_][A-Za-z0-9_-]*!?):.*$""")
         private val BLOCK_ATTRIBUTES = Regex("""^\[([^\[\]]*)]$""")
@@ -773,6 +837,24 @@ class AsciiDocToDocument(
                 .replace(" -- ", " \u2014 ")
                 .replace("...", "\u2026")
         }
+    }
+}
+
+/**
+ * The first match at or after a position, by [search], remembering the last answer: when a later
+ * search starts at or before that answer (and after the last start), the answer is the same.
+ */
+private class NextIndex(
+    private val search: (Int) -> Int,
+) {
+    private var lastFrom = -1
+    private var lastFound = -1
+
+    fun find(from: Int): Int {
+        if (lastFrom in 0..from && (lastFound < 0 || from <= lastFound)) return lastFound
+        lastFrom = from
+        lastFound = search(from)
+        return lastFound
     }
 }
 

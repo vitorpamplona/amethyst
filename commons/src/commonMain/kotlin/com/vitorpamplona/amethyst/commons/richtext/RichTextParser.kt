@@ -48,6 +48,7 @@ import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.DurationTag
 import com.vitorpamplona.quartz.nipA0VoiceMessages.tags.WaveformTag
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
@@ -207,9 +208,22 @@ class RichTextParser {
         tags: ImmutableListOfLists<String>,
         callbackUri: String?,
         authorPubKey: String? = null,
+    ): RichTextViewerState = parseText(content, TagContext(tags), callbackUri, authorPubKey)
+
+    /**
+     * [parseText] with the tag work done already: a document parses each run of plain text between
+     * its markup on its own, and rebuilding the `imeta` and emoji maps for every run cost more than
+     * the runs did.
+     */
+    fun parseText(
+        content: String,
+        context: TagContext,
+        callbackUri: String?,
+        authorPubKey: String? = null,
     ): RichTextViewerState {
-        val imetas = tags.lists.imetasByUrl()
-        val cartImetas = CartLinks.tagsToKeep(imetas)
+        val tags = context.tags
+        val imetas = context.imetas
+        val cartImetas = context.cartImetas
         val urlSet = UrlParser().parseValidUrls(content)
 
         val mediaContents =
@@ -227,7 +241,7 @@ class RichTextParser {
         val pdfUrls = mediaForPager.filterValues { it is MediaUrlPdf }.keys
         val webxdcApps = webxdcApps(urlSet.withScheme, imetas, callbackUri)
 
-        val emojiMap = CustomEmoji.createEmojiMap(tags.lists)
+        val emojiMap = context.emojiMap
 
         val allUrls = urlSet.withScheme + urlSet.withoutScheme + urlSet.emails + urlSet.bech32s + urlSet.relayUrls + urlSet.blossomUris + urlSet.groupLinks
 
@@ -255,7 +269,7 @@ class RichTextParser {
             urlSet = urlSet,
             mediaForPager = mediaForPagerWithBase64.toImmutableMap(),
             mediaList = mediaForPagerWithBase64.values.toImmutableList(),
-            customEmoji = emojiMap.toImmutableMap(),
+            customEmoji = emojiMap,
             paragraphs = segments,
             tags = tags,
         )
@@ -881,4 +895,16 @@ fun normalizeMimeType(rawMimeType: String?): String? {
     val resolved = mimeTypeMap[token] ?: mimeSubtypeMap[token] ?: return null
     if (token in ambiguousMimeSubtypes && resolved.startsWith("audio/")) return null
     return resolved
+}
+
+/**
+ * What [RichTextParser] reads from an event's tags, worked out once: the `imeta` media by URL, the
+ * ones that describe a cart, and the custom emoji.
+ */
+class TagContext(
+    val tags: ImmutableListOfLists<String>,
+) {
+    val imetas = tags.lists.imetasByUrl()
+    val cartImetas = CartLinks.tagsToKeep(imetas)
+    val emojiMap: ImmutableMap<String, String> = CustomEmoji.createEmojiMap(tags.lists).toImmutableMap()
 }

@@ -85,7 +85,6 @@ import com.vitorpamplona.amethyst.commons.content.Quote
 import com.vitorpamplona.amethyst.commons.content.Table
 import com.vitorpamplona.amethyst.commons.content.Text
 import com.vitorpamplona.amethyst.commons.content.ThematicBreak
-import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownToDocument
 import com.vitorpamplona.amethyst.commons.model.EmptyTagList
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
@@ -261,7 +260,7 @@ fun RenderPlainMarkdown(
     style: RichTextStyle? = null,
     textStyle: TextStyle? = null,
 ) {
-    val document = remember(content) { MarkdownToDocument(nostr = null).parse(content) }
+    val document = remember(content) { CachedDocuments.plainMarkdown(content) }
     val context = remember { DocumentContext(null, false, 0, null, null, null, null, 0.dp) }
     val uriHandler = remember(onLinkClick) { PlainUriHandler(onLinkClick) }
     val density = LocalDensity.current
@@ -376,7 +375,8 @@ private fun RichTextScope.RenderList(
     FormattedList(
         listType = if (list.ordered) ListType.Ordered else ListType.Unordered,
         items = list.items,
-        startIndex = (list.start - 1).coerceAtLeast(0),
+        // `0.` is index -1: the style's numbering (ListNumbers) handles it.
+        startIndex = list.start - 1,
     ) { item ->
         val checked = item.checked
         if (checked != null) {
