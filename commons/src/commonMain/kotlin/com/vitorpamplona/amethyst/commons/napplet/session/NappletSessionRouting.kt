@@ -24,7 +24,9 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
+import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
 import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
+import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
 import com.vitorpamplona.amethyst.commons.napplet.NappletIntentDispatcher
@@ -79,7 +81,10 @@ interface NappletTrustedBridge {
  */
 class NappletSessionRouting<K : Any>(
     private val owner: K,
-    private val launch: NappletLaunch,
+    /** Who the launch is, from the trusted side (never from the page). */
+    private val identity: NappletIdentity,
+    /** What the launch may ask for: the set minted when it was launched. */
+    private val declared: Set<NappletCapability>,
     /** The account the launch signs as, whoever is active later; NAP-INC connects only its launches. */
     private val accountPubKey: HexKey,
     /** The launching account, for live relay subscriptions, read as each opens; null leaves them unopened. */
@@ -129,7 +134,7 @@ class NappletSessionRouting<K : Any>(
         fsSession: NappletFsSession?,
         scope: CoroutineScope,
         send: (String) -> Unit,
-    ) : this(owner, launch, accountPubKey, { account }, { broker }, services, fsSession, scope, { id, payload -> send(withReplyId(payload, id)) }, send)
+    ) : this(owner, launch.identity, launch.declared, accountPubKey, { account }, { broker }, services, fsSession, scope, { id, payload -> send(withReplyId(payload, id)) }, send)
 
     override fun handle(payload: String) = handle(payload, NappletPageBridge.idOf(payload))
 
@@ -147,7 +152,7 @@ class NappletSessionRouting<K : Any>(
         // NAP-INC goes to the bus now, on the arrival thread, so a napplet's messages reach it in the
         // order it sent them (the coroutines below run on a pool). The bus only connects launches of
         // the same account.
-        NappletRequestRouter.routeInc(launch.declared, payload, type)?.let { outcome ->
+        NappletRequestRouter.routeInc(declared, payload, type)?.let { outcome ->
             when (outcome) {
                 is NappletRequestRouter.Outcome.Inc -> services.incBus.handle(owner, accountPubKey, push, outcome.request)?.let { reply(requestId, it) }
                 is NappletRequestRouter.Outcome.Reply -> reply(requestId, outcome.payload)
@@ -158,14 +163,14 @@ class NappletSessionRouting<K : Any>(
             return
         }
         // NAP-INTENT: an invoke may open the handler's window, so it runs off this thread.
-        NappletRequestRouter.routeIntent(launch.declared, payload, type)?.let { outcome ->
+        NappletRequestRouter.routeIntent(declared, payload, type)?.let { outcome ->
             when (outcome) {
                 is NappletRequestRouter.Outcome.Intent -> {
                     val intents = services.intents()
                     if (intents == null) {
                         if (requestId != null) reply(requestId, NappletProtocolJson.encodeIntentFailure(type ?: "intent.invoke", "intent unavailable"))
                     } else {
-                        scope.launch { intents.handle(intentKey, launch.identity, push, outcome.request)?.let { reply(requestId, it) } }
+                        scope.launch { intents.handle(intentKey, identity, push, outcome.request)?.let { reply(requestId, it) } }
                     }
                 }
                 is NappletRequestRouter.Outcome.Reply -> reply(requestId, outcome.payload)
@@ -204,7 +209,7 @@ class NappletSessionRouting<K : Any>(
             reply(requestId, NappletProtocolJson.encodeResponse(type ?: "napplet", NappletResponse.Failed(NappletHeldRequests.EXPIRED)))
             return
         }
-        when (val outcome = NappletRequestRouter.route(broker, launch.identity, launch.declared, payload, fsSession)) {
+        when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload, fsSession)) {
             is NappletRequestRouter.Outcome.Reply -> {
                 reply(requestId, outcome.payload)
                 // NAP-IDENTITY has no watch request: once the consent-gated snapshot succeeds, the launch

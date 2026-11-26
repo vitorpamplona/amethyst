@@ -114,7 +114,8 @@ class NappletSessionRoutingTest {
         readsWait: Boolean = false,
     ) = NappletSessionRouting(
         owner = "surface",
-        launch = TestLaunches.napplet(author),
+        identity = TestLaunches.napplet(author).identity,
+        declared = TestLaunches.napplet(author).declared,
         accountPubKey = account,
         account = { null },
         broker = brokerOf,
