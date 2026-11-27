@@ -20,7 +20,9 @@
  */
 package com.vitorpamplona.amethyst.commons.model.observables
 
+import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -45,10 +47,19 @@ class CandidateSetTest {
     private val signer = NostrSignerSync(KeyPair())
     private val relay = NormalizedRelayUrl("wss://relay.example.com/")
 
+    // The cache holds notes weakly (LargeSoftCache) and nothing else references these, so a GC
+    // during the walk would drop some and the snapshot would come back short.
+    private val pinned = mutableListOf<Note>()
+
+    private fun EventCache.consumePinned(event: Event) {
+        pinned.add(getOrCreateNote(event.id))
+        justConsume(event, relay, true)
+    }
+
     @Test
     fun aRebuildDuringTheBackgroundWalkWaitsForItInsteadOfWalkingAgain() {
         val cache = EventCache()
-        repeat(50) { cache.justConsume(signer.sign(1_000L + it, TextNoteEvent.KIND, emptyArray(), "n$it"), relay, true) }
+        repeat(50) { cache.consumePinned(signer.sign(1_000L + it, TextNoteEvent.KIND, emptyArray(), "n$it")) }
 
         val walkStarted = CountDownLatch(1)
         val slowFilter =
@@ -74,7 +85,7 @@ class CandidateSetTest {
     @Test
     fun theFirstSnapshotStartsTheSetAndReturnsItsWalk() {
         val cache = EventCache()
-        repeat(10) { cache.justConsume(signer.sign(2_000L + it, TextNoteEvent.KIND, emptyArray(), "m$it"), relay, true) }
+        repeat(10) { cache.consumePinned(signer.sign(2_000L + it, TextNoteEvent.KIND, emptyArray(), "m$it")) }
 
         val scope = CoroutineScope(SupervisorJob())
         try {

@@ -43,9 +43,12 @@ class AppCurationSetConsumeTest {
         assertIs<AppCurationSetEvent>(event)
 
         val cache = EventCache()
+        // The cache holds notes weakly (LargeSoftCache): hold the address's note, or a GC before the
+        // lookup drops it and the lookup comes back null.
+        val pinned = cache.getOrCreateAddressableNote(event.address())
         assertTrue(cache.justConsume(event, null, true))
 
-        val note = cache.getAddressableNoteIfExists(event.address())
-        assertSame(event, note?.event)
+        assertSame(pinned, cache.getAddressableNoteIfExists(event.address()))
+        assertSame(event, pinned.event)
     }
 }
