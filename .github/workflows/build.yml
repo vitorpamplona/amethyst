@@ -427,10 +427,14 @@ jobs:
             konan-${{ runner.os }}-iosapp-
             konan-${{ runner.os }}-
 
+      # verifyArtiIosArchives by name, so its failure is the first thing the log shows: it fails
+      # when tools/arti-build changed without rebuilt archives (BUILD_INFO's input digest), or
+      # when an archive is missing or wrong.
       - name: Link AmethystKit for the simulator
         run: |
           ./gradlew \
             -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :iosApp:verifyArtiIosArchives \
             :iosApp:linkDebugFrameworkIosSimulatorArm64
 
       # The pre-build step's embedAndSignAppleFrameworkForXcode checks the committed Arti archives

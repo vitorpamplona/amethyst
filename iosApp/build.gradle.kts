@@ -5,6 +5,10 @@
 // Kotlin/Native compiles this module's Kotlin on any host (`compileKotlinIosSimulatorArm64`), but
 // linking the framework needs Xcode, so `link*FrameworkIos*` runs only on a Mac.
 
+import java.io.RandomAccessFile
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import org.jetbrains.kotlin.gradle.plugin.mpp.TestExecutable
 import org.jetbrains.kotlin.gradle.targets.native.tasks.KotlinNativeSimulatorTest
 import org.jetbrains.kotlin.konan.target.HostManager
@@ -33,27 +37,207 @@ val artiSimulatorTarget = "aarch64-apple-ios-sim"
 
 // Like Android's verifyNativeAbis: a missing or wrong archive links into nothing useful, so fail
 // the build that would link it, with the fix, rather than at Xcode's undefined-symbol errors.
+// Checks, per archive: a static archive whose every member is an arm64 Mach-O object built for
+// the slice's platform (LC_BUILD_VERSION / LC_VERSION_MIN_*: iOS for the device slice, the iOS
+// simulator for the other, so swapped slices fail), whose symbol table exports every function
+// arti_ffi.h declares, and which BUILD_INFO describes (its sha256), built from the sources
+// tools/arti-build holds now (BUILD_INFO's `<triple>.inputs`, the digest below) with the pinned
+// Xcode. So CI fails when a change to tools/arti-build lands without rebuilt archives.
+// It streams the archives (headers and load commands only, plus one sha256 pass) and writes a
+// stamp, so it is up to date, and cacheable, until one of its inputs changes.
+//
+// The input digest must stay identical to inputs_digest() in build-arti-ios.sh (README.md ->
+// "iOS", same text): sha256 over one line per file, "<hex sha256>  <path>\n", for ARTI_VERSION
+// Cargo.lock Cargo.toml IOS_XCODE_VERSION build-arti-ios.sh include/arti_ffi.h repro-env.sh
+// rust-toolchain.toml and every src/*.rs, paths relative to tools/arti-build, sorted by path.
+// A build followed by this task is the check that both agree: a mismatch fails here at once.
+val artiInputNames =
+    listOf(
+        "ARTI_VERSION",
+        "Cargo.lock",
+        "Cargo.toml",
+        "IOS_XCODE_VERSION",
+        "build-arti-ios.sh",
+        "include/arti_ffi.h",
+        "repro-env.sh",
+        "rust-toolchain.toml",
+    )
 val verifyArtiIosArchives =
     tasks.register("verifyArtiIosArchives") {
         group = "verification"
-        description = "Checks the committed Arti archives in iosApp/libs/arti (arm64, every C export)."
-        val archives = listOf(artiDeviceTarget, artiSimulatorTarget).map { artiLibs.file("$it/libarti.a").asFile }
-        val header = artiBuildDir.file("include/arti_ffi.h").asFile
-        inputs.files(archives + header)
+        description = "Checks the committed Arti archives in iosApp/libs/arti against their platform, exports and sources."
+        // Mach-O platforms (<mach-o/loader.h>): PLATFORM_IOS = 2, PLATFORM_IOSSIMULATOR = 7.
+        val slices = listOf(artiDeviceTarget to 2, artiSimulatorTarget to 7)
+        val archives = slices.associate { (target, _) -> target to artiLibs.file("$target/libarti.a").asFile }
+        val buildInfo = artiLibs.file("BUILD_INFO").asFile
+        val sourceRoot = artiBuildDir.asFile
+        // One property per archive, so swapping the two files changes the inputs.
+        archives.forEach { (target, archive) ->
+            inputs.files(archive).withPropertyName("archive-$target").withPathSensitivity(PathSensitivity.NONE)
+        }
+        inputs.files(buildInfo).withPropertyName("buildInfo").withPathSensitivity(PathSensitivity.NONE)
+        inputs
+            .files(artiBuildDir.asFileTree.matching { include(artiInputNames + "src/*.rs") })
+            .withPropertyName("sources")
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+        val stamp = layout.buildDirectory.file("arti/verifyArtiIosArchives.stamp")
+        outputs.file(stamp)
+        outputs.cacheIf { true }
         doLast {
+            val fix = "Rebuild with tools/arti-build/build-arti-ios.sh (README.md -> \"iOS\") and commit iosApp/libs/arti."
+
+            fun fail(message: String): Nothing = throw GradleException("$message $fix")
+
+            fun hex(bytes: ByteArray) = bytes.joinToString("") { "%02x".format(it) }
+
+            fun sha256(file: File): String {
+                val digest = MessageDigest.getInstance("SHA-256")
+                file.inputStream().use { input ->
+                    val buffer = ByteArray(1 shl 16)
+                    while (true) {
+                        val n = input.read(buffer)
+                        if (n < 0) break
+                        digest.update(buffer, 0, n)
+                    }
+                }
+                return hex(digest.digest())
+            }
+
+            val sourceFiles =
+                (
+                    artiInputNames +
+                        (sourceRoot.resolve("src").listFiles().orEmpty())
+                            .filter { it.isFile && it.name.endsWith(".rs") }
+                            .map { "src/${it.name}" }
+                ).sorted()
+            val inputsDigest =
+                hex(
+                    MessageDigest
+                        .getInstance("SHA-256")
+                        .digest(sourceFiles.joinToString("") { "${sha256(sourceRoot.resolve(it))}  $it\n" }.toByteArray()),
+                )
+
+            val header = sourceRoot.resolve("include/arti_ffi.h")
             val declared = Regex("""\b(arti_[a-z_]+)\(""").findAll(header.readText()).map { it.groupValues[1] }.toSet()
-            // MH_MAGIC_64 then CPU_TYPE_ARM64, little-endian: the first object member's header.
-            val arm64MachO = "\u00cf\u00fa\u00ed\u00fe\u000c\u0000\u0000\u0001"
-            archives.forEach { archive ->
-                val fix = "Rebuild it: tools/arti-build/build-arti-ios.sh (README.md -> \"iOS\")."
-                if (!archive.isFile) throw GradleException("Missing $archive. $fix")
-                // ISO-8859-1 maps each byte to one char, so the archive can be searched as text.
-                val bytes = archive.readText(Charsets.ISO_8859_1)
-                if (!bytes.startsWith("!<arch>\n")) throw GradleException("$archive is not a static archive. $fix")
-                if (!bytes.contains(arm64MachO)) throw GradleException("$archive holds no arm64 Mach-O object. $fix")
-                // The symbol table (__.SYMDEF) names every exported function, NUL-terminated.
-                val missing = declared.filterNot { bytes.contains("_$it\u0000") }
-                if (missing.isNotEmpty()) throw GradleException("$archive does not export $missing. $fix")
+            val platformNames = mapOf(1 to "macOS", 2 to "iOS", 3 to "tvOS", 4 to "watchOS", 6 to "Mac Catalyst", 7 to "iOS simulator")
+
+            fun RandomAccessFile.bytesAt(
+                offset: Long,
+                count: Int,
+            ): ByteBuffer {
+                val bytes = ByteArray(count)
+                seek(offset)
+                readFully(bytes)
+                return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+            }
+
+            slices.forEach { (target, platform) ->
+                val archive = archives.getValue(target)
+                if (!archive.isFile) fail("Missing $archive.")
+                val platformsSeen = sortedMapOf<Int, Int>()
+                var exported: Set<String>? = null
+                RandomAccessFile(archive, "r").use { file ->
+                    val length = file.length()
+                    if (length < 8 || String(file.bytesAt(0, 8).array(), Charsets.ISO_8859_1) != "!<arch>\n") {
+                        fail("$archive is not a static archive.")
+                    }
+                    var pos = 8L
+                    while (pos + 60 <= length) {
+                        // The 60-byte BSD ar member header; "#1/<n>" puts an n-byte name before the data.
+                        val memberHeader = String(file.bytesAt(pos, 60).array(), Charsets.ISO_8859_1)
+                        if (!memberHeader.endsWith("`\n")) fail("$archive: bad archive member header at $pos.")
+                        val rawName = memberHeader.substring(0, 16).trimEnd()
+                        val size = memberHeader.substring(48, 58).trim().toLong()
+                        var dataStart = pos + 60
+                        var dataSize = size
+                        val name =
+                            if (rawName.startsWith("#1/")) {
+                                val nameLength = rawName.substring(3).toInt()
+                                dataStart += nameLength
+                                dataSize -= nameLength
+                                String(file.bytesAt(pos + 60, nameLength).array(), Charsets.ISO_8859_1).trimEnd('\u0000')
+                            } else {
+                                rawName.removeSuffix("/")
+                            }
+                        if (name.startsWith("__.SYMDEF")) {
+                            // ranlib table: size, (strx, offset) pairs, string table size, strings.
+                            val wide = name.startsWith("__.SYMDEF_64")
+                            val table = file.bytesAt(dataStart, dataSize.toInt())
+                            val word = if (wide) 8 else 4
+                            fun read(at: Int) = if (wide) table.getLong(at).toInt() else table.getInt(at)
+                            val ranlibBytes = read(0)
+                            val stringsStart = word + ranlibBytes + word
+                            exported =
+                                (0 until ranlibBytes / (2 * word))
+                                    .map { i ->
+                                        var end = stringsStart + read(word + i * 2 * word)
+                                        val start = end
+                                        while (table.get(end) != 0.toByte()) end++
+                                        String(table.array(), start, end - start, Charsets.ISO_8859_1)
+                                    }.toSet()
+                        } else {
+                            val machHeader = file.bytesAt(dataStart, 32)
+                            // MH_MAGIC_64, CPU_TYPE_ARM64.
+                            if (machHeader.getInt(0) != 0xfeedfacf.toInt() || machHeader.getInt(4) != 0x0100000c) {
+                                fail("$archive: member $name is not an arm64 Mach-O object.")
+                            }
+                            val commandCount = machHeader.getInt(16)
+                            val commands = file.bytesAt(dataStart + 32, machHeader.getInt(20))
+                            var at = 0
+                            var memberPlatform: Int? = null
+                            repeat(commandCount) {
+                                val command = commands.getInt(at)
+                                memberPlatform =
+                                    when (command) {
+                                        0x32 -> commands.getInt(at + 8) // LC_BUILD_VERSION
+                                        0x25 -> 2 // LC_VERSION_MIN_IPHONEOS
+                                        0x24 -> 1 // LC_VERSION_MIN_MACOSX
+                                        0x2F -> 3 // LC_VERSION_MIN_TVOS
+                                        0x30 -> 4 // LC_VERSION_MIN_WATCHOS
+                                        else -> memberPlatform
+                                    }
+                                at += commands.getInt(at + 4)
+                            }
+                            val found = memberPlatform ?: fail("$archive: member $name names no platform.")
+                            platformsSeen[found] = (platformsSeen[found] ?: 0) + 1
+                        }
+                        pos = dataStart + dataSize
+                        if (pos % 2 == 1L) pos++
+                    }
+                }
+                if (platformsSeen.keys != setOf(platform)) {
+                    val seen = platformsSeen.entries.joinToString { (p, n) -> "$n ${platformNames[p] ?: "platform $p"}" }
+                    fail("$archive is the $target slice, so its objects must all be built for ${platformNames[platform]}; found $seen objects (swapped slices?).")
+                }
+                val symbols = exported ?: fail("$archive has no symbol table (__.SYMDEF).")
+                val missing = declared.filterNot { "_$it" in symbols }
+                if (missing.isNotEmpty()) fail("$archive does not export $missing.")
+            }
+
+            if (!buildInfo.isFile) fail("Missing $buildInfo.")
+            val info =
+                buildInfo
+                    .readLines()
+                    .mapNotNull { line -> line.indexOf(": ").takeIf { it > 0 }?.let { line.substring(0, it) to line.substring(it + 2) } }
+                    .toMap()
+            val xcodePin = sourceRoot.resolve("IOS_XCODE_VERSION").readText().filterNot { it.isWhitespace() }
+            if (info["xcode"] != xcodePin) fail("$buildInfo says Xcode ${info["xcode"]} built the archives; IOS_XCODE_VERSION pins $xcodePin.")
+            slices.forEach { (target, _) ->
+                val archive = archives.getValue(target)
+                val sha = sha256(archive)
+                if (info[target] != sha) fail("$buildInfo records sha256 ${info[target]} for $target, but $archive is $sha.")
+                val recorded = info["$target.inputs"]
+                if (recorded != inputsDigest) {
+                    fail(
+                        "The $target archive was built from other sources than tools/arti-build holds now: BUILD_INFO " +
+                            "records inputs $recorded, the sources digest to $inputsDigest (over $sourceFiles).",
+                    )
+                }
+            }
+
+            stamp.get().asFile.apply {
+                parentFile.mkdirs()
+                writeText(slices.joinToString("") { (target, _) -> "$target: ${info[target]}\n" } + "inputs: $inputsDigest\n")
             }
         }
     }
