@@ -39,9 +39,9 @@ import com.vitorpamplona.amethyst.commons.keystorage.SecureKeyStorageVault
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
-import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.model.marmot.MarmotGroupNotifier
 import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.BitcoinExplorerEndpoint
+import com.vitorpamplona.amethyst.commons.model.nip03Timestamp.TorAwareKtorOtsResolverBuilder
 import com.vitorpamplona.amethyst.commons.model.nip46Signer.Nip46ConsentPrompter
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
@@ -107,12 +107,9 @@ import com.vitorpamplona.quartz.nip01Core.relay.client.accessories.RelayOfflineT
 import com.vitorpamplona.quartz.nip01Core.relay.client.stats.RelayStats
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip03Timestamp.BitcoinExplorerUrls
-import com.vitorpamplona.quartz.nip03Timestamp.OtsResolver
-import com.vitorpamplona.quartz.nip03Timestamp.ots.BitcoinExplorer
-import com.vitorpamplona.quartz.nip03Timestamp.ots.BlockHeader
-import com.vitorpamplona.quartz.nip03Timestamp.ots.RemoteCalendar
-import com.vitorpamplona.quartz.nip03Timestamp.ots.Timestamp
+import com.vitorpamplona.quartz.nip03Timestamp.ots.OtsBlockHeightCache
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.Nip05Client
+import com.vitorpamplona.quartz.nip46RemoteSigner.BunkerClientMetadata
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.CachingOnchainBackend
 import com.vitorpamplona.quartz.nipBCOnchainZaps.chain.EsploraClient
 import com.vitorpamplona.quartz.utils.Log
@@ -127,7 +124,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -135,7 +131,6 @@ import kotlinx.coroutines.withContext
 import okio.FileSystem
 import okio.Path
 import okio.Path.Companion.toPath
-import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSOSStatusErrorDomain
 import platform.Foundation.NSPOSIXErrorDomain
@@ -181,8 +176,7 @@ class IosAppModules(
     val applicationIOScope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
 
     /** Application Support: kept across launches and in backups, hidden from the Files app. */
-    val filesPath: Path =
-        (NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, true).first() as String).toPath() / "amethyst"
+    val filesPath: Path = appFilesPath()
 
     val appStores = AppPreferenceStores(rootFilesDir = { filesPath })
 
@@ -308,10 +302,17 @@ class IosAppModules(
             },
         )
 
+    /**
+     * Every Blossom call (uploads, mirrors, the blob manager's list and delete, reports, Cordn's
+     * migration blobs) over the upload role: one client serves every server, picking each request's
+     * route by its URL.
+     */
+    val blossom by lazy { KtorBlossomClient(roleBasedHttpClientBuilder::ktorClientForUploads) }
+
     /** Blossom uploads over the upload role; re-encoded pictures wait in the temp folder until they go up. */
     val mediaUploader by lazy {
         IosMediaUploader(
-            blossom = KtorBlossomClient(roleBasedHttpClientBuilder::ktorClientForUploads),
+            blossom = blossom,
             tempDir = (NSTemporaryDirectory().toPath() / "uploads"),
         )
     }
@@ -500,7 +501,17 @@ class IosAppModules(
     }
 
     val blossomMirrorQueue by lazy {
-        BlossomMirrorQueue(scope = applicationIOScope, clientFor = { throw UnsupportedOperationException("Blossom on iOS comes with A2") })
+        BlossomMirrorQueue(scope = applicationIOScope, clientFor = { blossom })
+    }
+
+    /** OpenTimestamps: calendars and the block explorer over the money role, Tor-aware as on Android. */
+    val otsResolverBuilder by lazy {
+        TorAwareKtorOtsResolverBuilder(
+            client = roleBasedHttpClientBuilder::ktorClientForMoney,
+            isTorActive = roleBasedHttpClientBuilder::shouldUseTorForMoneyOperations,
+            cache = OtsBlockHeightCache(),
+            customExplorerUrl = { otsPrefs.current.normalizedUrl() },
+        )
     }
 
     /** What key storage asks the user. */
@@ -521,20 +532,21 @@ class IosAppModules(
             keyPrompts = keyPrompts,
         )
 
-    private val noLocation = MutableStateFlow<LocationResult>(LocationResult.LackPermission)
+    /** Core Location as geohashes, listening only while the app is on screen and allowed to. */
+    val deviceLocation by lazy { iosDeviceLocation(applicationIOScope, appLifecycle.isForeground) }
 
     val remoteSignerAuthPrompts = RemoteSignerAuthPrompts()
 
     val accountsCache =
         AccountCacheState(
-            geolocationFlow = { noLocation },
+            geolocationFlow = { deviceLocation.geohashStateFlow },
             nwcFilterAssembler = { sources.nwc },
             cashuMintDirectoryFilterAssembler = { sources.cashuMintDirectory },
             cashuMintTransport = KtorMintTransport(roleBasedHttpClientBuilder::ktorClientForMoney),
             // NIP-55 signer apps are Android's.
             externalSignerFactory = { _, _ -> null },
             cordnBlobCipher = { SecretEncryptionCordnBlobCipher() },
-            otsResolverBuilder = { OtsResolver(UnavailableOts, UnavailableOts) },
+            otsResolverBuilder = { otsResolverBuilder.build() },
             cache = cache,
             client = client,
             appVersion = appVersion,
@@ -550,7 +562,7 @@ class IosAppModules(
             meterSigner = { it },
             signerPermissionStore = signerPermissionStore,
             nip46ClientStore = nip46ClientStore,
-            remoteSignerMetadata = null,
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             trustNetworkClientBuilder = { NostrClient(websocketBuilder) },
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             marmotHistoryBlobs = null,
@@ -567,6 +579,7 @@ class IosAppModules(
             scope = applicationIOScope,
             // A NIP-46 login's relays follow the signer-relay Tor setting, as on Android.
             signerRelayRouting = torRelayState,
+            remoteSignerMetadata = REMOTE_SIGNER_METADATA,
             remoteSignerAuthPrompts = remoteSignerAuthPrompts,
             hooks = SessionHooks(),
         )
@@ -588,25 +601,11 @@ class IosAppModules(
     // As accounts load, feeds their DM, trusted, money and signer relays into torRelayState, which
     // re-evaluates which relays go through Tor and re-dials those that moved.
     val accountsTorStateConnector = AccountsTorStateConnector(accountsCache, torRelayState, applicationIOScope)
-}
 
-/** OpenTimestamps over Ktor comes with A2; verifying a timestamp fails with this message. */
-private object UnavailableOts : BitcoinExplorer, RemoteCalendar {
-    override suspend fun block(hash: String): BlockHeader = fail()
-
-    override suspend fun blockHash(height: Int): String = fail()
-
-    override suspend fun submit(
-        url: String,
-        digest: ByteArray,
-    ): Timestamp = fail()
-
-    override suspend fun getTimestamp(
-        url: String,
-        commitment: ByteArray,
-    ): Timestamp = fail()
-
-    private fun fail(): Nothing = throw UnsupportedOperationException("OpenTimestamps on iOS comes with A2")
+    companion object {
+        /** How a NIP-46 bunker shows this app when it asks the user to approve it. */
+        val REMOTE_SIGNER_METADATA = BunkerClientMetadata(name = "Amethyst iOS", url = "https://amethyst.social", image = "https://raw.githubusercontent.com/vitorpamplona/amethyst/refs/heads/main/icon.png")
+    }
 }
 
 /** NSURLSession's "the server answered the WebSocket upgrade with something other than 101". */

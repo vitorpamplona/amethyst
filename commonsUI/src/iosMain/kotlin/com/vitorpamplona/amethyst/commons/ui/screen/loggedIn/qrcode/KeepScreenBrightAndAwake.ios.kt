@@ -21,7 +21,26 @@
 package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import platform.UIKit.UIApplication
+import platform.UIKit.UIScreen
 
-/** Not wired on iOS yet. */
+/**
+ * Full brightness and no auto-lock while a QR code is on screen, as on Android. Both are put back
+ * to what they were, not to fixed values: the player may hold the idle timer off while it plays.
+ */
 @Composable
-actual fun KeepScreenBrightAndAwake() {}
+actual fun KeepScreenBrightAndAwake() {
+    DisposableEffect(Unit) {
+        val app = UIApplication.sharedApplication
+        val screen = UIScreen.mainScreen
+        val previousBrightness = screen.brightness
+        val previousIdleTimerDisabled = app.idleTimerDisabled
+        screen.brightness = 1.0
+        app.idleTimerDisabled = true
+        onDispose {
+            screen.brightness = previousBrightness
+            app.idleTimerDisabled = previousIdleTimerDisabled
+        }
+    }
+}

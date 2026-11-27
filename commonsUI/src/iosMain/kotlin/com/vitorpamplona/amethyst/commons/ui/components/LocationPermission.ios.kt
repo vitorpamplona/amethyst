@@ -21,13 +21,55 @@
 package com.vitorpamplona.amethyst.commons.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import platform.CoreLocation.CLLocationManager
+import platform.CoreLocation.CLLocationManagerDelegateProtocol
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedAlways
+import platform.CoreLocation.kCLAuthorizationStatusAuthorizedWhenInUse
+import platform.darwin.NSObject
 
-private object NoLocationPermission : PlatformPermission {
-    override val isGranted: Boolean = false
+/**
+ * "While using the app" location, which iOS asks for once (then only Settings can change it). The
+ * Info.plist defaults it to approximate (NSLocationDefaultAccuracyReduced), as Android asks only
+ * for coarse location: a 5 km geohash is all the app reads.
+ */
+private class IosLocationPermission : PlatformPermission {
+    private val manager = CLLocationManager()
 
-    override fun launchRequest() = Unit
+    override var isGranted: Boolean by mutableStateOf(isAuthorized())
+        private set
+
+    // CLLocationManager holds its delegate weakly; this class keeps it.
+    private val delegate =
+        object : NSObject(), CLLocationManagerDelegateProtocol {
+            override fun locationManagerDidChangeAuthorization(manager: CLLocationManager) {
+                isGranted = isAuthorized()
+            }
+        }
+
+    init {
+        manager.delegate = delegate
+    }
+
+    private fun isAuthorized(): Boolean {
+        val status = manager.authorizationStatus
+        return status == kCLAuthorizationStatusAuthorizedWhenInUse || status == kCLAuthorizationStatusAuthorizedAlways
+    }
+
+    override fun launchRequest() = manager.requestWhenInUseAuthorization()
+
+    fun release() {
+        manager.delegate = null
+    }
 }
 
-/** No location source on this platform yet. */
 @Composable
-actual fun rememberCoarseLocationPermission(): PlatformPermission = NoLocationPermission
+actual fun rememberCoarseLocationPermission(): PlatformPermission {
+    val permission = remember { IosLocationPermission() }
+    DisposableEffect(permission) { onDispose { permission.release() } }
+    return permission
+}

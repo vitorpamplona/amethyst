@@ -47,6 +47,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.UrlPreviewState
 import com.vitorpamplona.amethyst.commons.ui.components.ZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
+import com.vitorpamplona.amethyst.commons.ui.map.TileLocationPreviewMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodePlayhead
@@ -84,6 +85,36 @@ import com.vitorpamplona.amethyst.commons.ui.playback.composable.VideoView as Sh
  * previews are still links the user can open (B7).
  */
 object IosNotePlatform : NotePlatform {
+    // The shared OpenStreetMap tile card for a note's place (as on the desktop), and Core Location's
+    // geocoder for its name.
+    @Composable
+    override fun LocationPreviewMap(
+        latitude: Double,
+        longitude: Double,
+        aspectRatio: Float,
+        pinColor: Color?,
+        pinEmoji: String?,
+        pinAlpha: Float,
+        modifier: Modifier,
+        zoom: Double?,
+    ) = TileLocationPreviewMap(
+        latitude = latitude,
+        longitude = longitude,
+        modifier = modifier,
+        zoom = zoom,
+        aspectRatio = aspectRatio,
+        pinColor = pinColor,
+        pinEmoji = pinEmoji,
+        pinAlpha = pinAlpha,
+    )
+
+    @Composable
+    override fun LoadCityName(
+        geohashStr: String,
+        onLoading: (@Composable () -> Unit)?,
+        content: @Composable (String) -> Unit,
+    ) = IosLoadCityName(geohashStr, onLoading, content)
+
     override val maxInlineMediaHeight: Dp get() = MAX_INLINE_MEDIA_HEIGHT
 
     // Voice messages: the shared recording UI over AVAudioRecorder.

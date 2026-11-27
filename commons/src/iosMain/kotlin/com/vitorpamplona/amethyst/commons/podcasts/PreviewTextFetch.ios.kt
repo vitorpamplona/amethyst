@@ -21,5 +21,31 @@
 package com.vitorpamplona.amethyst.commons.podcasts
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.isSuccess
+import io.ktor.utils.io.readRemaining
+import kotlinx.coroutines.CancellationException
+import kotlinx.io.readByteArray
 
-actual suspend fun IRoleBasedHttpClientBuilder.fetchPreviewText(url: String): String? = null
+/** Refuse bodies larger than this (chapters and transcripts are small text files), as the JVM does. */
+private const val MAX_BYTES = 2_000_000L
+
+/** A podcast episode's chapters or transcript, over the preview role, capped at [MAX_BYTES]. */
+actual suspend fun IRoleBasedHttpClientBuilder.fetchPreviewText(url: String): String? =
+    try {
+        ktorClientForPreview(url).prepareGet(url).execute { response ->
+            if (!response.status.isSuccess()) return@execute null
+            val declared = response.headers["Content-Length"]?.toLongOrNull()
+            if (declared != null && declared > MAX_BYTES) return@execute null
+            response
+                .bodyAsChannel()
+                .readRemaining(MAX_BYTES)
+                .readByteArray()
+                .decodeToString()
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
+    }

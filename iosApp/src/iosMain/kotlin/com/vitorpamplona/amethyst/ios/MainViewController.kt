@@ -20,12 +20,22 @@
  */
 package com.vitorpamplona.amethyst.ios
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.ComposeUIViewController
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
@@ -45,8 +55,14 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIUserInterfaceStyle
 import platform.UIKit.UIViewController
 
-/** Built once per process: the graph outlives every view controller the system asks for. */
-private val modules by lazy { IosAppModules(appVersion = IosBuildInfo.VERSION_NAME) }
+/**
+ * Built once per process: the graph outlives every view controller the system asks for. The crash
+ * reporter goes in first, so a crash while building the graph is kept too.
+ */
+private val modules by lazy {
+    IosCrashReports.install(IosBuildInfo.VERSION_NAME)
+    IosAppModules(appVersion = IosBuildInfo.VERSION_NAME)
+}
 
 /**
  * The whole app as a view controller: what the Swift `@main` in `iosApp/xcode` hosts. It renders the
@@ -74,7 +90,14 @@ fun MainViewController(): UIViewController {
                 LocalPlaybackPlatform provides modules.playbackPlatform,
                 LocalRichTextPlatform provides IosRichTextPlatform,
             ) {
-                AmethystApp(modules.sessionManager, root)
+                Box(Modifier.fillMaxSize()) {
+                    AmethystApp(modules.sessionManager, root)
+                    // Toasts, above the home indicator and the keyboard.
+                    SnackbarHost(
+                        platform.snackbarHostState,
+                        Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.safeDrawing).padding(bottom = 64.dp),
+                    )
+                }
             }
         }
     }

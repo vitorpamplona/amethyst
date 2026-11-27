@@ -24,8 +24,12 @@ import com.vitorpamplona.amethyst.commons.browser.BrowserHistoryRegistry
 import com.vitorpamplona.amethyst.commons.browser.BrowserIconRegistry
 import com.vitorpamplona.amethyst.commons.connectedApps.nip46.Nip46ClientStore
 import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermissionStore
+import com.vitorpamplona.amethyst.commons.cordn.BlossomCordnBlobStore
+import com.vitorpamplona.amethyst.commons.cordn.KtorCordnHttp
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteAppsRegistry
 import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.model.location.PlaceHit
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.DrawerSectionCollapsePreferences
 import com.vitorpamplona.amethyst.commons.model.preferences.NamecoinSettingsStore
@@ -33,6 +37,8 @@ import com.vitorpamplona.amethyst.commons.model.preferences.OtsSettingsStore
 import com.vitorpamplona.amethyst.commons.model.preferences.PaneWidthPreferences
 import com.vitorpamplona.amethyst.commons.napplet.permissions.NappletPermissionLedger
 import com.vitorpamplona.amethyst.commons.relayClient.auth.AuthCoordinator
+import com.vitorpamplona.amethyst.commons.relayManagement.KtorNip86Retriever
+import com.vitorpamplona.amethyst.commons.relayManagement.Nip86Executor
 import com.vitorpamplona.amethyst.commons.scheduledposts.ScheduledPostStore
 import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.pow.PoWPublishQueue
@@ -45,8 +51,11 @@ import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.ElectrumxServer
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.IElectrumXClient
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NameShowResult
 import com.vitorpamplona.quartz.nip05DnsIdentifiers.namecoin.NamecoinNameResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 /** The app-wide services the shared screens read, from [IosAppModules]. */
 class IosAppServices(
@@ -101,13 +110,30 @@ class IosAppServices(
 
     override val nip46ClientStore: Nip46ClientStore get() = modules.nip46ClientStore
 
-    override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = throw UnsupportedOperationException("Blossom on iOS comes with A2")
+    override fun blossomClient(serverBaseUrl: String): BlossomBlobClient = modules.blossom
 
     override val blossomMirrorQueue: BlossomMirrorQueue get() = modules.blossomMirrorQueue
 
-    override fun cordnBlobStore(servers: List<String>): CordnBlobStore = throw UnsupportedOperationException("Cordn blobs on iOS come with A2")
+    override fun cordnBlobStore(servers: List<String>): CordnBlobStore = BlossomCordnBlobStore(servers, KtorCordnHttp(modules.blossom))
 
     override val authCoordinator: AuthCoordinator get() = modules.authCoordinator
 
     override val powPublishQueue: PoWPublishQueue get() = modules.powPublishQueue
+
+    override val deviceLocation: DeviceLocation get() = modules.deviceLocation
+
+    override fun cachedPlaceName(geohash: String): String? = IosPlaceNames.cached(geohash)
+
+    // The location picker's place search, on Core Location's geocoder.
+    override val hasPlaceSearch: Boolean get() = true
+
+    override suspend fun searchPlaces(query: String): List<PlaceHit> = withContext(Dispatchers.Main) { IosPlaceNames.search(query) }
+
+    // NIP-86 relay management on each relay's own route (Tor when the relay goes through Tor).
+    override val nip86Executor: Nip86Executor by lazy {
+        KtorNip86Retriever { relay -> modules.httpClients.get(modules.torRelayState.shouldUseTorForRelay(relay)) }
+    }
+
+    // The report the last run's crash left (IosCrashReports), offered to the user at start.
+    override suspend fun takeCrashReport(): String? = withContext(Dispatchers.IO) { IosCrashReports.takeReport() }
 }

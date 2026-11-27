@@ -21,12 +21,15 @@
 package com.vitorpamplona.amethyst.ios
 
 import com.vitorpamplona.amethyst.commons.account.AccountInfo
+import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
 import com.vitorpamplona.amethyst.commons.service.lnurl.LnurlHttpTransport
 import com.vitorpamplona.amethyst.commons.service.pow.PoWJobFailure
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.tor.MoneyOpRelayRouting
 import com.vitorpamplona.amethyst.commons.tor.TorRelayEvaluation
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModelHost
+import com.vitorpamplona.amethyst.commons.wot.onboarding.KtorTrustProviderHttp
+import com.vitorpamplona.amethyst.commons.wot.onboarding.TrustProviderHttp
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
 import com.vitorpamplona.quartz.nip01Core.relay.client.auth.RelayAuthSnapshot
@@ -38,7 +41,6 @@ import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
@@ -49,8 +51,8 @@ import platform.UIKit.UIApplication
 class IosAccountViewModelHost(
     private val modules: IosAppModules,
 ) : AccountViewModelHost {
-    // Memory warnings (UIApplicationDidReceiveMemoryWarningNotification) come with B3's memory work.
-    override val memoryPressure: Flow<Unit> get() = emptyFlow()
+    // UIApplicationDidReceiveMemoryWarningNotification, what Android reads from onTrimMemory.
+    override val memoryPressure: Flow<Unit> = memoryWarnings()
 
     override val localBlossomCacheAvailable: Flow<Boolean> get() = flowOf(false)
 
@@ -77,6 +79,19 @@ class IosAccountViewModelHost(
             .accountsFlow()
             .map { toPubKeys(it) }
             .onStart { emit(toPubKeys(modules.sessionStore.allSavedAccounts())) }
+
+    override val deviceLocation: DeviceLocation get() = modules.deviceLocation
+
+    // Web of Trust provider sign-ups (Brainstorm's API) over the NIP-05 role, as on Android.
+    override val trustProviderHttp: TrustProviderHttp by lazy { KtorTrustProviderHttp(modules.roleBasedHttpClientBuilder::ktorClientForNip05) }
+
+    // The key-backup nudge for a freshly generated key, stored with the account as on the desktop.
+    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = modules.sessionStore.hasBackedUpKeysFlow(npub)
+
+    override suspend fun setHasBackedUpKeys(
+        npub: String,
+        value: Boolean,
+    ) = modules.sessionStore.setHasBackedUpKeys(value, npub)
 
     // Notifications come with B6.
     override fun dismissNotificationFor(eventId: HexKey) = Unit

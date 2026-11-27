@@ -21,8 +21,52 @@
 package com.vitorpamplona.amethyst.commons.mediaServers
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.nipB7Blossom.BlossomServerUrl
+import com.vitorpamplona.quartz.utils.TimeUtils
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
+import io.ktor.client.request.head
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
-actual fun cachedMediaServerHealth(baseUrl: String): ServerHealth? = null
+/**
+ * The Blossom server reachability check of the JVM's MediaServerHealthProbe, over Ktor: a `HEAD`
+ * to `/upload` (CDN-fronted hosts answer nothing at `/`), any answer counting as reachable, slow
+ * past a second, offline past five, each answer reused for a minute.
+ */
+private object IosMediaServerHealth {
+    const val SLOW_THRESHOLD_MS: Long = 1_000L
+    const val PROBE_TIMEOUT_MS: Long = 5_000L
+    const val CACHE_TTL_MS: Long = 60_000L
 
-/** No HTTP client is wired on iOS yet: the server's status stays unknown. */
-actual suspend fun IRoleBasedHttpClientBuilder.probeMediaServer(baseUrl: String): ServerHealth = ServerHealth.Unknown
+    class CachedResult(
+        val status: ServerHealth,
+        val atMs: Long,
+    )
+
+    val cache = ConcurrentMap<String, CachedResult>()
+
+    fun cached(baseUrl: String): ServerHealth? {
+        val entry = cache[baseUrl] ?: return null
+        return if (TimeUtils.nowMillis() - entry.atMs < CACHE_TTL_MS) entry.status else null
+    }
+}
+
+actual fun cachedMediaServerHealth(baseUrl: String): ServerHealth? = IosMediaServerHealth.cached(baseUrl)
+
+actual suspend fun IRoleBasedHttpClientBuilder.probeMediaServer(baseUrl: String): ServerHealth {
+    IosMediaServerHealth.cached(baseUrl)?.let { return it }
+    val result =
+        try {
+            val startedAt = TimeUtils.nowMillis()
+            // The status does not matter: /upload often answers 401, 404 or 405 without auth.
+            withTimeout(IosMediaServerHealth.PROBE_TIMEOUT_MS) { ktorClientForPreview(baseUrl).head(BlossomServerUrl.upload(baseUrl)) }
+            if (TimeUtils.nowMillis() - startedAt > IosMediaServerHealth.SLOW_THRESHOLD_MS) ServerHealth.Slow else ServerHealth.Online
+        } catch (e: Exception) {
+            // A timeout is a TimeoutCancellationException: offline, not a cancel of the caller.
+            if (e is CancellationException && e !is TimeoutCancellationException) throw e
+            ServerHealth.Offline
+        }
+    IosMediaServerHealth.cache[baseUrl] = IosMediaServerHealth.CachedResult(result, TimeUtils.nowMillis())
+    return result
+}

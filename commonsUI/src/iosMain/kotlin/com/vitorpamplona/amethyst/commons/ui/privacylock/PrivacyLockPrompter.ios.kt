@@ -21,15 +21,40 @@
 package com.vitorpamplona.amethyst.commons.ui.privacylock
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import com.vitorpamplona.amethyst.commons.privacylock.PrivacyLockSettings
+import com.vitorpamplona.amethyst.commons.resources.Res
+import com.vitorpamplona.amethyst.commons.resources.privacy_lock_prompt_title
+import com.vitorpamplona.amethyst.commons.ui.stringRes
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 
-/** No device-credential prompt wired on iOS yet: it approves, like [rememberDeviceAuthenticator] there. */
-private val ApproveAtOnce =
-    object : CredentialPrompter {
-        override val available: Boolean = true
-
-        override suspend fun prompt(): PromptResult = PromptResult.Success
-    }
-
+/**
+ * The privacy lock opens with Face ID, Touch ID or the passcode ([IosDeviceOwner]). Without a
+ * passcode the lock would open for anyone, so it is not offered, and a lock already on is released,
+ * as on Android without a screen lock.
+ */
 @Composable
-actual fun rememberPrivacyLockPrompter(settings: PrivacyLockSettings): CredentialPrompter = ApproveAtOnce
+actual fun rememberPrivacyLockPrompter(settings: PrivacyLockSettings): CredentialPrompter {
+    val title = stringRes(Res.string.privacy_lock_prompt_title)
+    return remember(title) {
+        object : CredentialPrompter {
+            override val available: Boolean get() = IosDeviceOwner.isSecure()
+
+            override suspend fun prompt(): PromptResult =
+                suspendCancellableCoroutine { continuation ->
+                    IosDeviceOwner.authenticate(title) { approved, code, _ ->
+                        if (continuation.isActive) {
+                            continuation.resume(
+                                when {
+                                    approved -> PromptResult.Success
+                                    IosDeviceOwner.isCancel(code) -> PromptResult.UserCanceled
+                                    else -> PromptResult.Failed
+                                },
+                            )
+                        }
+                    }
+                }
+        }
+    }
+}

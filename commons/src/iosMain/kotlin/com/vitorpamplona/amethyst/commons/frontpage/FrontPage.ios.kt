@@ -23,6 +23,11 @@ package com.vitorpamplona.amethyst.commons.frontpage
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
 import com.vitorpamplona.quartz.nipFAAgentKeys.tags.AgentKeyTag
 import com.vitorpamplona.quartz.nipFBScheduledTasks.CronZone
+import com.vitorpamplona.quartz.utils.Log
+import io.ktor.client.request.get
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.isSuccess
+import kotlinx.coroutines.CancellationException
 
 actual suspend fun IRoleBasedHttpClientBuilder.listAgentModels(key: AgentKeyTag): List<AgentModel> = throw WriterException(WriterFailure.UNSUPPORTED)
 
@@ -37,8 +42,19 @@ actual suspend fun IRoleBasedHttpClientBuilder.chatComplete(
 
 actual fun paperBoundary(): PaperBoundary? = null
 
-/** No HTTP client here yet: no weather. */
-actual suspend fun IRoleBasedHttpClientBuilder.fetchWeatherText(url: String): String? = null
+/** The weather text over the preview role, as on the JVM: https only. */
+actual suspend fun IRoleBasedHttpClientBuilder.fetchWeatherText(url: String): String? {
+    if (!url.startsWith("https://")) return null
+    return try {
+        val response = ktorClientForPreview(url).get(url)
+        if (response.status.isSuccess()) response.bodyAsText() else null
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Log.w("ObserverWeather", "Could not fetch the weather", e)
+        null
+    }
+}
 
 /*
  * iOS prints no front page yet (there is no HTML boundary there), so its clock is UTC days:

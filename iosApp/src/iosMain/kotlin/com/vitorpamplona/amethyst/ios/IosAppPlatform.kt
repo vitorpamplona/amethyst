@@ -20,26 +20,40 @@
  */
 package com.vitorpamplona.amethyst.ios
 
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.UriHandler
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.vitorpamplona.amethyst.commons.account.ui.legal.StoreTermsGate
+import com.vitorpamplona.amethyst.commons.account.ui.legal.storeLegalSettingsCategory
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.favorites.favoriteCoordinateOf
+import com.vitorpamplona.amethyst.commons.feeds.FeedContentState
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.IosQrCodeScannerDialog
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeocacheMapTab
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeohashLocationPickerContent
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.LocalAppNav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.DeviceAroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.commons.ui.platform.Toaster
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode.ScanOutcome
+import com.vitorpamplona.amethyst.commons.ui.settings.SettingsCategory
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.ios.napplet.IosHeldNappletPane
@@ -55,6 +69,9 @@ import com.vitorpamplona.quartz.nip5aStaticWebsites.tags.PathTag
 import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
+import kotlinx.coroutines.launch
+import platform.Foundation.NSURL
+import platform.UIKit.UIApplication
 import com.vitorpamplona.amethyst.commons.ui.navigation.bottombars.AppBottomBar as SharedAppBottomBar
 
 /**
@@ -77,6 +94,103 @@ class IosAppPlatform(
     // Orbot on iOS is a VPN, not a SOCKS port another app could route through, so "external Tor"
     // has nothing to point at. IosAppModules runs the built-in Tor for a stored one.
     override val supportsExternalTor: Boolean get() = false
+
+    // The Cashu and on-chain wallets hold the user's funds in the app, which the App Store allows
+    // only from an organization account (3.1.5(i)): off unless the build turns them on
+    // (iosApp/build.gradle.kts, IN_APP_WALLETS). NWC and external wallets are unaffected.
+    override val offersInAppWallets: Boolean get() = IosBuildInfo.IN_APP_WALLETS
+
+    // NIP-46 remote signers: a bunker:// address in the key field, or a nostrconnect:// code a
+    // signer scans. iOS has no NIP-55 signer apps, so this is how a key can stay out of the app,
+    // as on the desktop. The session, its relays (by the signer-relay Tor setting) and its
+    // permission prompts are the shared ones IosAppModules already builds.
+    override val supportsRemoteSignerLogin: Boolean get() = true
+
+    // A signer app on this phone that registered nostrconnect: (LSApplicationQueriesSchemes in
+    // project.yml lets canOpenURL ask) takes the code without a scan. Only the addresses the login
+    // screen makes: never a scheme a page or a note could slip in.
+    override fun openNostrConnect(
+        uri: String,
+        appId: String?,
+    ): Boolean {
+        if (!uri.startsWith("nostrconnect://")) return false
+        val url = NSURL.URLWithString(uri) ?: return false
+        val app = UIApplication.sharedApplication
+        if (!app.canOpenURL(url)) return false
+        app.openURL(url, options = emptyMap<Any?, Any?>(), completionHandler = null)
+        return true
+    }
+
+    // The App Store asks apps with user-generated content for an agreement before sign-up
+    // (guideline 1.2), as the Play build does: the same checkbox and the same published terms.
+    override val requiresTermsAcceptance: Boolean get() = true
+
+    @Composable
+    override fun TermsGate(
+        checked: Boolean,
+        onCheckedChange: (Boolean) -> Unit,
+        showError: Boolean,
+    ) = StoreTermsGate(checked, onCheckedChange, showError)
+
+    override fun legalSettingsCategory(uriHandler: UriHandler): SettingsCategory? = storeLegalSettingsCategory(uriHandler)
+
+    /** Where the shared app's toasts show: a snackbar over the bottom of the screen (MainViewController). */
+    val snackbarHostState = SnackbarHostState()
+
+    // iOS has no toast; a snackbar is what the desktop shows for the same messages. Callers may
+    // report from any thread, so the snackbar is shown from the composition's scope.
+    @Composable
+    override fun rememberToaster(): Toaster {
+        val scope = rememberCoroutineScope()
+        return remember(scope) {
+            Toaster { message, long ->
+                scope.launch {
+                    snackbarHostState.showSnackbar(message, duration = if (long) SnackbarDuration.Long else SnackbarDuration.Short)
+                }
+            }
+        }
+    }
+
+    // The shared tile map (OpenStreetMap, as Android and the desktop draw): the location picker, with
+    // Core Location's search and "use my location", and the geocaches' map tab.
+    @Composable
+    override fun GeohashLocationPickerDialog(
+        initialGeohash: String?,
+        onDismiss: () -> Unit,
+        onConfirm: (String) -> Unit,
+        precision: Int?,
+    ) = TileGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
+
+    @Composable
+    override fun GeohashLocationPickerContent(
+        initialGeohash: String?,
+        confirmLabel: String,
+        onConfirm: (String) -> Unit,
+        modifier: Modifier,
+    ) = TileGeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
+
+    override val hasGeocacheMap: Boolean get() = true
+
+    @Composable
+    override fun GeocacheMapTab(
+        feedContentState: FeedContentState,
+        accountViewModel: AccountViewModel,
+        nav: INav,
+    ) = TileGeocacheMapTab(feedContentState, accountViewModel, nav)
+
+    @Composable
+    override fun AroundMeLocationLabel() = DeviceAroundMeLocationLabel()
+
+    // The shared scanner over AVFoundation's QR detector (IosQrCodeScannerDialog).
+    @Composable
+    override fun QrCodeScannerDialog(
+        onDismiss: () -> Unit,
+        onScan: (String) -> ScanOutcome,
+    ) = IosQrCodeScannerDialog(onDismiss, onScan)
+
+    // AVSpeechSynthesizer, the system's text-to-speech.
+    @Composable
+    override fun SpeakNameButton(name: String) = IosSpeakNameButton(name)
 
     // The shared bar, imported under another name: inside this override the bare name is the override.
     @Composable

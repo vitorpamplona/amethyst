@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The app's privacy manifest (App Store requirement since 2024-05-01). XcodeGen copies it into the
+  bundle as a resource, beside Info.plist.
+
+  Tracking: none. Amethyst has no analytics, ads or tracking SDKs, and talks only to the relays,
+  media servers and wallets the user picks.
+
+  Collected data: none listed. Notes, messages and media go to servers the user chooses, not to
+  the developer. Review this list before submission if a developer-run service is added (the push
+  server for notifications, commons/plans/2026-10-09-ios-app.md B6, will collect a device token).
+
+  Required-reason APIs, each with where it is called:
+  - UserDefaults (CA92.1, the app's own): the napplet web-view stores (IosNappletStores).
+  - File timestamps (C617.1, files in the app's container): FileLastModified, okio metadata.
+  - Disk space (E174.1, checking there is room before writing): the video cache (IosVideoCache).
+  - System boot time (35F9.1, elapsed time between events in the app): the Kotlin runtime's and
+    coroutines' monotonic clocks.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

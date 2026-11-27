@@ -30,12 +30,15 @@ targets:
         # Audio and video keep playing on the lock screen and in picture in picture.
         UIBackgroundModes: [audio]
         NSPhotoLibraryAddUsageDescription: Amethyst saves the videos you choose to your photo library.
-        NSMicrophoneUsageDescription: Amethyst records the voice messages and voice notes you choose to send.
-        # A napplet's or nSite's <input type=file> opens WebKit's own picker, which offers "Take Photo
-        # or Video": WebKit asks for the camera then, and without this text the app would crash. The
-        # photo library needs no text: WebKit's picker is the system's out-of-process one. Napplets
-        # never get the camera any other way (the web view denies getUserMedia).
-        NSCameraUsageDescription: Amethyst uses the camera only when you take a photo or video to pick as a file in an app or site.
+        NSMicrophoneUsageDescription: Amethyst records the voice messages, voice notes and videos you choose to send.
+        # The privacy lock and the key-reveal checks ask for Face ID (IosDeviceOwner). Without this
+        # text iOS ends the app the first time Face ID is asked for.
+        NSFaceIDUsageDescription: Amethyst uses Face ID to unlock the app and before showing your secret key, when you turn that on.
+        # The camera button of the composers (TakePicture.ios.kt) and the QR scanner; also a napplet's
+        # or nSite's <input type=file>, whose WebKit picker offers "Take Photo or Video". Without this
+        # text the app would crash there. Napplets never get the camera any other way (the web view
+        # denies getUserMedia).
+        NSCameraUsageDescription: Amethyst uses the camera when you take a photo or video to post, scan a QR code, or pick a file in an app or site.
         # Onion relays are mostly ws:// and onion sites http://, which ATS blocks. An onion name only
         # resolves inside Tor, whose circuit is end-to-end encrypted to the service, so plain HTTP is
         # allowed for the `onion` TLD alone; every clearnet http:// stays blocked. Measured on the
@@ -46,9 +49,20 @@ targets:
             onion:
               NSIncludesSubdomains: true
               NSExceptionAllowsInsecureHTTPLoads: true
-        # openLightningWallet asks whether a wallet can take a `lightning:` URL.
+        # The "around me" feed, geohash chats and a post's location (IosDeviceLocation): only while the
+        # app is in use, and approximate by default, as Android asks only for coarse location.
+        NSLocationWhenInUseUsageDescription: Amethyst uses your approximate location for the "Around me" feed, location chats and the places you choose to tag in posts.
+        NSLocationDefaultAccuracyReduced: true
+        # Export compliance. Beyond the HTTPS iOS provides, the app implements standard encryption
+        # for end-to-end messages (NIP-44, NIP-04, MLS for Marmot groups) and runs Tor (Arti). That is
+        # not exempt, so App Store Connect asks the export questions for each build; the mass-market
+        # classification (EAR 5D992.c) then needs the yearly self-classification report to BIS.
+        ITSAppUsesNonExemptEncryption: true
+        # openLightningWallet asks whether a wallet can take a `lightning:` URL, and the NIP-46 login
+        # whether a signer app can take a `nostrconnect:` code (IosAppPlatform.openNostrConnect).
         LSApplicationQueriesSchemes:
           - lightning
+          - nostrconnect
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
           - UIInterfaceOrientationLandscapeLeft
@@ -101,3 +115,25 @@ targets:
           PLIST="$SRCROOT/Amethyst/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CODE" "$PLIST"
+      - name: List the app's languages (commonsUI compose resources)
+        basedOnDependencyAnalysis: false
+        script: |
+          # CFBundleLocalizations is what makes iOS offer a per-app language in Settings, as
+          # Android 13's per-app language picker does. It follows the translated strings folders
+          # (values-de, values-pt, values-zh-rTW, ...), renamed to Apple's language IDs.
+          RES="$SRCROOT/../../commonsUI/src/commonMain/composeResources"
+          PLIST="$SRCROOT/Amethyst/Info.plist"
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleLocalizations" "$PLIST" 2>/dev/null || true
+          /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations: string en" "$PLIST"
+          for dir in "$RES"/values-*; do
+            id=$(basename "$dir" | sed -e 's/^values-//' -e 's/-r/-/')
+            case "$id" in
+              in) id=id ;;
+              zh) id=zh-Hans ;;
+              zh-TW) id=zh-Hant ;;
+              zh-HK) id=zh-Hant-HK ;;
+              zh-SG) id=zh-Hans-SG ;;
+            esac
+            /usr/libexec/PlistBuddy -c "Add :CFBundleLocalizations: string $id" "$PLIST"
+          done

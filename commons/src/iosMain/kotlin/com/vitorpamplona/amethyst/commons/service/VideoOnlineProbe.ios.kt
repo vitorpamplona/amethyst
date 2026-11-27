@@ -21,5 +21,36 @@
 package com.vitorpamplona.amethyst.commons.service
 
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.quartz.utils.Log
+import io.ktor.client.plugins.websocket.webSocketSession
+import io.ktor.client.request.prepareGet
+import io.ktor.http.isSuccess
+import io.ktor.websocket.close
+import kotlinx.coroutines.CancellationException
 
-actual suspend fun IRoleBasedHttpClientBuilder.isVideoOnline(url: String): Boolean = true
+/**
+ * Whether a stream answers, as the JVM's OnlineChecker: a GET for HTTP streams, a WebSocket
+ * handshake for `wss:` ones (LiveKit rooms), the answer kept in [OnlineStatusCache].
+ */
+actual suspend fun IRoleBasedHttpClientBuilder.isVideoOnline(url: String): Boolean {
+    if (url.isBlank()) return false
+    OnlineStatusCache.fresh(url)?.let { return it.online }
+    return try {
+        val client = ktorClientForVideo(url)
+        val online =
+            if (url.startsWith("wss")) {
+                client.webSocketSession(url.replace("wss+livekit://", "wss://")).close()
+                true
+            } else {
+                // Only the status: the body of a live stream never ends.
+                client.prepareGet(url).execute { it.status.isSuccess() }
+            }
+        OnlineStatusCache.record(url, online)
+        online
+    } catch (e: Exception) {
+        if (e is CancellationException) throw e
+        OnlineStatusCache.record(url, false)
+        Log.e("LiveActivities", "Failed to check streaming url $url", e)
+        false
+    }
+}

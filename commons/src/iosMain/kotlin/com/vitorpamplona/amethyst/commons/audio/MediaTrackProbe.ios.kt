@@ -20,6 +20,45 @@
  */
 package com.vitorpamplona.amethyst.commons.audio
 
+import com.vitorpamplona.amethyst.commons.service.MediaSizeCache
+import com.vitorpamplona.amethyst.commons.service.fileLength
 import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
+import com.vitorpamplona.amethyst.commons.service.parseContentRangeTotal
+import io.ktor.client.request.header
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.utils.io.readRemaining
+import kotlinx.coroutines.CancellationException
+import kotlinx.io.readByteArray
 
-internal actual suspend fun IRoleBasedHttpClientBuilder.readMp4AudioOnly(url: String): Boolean? = null
+/** Whether an MP4 carries audio only, read block by block with Range requests over the video role. */
+internal actual suspend fun IRoleBasedHttpClientBuilder.readMp4AudioOnly(url: String): Boolean? {
+    val client = ktorClientForVideo(url)
+    return probeMp4AudioOnly { offset, length ->
+        try {
+            client.prepareGet(url) { header("Range", "bytes=$offset-${offset + length - 1}") }.execute { response ->
+                when (response.status.value) {
+                    // Past the end of the file: an empty read, which ends the walk.
+                    416 -> ByteArray(0)
+                    206 -> {
+                        // The first answer says how big the whole file is: a held-back placeholder shows it.
+                        if (offset == 0L) parseContentRangeTotal(response.headers["Content-Range"])?.let { MediaSizeCache.put(url, it) }
+                        response.bodyAsChannel().readRemaining(length.toLong()).readByteArray()
+                    }
+                    // A server that ignores Range sends the whole file: that still answers the first block.
+                    200 ->
+                        if (offset == 0L) {
+                            response.fileLength()?.let { MediaSizeCache.put(url, it) }
+                            response.bodyAsChannel().readRemaining(length.toLong()).readByteArray()
+                        } else {
+                            null
+                        }
+                    else -> null
+                }
+            }
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            null
+        }
+    }
+}

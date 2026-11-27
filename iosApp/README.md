@@ -55,8 +55,29 @@ xcrun simctl boot <udid>                                         # HTTPS needs a
 
 ## What is not wired yet
 
-Each of these throws or stays off, and names the plan step that fills it: Blossom and Cordn blobs,
-OpenTimestamps and namecoin lookups (A2), media pickers, playback and uploads (B4, B5),
-notifications (B6). A video that must go through Tor but would play off the video cache (HLS, a
-live stream) is refused with a message (B12e). Marmot groups keep their state in memory until
-their stores move to okio (A3).
+Each of these stays off on iOS, and names the plan step that fills it:
+
+- **Notifications** (B6): no APNs registration, Notification Service Extension or background
+  catch-up. Needs the push server's APNs work, outside this repo.
+- **Links and sharing** (B7): the `nostr:` URL scheme, a share extension, and the share sheet
+  (`ImageSharer`/`FileSharer`; sharing text copies it).
+- **Calls** (B10, WebRTC) and **audio rooms** (B11): need a WebRTC framework, and quic-kmp and
+  `nestsClient` iOS builds.
+- **Screens still in `jvmAndroid`** (A4): Git repositories, Cordn group chat, the in-app browser,
+  scan QR from a shared image, My Fitness, Now Playing settings, Resource usage, the HLS composer.
+- **On-device AI and media extras** (B13): translation, the writing assistant, alt-text
+  suggestions, the voice anonymizer, the trim preview, Cast, the front page printer, Routstr.
+- **Namecoin** (`.bit`) lookups: need an ElectrumX client over raw TLS sockets.
+- **In-app wallets** (Cashu, on-chain) are off unless the build turns them on
+  (`-Pamethyst.ios.inAppWallets=true`, App Store guideline 3.1.5(i) wants an organization account).
+- A video that must go through Tor but would play off the video cache (HLS, a live stream) is
+  refused with a message (B12e).
+
+## App Store packaging
+
+`xcode/Amethyst/PrivacyInfo.xcprivacy` is the privacy manifest (no tracking, no collected data,
+the required-reason APIs with where each is called). `ITSAppUsesNonExemptEncryption` is true: the
+app implements its own end-to-end encryption and Tor, so App Store Connect asks the export
+questions, and the mass-market classification needs the yearly self-classification report. The
+first login accepts the terms of use, as on the Play build. Signing (a team) and a TestFlight
+workflow are not set up yet.
