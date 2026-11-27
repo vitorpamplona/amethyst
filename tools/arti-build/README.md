@@ -369,16 +369,21 @@ cd tools/arti-build
 ./verify-reproducible-ios.sh                     # then prove they reproduce, and commit them
 ```
 
-Run it after any change to `src/`, `include/`, `Cargo.*`, `ARTI_VERSION`, `rust-toolchain.toml`
-or `IOS_XCODE_VERSION`, and commit `iosApp/libs/arti` with that change, as you would the `.so`
-files. It needs macOS, the pinned Xcode and rustup; the two iOS targets are added on first use.
+Run it after any change to `src/`, `include/`, `Cargo.*`, `ARTI_VERSION`, `rust-toolchain.toml`,
+`IOS_XCODE_VERSION`, `repro-env.sh` or `build-arti-ios.sh`, and commit `iosApp/libs/arti` with that
+change, as you would the `.so` files; `:iosApp:verifyArtiIosArchives` (and so CI) fails until you
+do. It needs macOS, the pinned Xcode (another is refused; `--any-xcode` builds anyway) and rustup;
+the two iOS targets are added on first use. It builds into a staging directory and moves the
+archives and `BUILD_INFO` into place only once every check passed, so a failed run leaves the
+committed files alone.
 About 70 seconds per target cold, 35 after a change to `src/`.
 
 ```
 iosApp/libs/arti/                     # committed
 ├── aarch64-apple-ios/libarti.a       # device, ~12.7 MB (debug info stripped)
 ├── aarch64-apple-ios-sim/libarti.a   # simulator, ~12.7 MB
-└── BUILD_INFO                        # rustc, Xcode, SDKs, sha256 per slice, native-static-libs
+└── BUILD_INFO                        # rustc, Xcode, SDKs, native-static-libs, per slice its
+                                      # sha256 and the digest of the inputs it was built from
 ```
 
 What committing costs: git stores the two archives compressed, about 8.3 MB per Arti bump,
@@ -391,10 +396,24 @@ How the iOS build finds them:
 - **Compiling** `:iosApp` needs only `include/arti_ffi.h` (committed): the cinterop
   (`iosApp/src/nativeInterop/cinterop/arti.def`) names the header, not the library. The cinterop
   and `src/iosArtiMain` are set up on a macOS host only (cinterop needs the Apple SDK).
-- **`:iosApp:verifyArtiIosArchives`**, like Android's `verifyNativeAbis`: both archives must exist,
-  be static archives holding arm64 Mach-O objects, and export every function the header declares.
-  The test links and Xcode's pre-build step depend on it, so a missing or wrong archive fails
-  with the fix instead of with undefined symbols.
+- **`:iosApp:verifyArtiIosArchives`**, like Android's `verifyNativeAbis`: both archives must exist
+  and be static archives whose every member is an arm64 Mach-O object built for the slice's
+  platform (the `LC_BUILD_VERSION` / `LC_VERSION_MIN_IPHONEOS` load commands: iOS in the device
+  slice, the iOS simulator in the other, so swapped slices fail), export every function the
+  header declares, and match `BUILD_INFO`: its sha256 per slice, its Xcode against
+  `IOS_XCODE_VERSION`, and its `<triple>.inputs` against the digest of the sources here now. So
+  a change to this directory that lands without rebuilt archives fails CI. The test links and
+  Xcode's pre-build step depend on it, so a missing or wrong archive fails with the fix instead
+  of with undefined symbols. It streams the archives and writes a stamp, so it is up to date (and
+  cacheable) until an input changes.
+
+  The input digest, computed alike by `build-arti-ios.sh` (`inputs_digest`,
+  `--print-inputs-digest`) and the task: for `ARTI_VERSION`, `Cargo.lock`, `Cargo.toml`,
+  `IOS_XCODE_VERSION`, `build-arti-ios.sh`, `include/arti_ffi.h`, `repro-env.sh`,
+  `rust-toolchain.toml` and every `src/*.rs` (paths relative to `tools/arti-build`, sorted
+  bytewise), one line `"<hex sha256 of the file>  <path>\n"` each (the format of `shasum -a 256`),
+  and the sha256 of those lines concatenated. Change the list or the format in both places; a
+  build followed by the task shows at once whether they still agree.
 - **Test executables** link `iosApp/libs/arti/<triple>/libarti.a` with `-larti -liconv`
   (`iosApp/build.gradle.kts`) and take the archive as a link input, so a new one relinks.
 - **The app:** `AmethystKit` is a static framework, so Kotlin/Native leaves its `_arti_*`
@@ -425,22 +444,27 @@ bytes match:
 ./verify-reproducible-ios.sh --any-xcode     # another Xcode: reproducibility only (bytes will differ)
 ```
 
-Its first build writes `iosApp/libs/arti`, so a clean `git diff` afterwards is the proof that the
-committed archives are the reproducible ones.
+Its first build writes `iosApp/libs/arti` (through `build-arti-ios.sh`'s staging, so only a
+successful build replaces anything), so a clean `git diff` afterwards is the proof that the
+committed archives and `BUILD_INFO` are the reproducible ones. With `--any-xcode` both builds go
+to scratch directories and `iosApp/libs/arti` is left alone.
 
-The second of its two builds runs from a copy of `tools/arti-build` at another path with an
-empty `CARGO_HOME` elsewhere, so it sees what another machine sees; two builds in one place
+The second of its two builds runs from a copy of `tools/arti-build` (without `out/` and other
+build products) at another path, with an empty `CARGO_HOME` elsewhere whose path holds a space,
+another `HOME` and another `TMPDIR`, so it sees what another machine sees; neither build inherits
+the calling shell's environment; two builds in one place
 cannot show a leaked path. Both compile at the canonical `/tmp/amethyst-arti-build`.
 
 | Source of non-determinism | Pinned by |
 |---|---|
 | rustc, std and the iOS targets | `rust-toolchain.toml` |
-| Xcode: the clang that compiles `ring`, `zstd-sys`, `libsqlite3-sys`, the SDK, and the `strip` that post-processes the archives | `IOS_XCODE_VERSION`; `verify-reproducible-ios.sh` refuses another (override: `--any-xcode`), `build-arti-ios.sh` only warns |
+| Xcode: the clang that compiles `ring`, `zstd-sys`, `libsqlite3-sys`, the SDK, and the `strip` that post-processes the archives | `IOS_XCODE_VERSION`; both scripts refuse another (override: `--any-xcode`), and `verifyArtiIosArchives` checks `BUILD_INFO`'s |
 | the symbol table `strip` rewrites (it stamped the builder's uid/gid and the time on `__.SYMDEF`) | `ZERO_AR_DATE=1` |
 | dependency versions | `Cargo.lock`, `--locked` |
 | paths rustc embeds | `--remap-path-prefix` (`repro-env.sh`) |
-| paths the C and assembly objects embed (`ring` builds them with `-gfull`: each source under `CARGO_HOME`, the compile directory, the SDK under the Xcode install) | `-ffile-prefix-map` for `CARGO_HOME`, the Arti clone and Xcode's developer dir, each in every spelling (as given, normalised, symlinks resolved), through `CFLAGS_<target>` (iOS targets only, so Android's bytes cannot move) |
-| the caller's environment (Xcode's pre-build phase exports its build settings; a stray `RUSTFLAGS`, `CFLAGS`, `CC_*` or `SDKROOT`) | `build-arti-ios.sh` unsets every variable rustc, cargo or cc-rs would read before it builds |
+| paths the C and assembly objects embed (`ring` builds them with `-gfull`: each source under `CARGO_HOME`, the compile directory, the SDK under the Xcode install) | `-ffile-prefix-map` for `CARGO_HOME`, the Arti clone and Xcode's developer dir, each in every spelling (as given, normalised, symlinks resolved), through `CFLAGS_<target>` (iOS targets only, so Android's bytes cannot move), shell-quoted with `CC_SHELL_ESCAPED_FLAGS=1` so a path with a space (`/Applications/Xcode 27.1.app`) stays one flag; rustc's maps go through `CARGO_ENCODED_RUSTFLAGS` for the same reason |
+| the caller's environment (Xcode's pre-build phase exports its build settings; a stray `RUSTFLAGS`, `RUSTC_BOOTSTRAP`, `RUSTUP_TOOLCHAIN`, `CARGO_UNSTABLE_*`, `CFLAGS`, `CC_*`, a hyphenated `CFLAGS_aarch64-apple-ios` or `SDKROOT`) | every tool runs under `env -i` with an allowlist (`HOME`, `TMPDIR`, `USER`, `DEVELOPER_DIR`, `RUSTUP_HOME`, proxies) and a fixed `PATH` (rustup's proxies, then `/usr/bin` and the system dirs, since cc-rs finds `clang` on it); the toolchain is named with `RUSTUP_TOOLCHAIN` from `rust-toolchain.toml` |
+| cargo config files (`[env]`, `[profile]`, `[build] rustflags`) in `CARGO_HOME` or above the working directory | cargo runs in the canonical build path with a `CARGO_HOME` of its own (`/tmp/amethyst-arti-build/cargo-home`, whose `registry/` and `git/` link to the real ones, so the downloads are shared); a `.cargo/config*` above the build path (`/tmp/.cargo/config.toml`) is refused |
 | deployment target, panic strategy | `IPHONEOS_DEPLOYMENT_TARGET=16.0` and `panic = "unwind"`, set in the script |
 
 What was measured (2026-11-27, one Mac, Xcode 27.1): before the C path mapping, a build from

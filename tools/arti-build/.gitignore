@@ -1,4 +1,5 @@
 .arti-source/
 target/
-# iOS archives from build-arti-ios.sh (not committed, see README.md -> "iOS")
+# build-arti-ios.sh logs and verify-reproducible-ios.sh leftovers (the iOS archives themselves
+# are committed in iosApp/libs/arti, see README.md -> "iOS")
 out/
