@@ -31,6 +31,7 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import okhttp3.OkHttpClient
@@ -198,14 +199,21 @@ class MediaSizeProbeTest {
             assertFalse(MediaSizeCache.isAnswered(url))
         }
 
+    /**
+     * The waits are timed on the test's virtual clock, not the wall: the HEAD itself runs on real IO,
+     * which a slow runner can stretch past any wall-clock bound, but it adds no virtual time. So the
+     * `testScheduler.currentTime` after the call is exactly how long [resolveMediaSize]
+     * waited for a track probe, however long the request took.
+     */
     @Test
     fun resolveDoesNotWaitWhenNoTrackProbeRuns() =
-        runBlocking {
+        runTest {
             // A gallery tile's `.mp4`: nothing will read its tracks, so the HEAD must not sit out the full wait.
             headAnswer("tile.mp4", 200, "Content-Length" to "3300000")
-            val started = System.nanoTime()
-            assertEquals(3_300_000L, clients.resolveMediaSize(url("tile.mp4"), "video/mp4", MediaSizeRole.VIDEO))
-            assertTrue(System.nanoTime() - started < 1_000_000_000L)
+            val fullWaitMs = 60_000L
+            assertEquals(3_300_000L, clients.resolveMediaSize(url("tile.mp4"), "video/mp4", MediaSizeRole.VIDEO, trackProbeWaitMs = fullWaitMs))
+            assertTrue(testScheduler.currentTime < fullWaitMs, "waited ${testScheduler.currentTime} ms of the $fullWaitMs ms wait")
+            assertEquals(1, requestsTo("tile.mp4"))
         }
 
     @Test
@@ -226,7 +234,9 @@ class MediaSizeProbeTest {
             val probe = launch(Dispatchers.IO) { clients.probeMediaTracks(url("feed.mp4"), "video/mp4") }
             // In flight before resolve asks, so resolve waits for it rather than for its short start grace.
             withTimeout(5_000) { MediaTrackProbeCache.inFlight.first { url("feed.mp4") in it } }
-            assertEquals(12_400_000L, clients.resolveMediaSize(url("feed.mp4"), "video/mp4", MediaSizeRole.VIDEO))
+            // A wait cap far past the probe's 500 ms: a slow runner stretching the probe past the
+            // default 2 s would send the HEAD this test says never goes out.
+            assertEquals(12_400_000L, clients.resolveMediaSize(url("feed.mp4"), "video/mp4", MediaSizeRole.VIDEO, trackProbeWaitMs = 60_000))
             probe.join()
             assertTrue(requests.none { it.startsWith("HEAD") })
         }
@@ -268,10 +278,10 @@ class MediaSizeProbeTest {
 
     @Test
     fun resolveSkipsWaitForNonMp4() =
-        runBlocking {
+        runTest {
             headAnswer("still.jpg", 200, "Content-Length" to "4200")
-            val started = System.nanoTime()
             assertEquals(4_200L, clients.resolveMediaSize(url("still.jpg"), "image/jpeg", MediaSizeRole.IMAGE, trackProbeWaitMs = 10_000))
-            assertTrue(System.nanoTime() - started < 5_000_000_000L)
+            // Virtual time, as above: no wait at all, not even the start grace.
+            assertEquals(0L, testScheduler.currentTime)
         }
 }

@@ -211,6 +211,11 @@ class BuildGate(
                     } finally {
                         process = null
                     }
+                // Committed to while it ran: the pass is for the work before, and shows as outdated.
+                // Looked at before the run's end is published, so whoever sees it end finds no git of
+                // the gate's still reading the checkout: on Windows, git's open mapping of a file
+                // makes a write to it fail ("a file with a user-mapped section open").
+                recheck()
                 val tail = tail()
                 run.value =
                     when {
@@ -218,8 +223,6 @@ class BuildGate(
                         code == 0 -> Run(GateState.Passed(tail), work)
                         else -> Run(GateState.Failed(tail), work)
                     }
-                // Committed to while it ran: the pass is for the work before, and shows as outdated.
-                recheck()
             }
     }
 

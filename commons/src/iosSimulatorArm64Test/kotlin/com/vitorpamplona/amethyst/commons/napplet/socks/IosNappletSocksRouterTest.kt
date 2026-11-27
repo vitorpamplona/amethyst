@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.io.IOException
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -55,10 +56,16 @@ class IosNappletSocksRouterTest {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val selector = SelectorManager(Dispatchers.IO)
 
+    /**
+     * The test's coroutines go before the selector they wait on. Closed first, the selector fails
+     * every pending accept and write with an IOException on its own thread; one that lands before
+     * the cancel fails its coroutine, which on Kotlin/Native aborts the whole test process, during
+     * whichever test runs next (CI saw it as IosConnectivityTest dying).
+     */
     @AfterTest
     fun tearDown() {
-        selector.close()
         scope.cancel()
+        selector.close()
     }
 
     /** A loopback server that answers every connection with "hello" and counts them. */
@@ -66,15 +73,24 @@ class IosNappletSocksRouterTest {
         val server = aSocket(selector).tcp().bind("127.0.0.1", 0)
         val accepted = MutableStateFlow(0)
         scope.launch {
-            while (true) {
-                val socket = server.accept()
-                accepted.update { it + 1 }
-                launch {
-                    val out = socket.openWriteChannel(autoFlush = true)
-                    out.writeFully("hello".encodeToByteArray())
-                    out.flushAndClose()
-                    socket.close()
+            try {
+                while (true) {
+                    val socket = server.accept()
+                    accepted.update { it + 1 }
+                    launch {
+                        try {
+                            val out = socket.openWriteChannel(autoFlush = true)
+                            out.writeFully("hello".encodeToByteArray())
+                            out.flushAndClose()
+                        } catch (e: IOException) {
+                            // The client hung up first.
+                        } finally {
+                            socket.close()
+                        }
+                    }
                 }
+            } catch (e: IOException) {
+                // The selector closed under the server: it is done.
             }
         }
         return (server.localAddress as InetSocketAddress).port to accepted
