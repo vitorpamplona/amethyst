@@ -33,9 +33,14 @@ import kotlin.test.assertTrue
  * Events of a kind quartz has no class for are kept so the fallback card can draw them: a regular
  * one by its id, a replaceable or addressable one at its address (newest version wins), and an
  * ephemeral one not at all.
+ *
+ * Stored events go in through [NotePins], or a GC could drop a note nothing else references, such
+ * as the older version of an addressable, before the lookup.
  */
 class EventCacheUnknownKindTest {
     private val alice = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
+
+    private val pins = NotePins()
 
     private fun event(
         idSeed: Char,
@@ -48,7 +53,7 @@ class EventCacheUnknownKindTest {
     fun regularUnknownKindIsKeptById() {
         val cache = EventCache()
         val e = event('1', 4_242, 1_000)
-        assertTrue(cache.justConsume(e, null, true))
+        assertTrue(pins.consume(cache, e))
         assertEquals(e, cache.getNoteIfExists(e.id)?.event)
     }
 
@@ -57,10 +62,10 @@ class EventCacheUnknownKindTest {
         val cache = EventCache()
         val v1 = event('1', 35_123, 1_000, arrayOf(arrayOf("d", "bread")))
         val v2 = event('2', 35_123, 2_000, arrayOf(arrayOf("d", "bread")))
-        cache.justConsume(v2, null, true)
-        cache.justConsume(v1, null, true)
-
         val address = Address(35_123, alice, "bread")
+        pins.consume(cache, v2, address = address)
+        pins.consume(cache, v1, address = address)
+
         assertEquals(v2.id, cache.getAddressableNoteIfExists(address)?.event?.id)
         // Each version is still reachable by its id, as an nevent link would ask for it.
         assertEquals(v1.id, cache.getNoteIfExists(v1.id)?.event?.id)
@@ -70,8 +75,9 @@ class EventCacheUnknownKindTest {
     fun replaceableUnknownKindLivesAtItsAddress() {
         val cache = EventCache()
         val e = event('3', 17_777, 1_000)
-        cache.justConsume(e, null, true)
-        assertEquals(e.id, cache.getAddressableNoteIfExists(Address(17_777, alice, ""))?.event?.id)
+        val address = Address(17_777, alice, "")
+        pins.consume(cache, e, address = address)
+        assertEquals(e.id, cache.getAddressableNoteIfExists(address)?.event?.id)
     }
 
     @Test

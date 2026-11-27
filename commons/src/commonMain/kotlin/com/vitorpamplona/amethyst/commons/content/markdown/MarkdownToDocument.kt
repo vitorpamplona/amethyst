@@ -77,7 +77,7 @@ class MarkdownToDocument(
         // CommonMark ends a line at \r\n and \r too; this parser only at \n, so a document written
         // with Windows line endings would be one paragraph.
         val normalized = if (markdown.contains('\r')) markdown.replace("\r\n", "\n").replace('\r', '\n') else markdown
-        val extracted = MarkdownFootnotes.extract(normalized)
+        val extracted = MarkdownFootnotes.extract(LooseFences.repair(normalized))
         val src = capQuoteDepth(extracted.source)
         val root = parser.buildMarkdownTreeFromString(src)
         val definitions = linkDefinitions(src, root)

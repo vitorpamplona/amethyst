@@ -23,8 +23,8 @@ package com.vitorpamplona.amethyst.commons.model.nip52Calendar
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
+import com.vitorpamplona.amethyst.commons.model.cache.NotePins
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderLogStore
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip52Calendar.appt.time.CalendarTimeSlotEvent
@@ -48,11 +48,9 @@ import java.io.File
  * a false "could fire" keeps waking the process forever; a false "can't fire"
  * silently kills a reminder the user RSVP'd to.
  *
- * Events go in through [consumePinned], which takes each event's note from the cache *before*
- * consuming it and keeps it for the test's lifetime. `LocalCache` holds notes weakly
- * (LargeSoftCache) and the scanner finds RSVPs and their time slots by reading the cache, so a
- * GC before that read would lose them — a lost slot reads as "not fetched yet" and flips
- * `couldStillFire` to true.
+ * Events go in through [NotePins]: the scanner finds RSVPs and their time slots by reading the
+ * cache, and without the pins a GC before that read would lose them — a lost slot reads as "not
+ * fetched yet" and flips `couldStillFire` to true.
  */
 class CalendarReminderScannerTest {
     @get:Rule
@@ -60,11 +58,10 @@ class CalendarReminderScannerTest {
 
     private val now = 2_000_000_000L
 
-    private val pinned = mutableListOf<Note>()
+    private val pins = NotePins()
 
     private fun consumePinned(event: Event) {
-        pinned.add(LocalCache.getOrCreateNote(event))
-        LocalCache.justConsume(event, null, true)
+        pins.consume(LocalCache, event)
     }
 
     // Unique per-test-class identities so the shared LocalCache singleton

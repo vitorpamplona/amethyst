@@ -36,13 +36,15 @@ import kotlin.test.assertSame
 class NoteShowingEventTest {
     private val signer = NostrSignerSync(KeyPair())
 
+    private val pins = NotePins()
+
     private fun consumed(
         kind: Int,
         createdAt: Long,
         vararg tags: Array<String>,
     ): Event {
         val event = signer.sign<Event>(EventTemplate(createdAt, kind, arrayOf(*tags), "v$createdAt"))
-        LocalCache.justConsume(event, null, false)
+        pins.consume(LocalCache, event, wasVerified = false)
         return event
     }
 
