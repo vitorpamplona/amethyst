@@ -201,3 +201,6 @@ benchmark/src/main/jniLibs/
 # Python bytecode (tools/*.py)
 __pycache__/
 *.pyc
+
+# App Store screenshots taken by iosApp/store/screenshots.sh: uploaded in App Store Connect, not committed.
+iosApp/store/screenshots/

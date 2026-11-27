@@ -21,14 +21,14 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.model.Account
-import com.vitorpamplona.amethyst.commons.service.http.IRoleBasedHttpClientBuilder
-import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
+import com.vitorpamplona.amethyst.commons.service.upload.BlossomBlobClient
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnEncryptedMedia
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaEncryption
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaTag
 import com.vitorpamplona.mls.group.MlsGroup
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.withContext
 
 /**
@@ -66,7 +66,11 @@ import kotlinx.coroutines.withContext
  */
 class CordnMediaService(
     private val account: Account,
-    private val httpClients: IRoleBasedHttpClientBuilder,
+    /**
+     * The platform's Blossom client for a server (`AppServices.blossomClient`): OkHttp on the JVM,
+     * Ktor elsewhere, both on the upload role's network route, so a Tor-routed server gets Tor.
+     */
+    private val clientFor: (serverBaseUrl: String) -> BlossomBlobClient,
 ) {
     /**
      * Encrypts [bytes] under a fresh per-file key and uploads the ciphertext.
@@ -127,15 +131,13 @@ class CordnMediaService(
         server: String,
     ): String {
         val blob = CordnBlobUpload.of(sealed)
-        // BlossomClient.upload is the BUD-02 `/upload` endpoint, never `/media`.
+        // BlossomBlobClient.upload is the BUD-02 `/upload` endpoint, never `/media`.
         check(!blob.useMediaEndpoint) { "cordn blobs are ciphertext and must never be re-encoded" }
 
         // The auth event is public too, so it names the blob by its hash, as the app's uploader
         // always has: "Uploading <hash>".
         val auth = account.createBlossomUploadAuth(blob.hash, blob.length, "Uploading ${blob.baseFileName}").toAuthorizationHeader()
-        val result =
-            BlossomClient(httpClients.okHttpClientForUploads(server))
-                .upload(bytes = blob.bytes, contentType = blob.contentType, serverBaseUrl = server, authHeader = auth)
+        val result = clientFor(server).upload(bytes = blob.bytes, contentType = blob.contentType, serverBaseUrl = server, authHeader = auth)
 
         return result.url ?: throw IllegalStateException("the blob server returned no URL")
     }

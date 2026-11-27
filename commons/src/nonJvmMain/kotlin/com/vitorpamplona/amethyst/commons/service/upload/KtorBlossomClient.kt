@@ -57,12 +57,12 @@ class KtorBlossomClient(
     private val client: (url: String) -> HttpClient,
 ) : BlossomBlobClient {
     /** [onProgress] follows the bytes sent. */
-    suspend fun upload(
+    override suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)?,
     ): BlossomUploadResult {
         val uploadUrl = BlossomServerUrl.upload(serverBaseUrl)
         val response =

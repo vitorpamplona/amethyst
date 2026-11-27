@@ -77,6 +77,7 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.create.Ne
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.calendars.detail.CalendarEventDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateGroupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnCreateMembersScreen
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupInfoScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupListScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnInvitationsScreen
@@ -86,9 +87,9 @@ import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.G
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.NewGeohashChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.ChatListDetailScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isConcordDetailRoute
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isCordnDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isGeohashDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isMarmotDetailRoute
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isPlatformChatDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail.isRelayGroupDetailRoute
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.CreateGroupScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.EditGroupInfoScreen
@@ -574,11 +575,14 @@ fun NavDestinations.sharedDestinations(accountViewModel: AccountViewModel) {
         )
     }
     composableFromEndArgs<Route.MarmotGroupInfo> { MarmotGroupInfoScreen(it.nostrGroupId, accountViewModel, nav) }
+    composableFromEndArgs<Route.CordnGroupChat> {
+        CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
+    }
     composableFromEndArgs<Route.CordnGroupInfo> {
         CordnGroupInfoScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
     }
     composableFromEnd<Route.CordnGroupList>(capWidth = false) {
-        ChatListDetailScreen(::isPlatformChatDetailRoute, accountViewModel, nav) { CordnGroupListScreen(accountViewModel, it) }
+        ChatListDetailScreen(::isCordnDetailRoute, accountViewModel, nav) { CordnGroupListScreen(accountViewModel, it) }
     }
     composer<Route.CordnCreateGroup>(ComposerSize.FORM) { CordnCreateGroupScreen(accountViewModel, nav) }
     composer<Route.CordnCreateGroupMembers>(ComposerSize.FORM) { CordnCreateMembersScreen(accountViewModel, nav) }

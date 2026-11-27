@@ -95,12 +95,12 @@ open class BlossomClient(
      * Upload raw bytes (e.g. encrypted blobs) to a Blossom server. [onProgress] follows the bytes
      * sent.
      */
-    open suspend fun upload(
+    override suspend fun upload(
         bytes: ByteArray,
         contentType: String,
         serverBaseUrl: String,
         authHeader: String?,
-        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)?,
     ): BlossomUploadResult {
         val body =
             if (onProgress == null) {

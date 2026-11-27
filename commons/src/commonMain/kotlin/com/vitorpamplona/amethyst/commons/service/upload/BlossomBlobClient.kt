@@ -76,11 +76,23 @@ class BlossomMirrorUnsupportedException(
 ) : RuntimeException("$server does not support the /mirror endpoint (HTTP $status)")
 
 /**
- * The Blossom blob operations the media-server screens need: list, probe, delete, mirror and
- * report. [BlossomClient] is the OkHttp implementation; platforms hand one out per server so
- * proxying, Tor and connection pooling stay theirs.
+ * The Blossom blob operations shared code needs: upload, list, probe, delete, mirror and report.
+ * [BlossomClient] is the OkHttp implementation; platforms hand one out per server so proxying,
+ * Tor and connection pooling stay theirs.
  */
 interface BlossomBlobClient {
+    /**
+     * BUD-02 `PUT /upload` of [bytes], stored as sent (never the BUD-05 `/media` endpoint, which
+     * may re-encode). [onProgress] follows the bytes sent.
+     */
+    suspend fun upload(
+        bytes: ByteArray,
+        contentType: String,
+        serverBaseUrl: String,
+        authHeader: String?,
+        onProgress: ((bytesWritten: Long, totalBytes: Long) -> Unit)? = null,
+    ): BlossomUploadResult
+
     /** BUD-04 `PUT /mirror`, falling back to a download and `PUT /upload` when the server lacks it. */
     suspend fun mirrorOrUpload(
         sourceUrl: String,

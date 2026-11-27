@@ -27,22 +27,62 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.screen_unavailable_here
+import com.vitorpamplona.amethyst.commons.resources.screen_unavailable_on_device
 import com.vitorpamplona.amethyst.commons.resources.screen_unavailable_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.threadview.ThreadScreen
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.grayText
+import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
+import com.vitorpamplona.quartz.nip01Core.core.Address
 
 /**
- * What a front end without a screen draws in its place ([NavDestinations.unavailable]): a way back
- * instead of a crash, for routes that reach it through a link, a synced bar item or a shared menu.
+ * What a front end without a screen for [route] draws in its place ([NavDestinations.unavailable]),
+ * for routes that reach it through a link in a note, a synced bar item or a shared menu. It shows the
+ * closest thing this front end has rather than a dead end:
+ *
+ * - a route about an addressable event (a git repository, a software app) opens that event's note,
+ *   the same thread view a plain `naddr` link opens;
+ * - a web page or web app opens in the system browser, unless it asked for Tor, which the system
+ *   browser would not use;
+ * - anything else says the screen is not here, without naming another platform (App Store
+ *   guideline 2.3.10).
  */
+@Composable
+fun UnavailableScreen(
+    route: Route,
+    accountViewModel: AccountViewModel,
+    nav: INav,
+) {
+    val address = addressOf(route)
+    if (address != null) {
+        ThreadScreen(address.toValue(), accountViewModel, nav)
+        return
+    }
+
+    val url = externalUrlOf(route)
+    if (url != null) {
+        val uri = LocalUriHandler.current
+        LaunchedEffect(route) {
+            runCatching { uri.openUri(url) }
+            nav.popBack()
+        }
+        return
+    }
+
+    UnavailableScreen(nav)
+}
+
+/** The notice alone: the screen is not in this version. */
 @Composable
 fun UnavailableScreen(nav: INav) {
     Scaffold(
@@ -50,7 +90,7 @@ fun UnavailableScreen(nav: INav) {
     ) { pad ->
         Box(Modifier.fillMaxSize().padding(pad).padding(24.dp), contentAlignment = Alignment.Center) {
             Text(
-                text = stringRes(Res.string.screen_unavailable_here),
+                text = stringRes(Res.string.screen_unavailable_on_device),
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.grayText,
@@ -58,3 +98,22 @@ fun UnavailableScreen(nav: INav) {
         }
     }
 }
+
+private fun addressOf(route: Route): Address? =
+    when (route) {
+        is Route.GitRepository -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.GitRepositoryCode -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.GitRepositoryIssues -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.GitRepositoryPulls -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.GitRepositoryNewIssue -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.GitRepositoryNewPullRequest -> Address(route.kind, route.pubKeyHex, route.dTag)
+        is Route.SoftwareAppDetail -> Address(route.kind, route.pubKeyHex, route.dTag)
+        else -> null
+    }
+
+private fun externalUrlOf(route: Route): String? =
+    when (route) {
+        is Route.WebPage -> route.url.takeUnless { route.preferTor }
+        is Route.WebApp -> route.url
+        else -> null
+    }

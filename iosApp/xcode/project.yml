@@ -112,6 +112,10 @@ targets:
           CATALOG="$SRCROOT/../../gradle/libs.versions.toml"
           APP=$(sed -n 's/^app = "\(.*\)"$/\1/p' "$CATALOG")
           CODE=$(sed -n 's/^appCode = "\(.*\)"$/\1/p' "$CATALOG")
+          # App Store Connect takes one upload per build number and version. A second TestFlight
+          # build of the same release sets AMETHYST_IOS_BUILD_NUMBER (ios-testflight.yml does,
+          # appCode then the run number) instead of reusing appCode.
+          CODE="${AMETHYST_IOS_BUILD_NUMBER:-$CODE}"
           PLIST="$SRCROOT/Amethyst/Info.plist"
           /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $APP" "$PLIST"
           /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $CODE" "$PLIST"

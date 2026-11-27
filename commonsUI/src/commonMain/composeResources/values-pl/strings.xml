@@ -7558,7 +7558,6 @@
     <string name="privacy_lock_too_many_attempts">Zbyt wiele błędnych haseł. Spróbuj ponownie za kilka minut.</string>
     <string name="deck_focus_column">Przejdź do kolumny %1$d</string>
     <string name="screen_unavailable_title">Niedostępne tutaj</string>
-    <string name="screen_unavailable_here">Ten ekran nie jest jeszcze dostępny w tej wersji aplikacji Amethyst. Jest on dostępny w aplikacji na Androida.</string>
     <string name="error_dialog_details">Szczegóły</string>
     <string name="crash_window_title">Amethyst napotkał problem</string>
     <string name="crash_window_body">Coś poszło nie tak i to okno musi zostać zamknięte. Możesz wysłać raport o awarii do deweloperów Amethysta w DM; żadne dane osobowe nie są udostępniane. Jeśli zamiast tego zamkniesz, Amethyst zaproponuje wysłanie go następnym razem.</string>

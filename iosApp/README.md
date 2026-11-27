@@ -63,13 +63,19 @@ Each of these stays off on iOS, and names the plan step that fills it:
   (`ImageSharer`/`FileSharer`; sharing text copies it).
 - **Calls** (B10, WebRTC) and **audio rooms** (B11): need a WebRTC framework, and quic-kmp and
   `nestsClient` iOS builds.
-- **Screens still in `jvmAndroid`** (A4): Git repositories, Cordn group chat, the in-app browser,
+- **Screens still in `jvmAndroid`** (A4): Git repositories, the in-app browser,
   scan QR from a shared image, My Fitness, Now Playing settings, Resource usage, the HLS composer.
 - **On-device AI and media extras** (B13): translation, the writing assistant, alt-text
   suggestions, the voice anonymizer, the trim preview, Cast, the front page printer, Routstr.
 - **Namecoin** (`.bit`) lookups: need an ElectrumX client over raw TLS sockets.
 - **In-app wallets** (Cashu, on-chain) are off unless the build turns them on
   (`-Pamethyst.ios.inAppWallets=true`, App Store guideline 3.1.5(i) wants an organization account).
+- **The NIP-82 software catalogue** ("App Store" in the menu) is left out on purpose: App Review
+  rejects an app that offers a store of other apps (guideline 3.2.2(i)). Software app notes still
+  render, and open as notes.
+- A link to a screen iOS lacks opens the note it is about (a git repository, a software app), the
+  system browser (a web page or web app that does not ask for Tor), or a notice that names no other
+  platform (`UnavailableScreen`).
 - A video that must go through Tor but would play off the video cache (HLS, a live stream) is
   refused with a message (B12e).
 
@@ -79,5 +85,9 @@ Each of these stays off on iOS, and names the plan step that fills it:
 the required-reason APIs with where each is called). `ITSAppUsesNonExemptEncryption` is true: the
 app implements its own end-to-end encryption and Tor, so App Store Connect asks the export
 questions, and the mass-market classification needs the yearly self-classification report. The
-first login accepts the terms of use, as on the Play build. Signing (a team) and a TestFlight
-workflow are not set up yet.
+first login accepts the terms of use, as on the Play build.
+
+Release builds go to TestFlight through `.github/workflows/ios-testflight.yml` (a release tag, or
+by hand): it archives, signs with Xcode's cloud-managed signing and an App Store Connect API key,
+and uploads. The listing, the review notes, the answers App Store Connect asks for and the
+guideline-by-guideline checklist are in [`store/README.md`](store/README.md).

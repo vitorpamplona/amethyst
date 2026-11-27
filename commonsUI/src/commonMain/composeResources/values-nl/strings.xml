@@ -7127,7 +7127,6 @@
     <string name="privacy_lock_too_many_attempts">Te veel onjuiste wachtwoorden. Probeer het over een paar minuten opnieuw.</string>
     <string name="deck_focus_column">Ga naar kolom %1$d</string>
     <string name="screen_unavailable_title">Hier niet beschikbaar</string>
-    <string name="screen_unavailable_here">Dit scherm zit nog niet in deze versie van Amethyst. Het is beschikbaar in de Android-app.</string>
     <string name="error_dialog_details">Details</string>
     <string name="crash_window_title">Amethyst is op een probleem gestuit</string>
     <string name="crash_window_body">Er ging iets mis en dit venster moet sluiten. Je kunt het crashrapport in een DM naar de ontwikkelaars van Amethyst sturen; er wordt geen persoonlijke informatie gedeeld. Als je in plaats daarvan sluit, biedt Amethyst aan het te versturen wanneer het de volgende keer opent.</string>

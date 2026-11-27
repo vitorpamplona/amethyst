@@ -1,0 +1,1 @@
+nostr,social,decentralized,relays,encrypted,messages,chat,bitcoin,lightning,zaps,tor,feed,posts

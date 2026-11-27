@@ -7127,7 +7127,6 @@
     <string name="privacy_lock_too_many_attempts">Túl sok hibás jelszó. Próbálja újra néhány perc múlva.</string>
     <string name="deck_focus_column">Ugrás a(z) %1$d. oszlopra</string>
     <string name="screen_unavailable_title">Itt nem érhető el</string>
-    <string name="screen_unavailable_here">Ez a képernyő még nincs benne az Amethyst ezen verziójában. Csak az Androidos alkalmazásban érhető el.</string>
     <string name="error_dialog_details">Részletek</string>
     <string name="crash_window_title">Az Amethyst problémába ütközött</string>
     <string name="crash_window_body">Valami hiba történt, és ezt az ablakot be kell zárni. Az összeomlási jelentést privát üzenetben elküldheti az Amethyst fejlesztőinek; személyes adatai nem lesznek megosztva. Ha inkább bezárja, az Amethyst felajánlja a küldést, amikor legközelebb megnyílik.</string>

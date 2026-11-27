@@ -7125,7 +7125,6 @@
     <string name="privacy_lock_too_many_attempts">अत्याधिक दोषपूर्ण पारणशब्द। कुछ क्षण पश्चात पुनःप्रयास करें।</string>
     <string name="deck_focus_column">स्तम्भ %1$d तक जाएँ</string>
     <string name="screen_unavailable_title">यहाँ उपलब्ध नहीं</string>
-    <string name="screen_unavailable_here">यह पटल इस Amethyst संस्करण में उपलब्ध नहीं अब तक। यह उपलब्ध है आण्ड्रोइड क्रमक में।</string>
     <string name="error_dialog_details">विवरण</string>
     <string name="crash_window_title">Amethyst में एक समस्या आ गई</string>
     <string name="crash_window_body">कुछ अपक्रम हुआ तथा यह पटल आवृत होगा। आप क्रमदोष वृत्तान्त को Amethyst के विकासकों को भेज सकते हैं एक सीधेसन्देश में। कोई व्यक्तिगत जानकारी बाँटा नहीं जाएगा। यदि आप इसके स्थान पर उसे आवृत करते हैं तो Amethyst उसे भेजने का प्रस्ताव करेगा अगली बार जब वह खुलता है।</string>

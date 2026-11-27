@@ -7099,7 +7099,6 @@
     <string name="privacy_lock_too_many_attempts">Senhas incorretas demais. Tente novamente em alguns minutos.</string>
     <string name="deck_focus_column">Ir para a coluna %1$d</string>
     <string name="screen_unavailable_title">Não disponível aqui</string>
-    <string name="screen_unavailable_here">Esta tela ainda não está nesta versão do Amethyst. Ela está disponível no app para Android.</string>
     <string name="error_dialog_details">Detalhes</string>
     <string name="crash_window_title">O Amethyst encontrou um problema</string>
     <string name="crash_window_body">Algo deu errado e esta janela precisa ser fechada. Você pode enviar o relatório de falha aos desenvolvedores do Amethyst por DM; nenhuma informação pessoal é compartilhada. Se você fechar sem enviar, o Amethyst oferecerá enviá-lo na próxima vez que abrir.</string>

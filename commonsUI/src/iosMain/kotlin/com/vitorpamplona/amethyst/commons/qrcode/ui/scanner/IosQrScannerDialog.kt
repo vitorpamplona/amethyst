@@ -72,7 +72,7 @@ import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code
-import com.vitorpamplona.amethyst.commons.resources.qr_scanner_camera_blocked
+import com.vitorpamplona.amethyst.commons.resources.qr_scanner_camera_blocked_ios
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_camera_rationale
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_clipboard_empty
 import com.vitorpamplona.amethyst.commons.resources.qr_scanner_grant_camera
@@ -191,7 +191,7 @@ private fun CameraPermissionGate(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
-            text = stringRes(if (blocked) Res.string.qr_scanner_camera_blocked else Res.string.qr_scanner_camera_rationale),
+            text = stringRes(if (blocked) Res.string.qr_scanner_camera_blocked_ios else Res.string.qr_scanner_camera_rationale),
             color = Color.White,
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyLarge,

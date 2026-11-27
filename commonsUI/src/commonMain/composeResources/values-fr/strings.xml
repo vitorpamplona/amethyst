@@ -7552,7 +7552,6 @@
     <string name="privacy_lock_too_many_attempts">Trop de mots de passe erronés. Réessayez dans quelques minutes.</string>
     <string name="deck_focus_column">Aller à la colonne %1$d</string>
     <string name="screen_unavailable_title">Non disponible ici</string>
-    <string name="screen_unavailable_here">Cet écran n'est pas encore dans cette version d'Amethyst. Il est disponible dans l'application Android.</string>
     <string name="error_dialog_details">Détails</string>
     <string name="crash_window_title">Amethyst a rencontré un problème</string>
     <string name="crash_window_body">Une erreur s'est produite et cette fenêtre doit se fermer. Vous pouvez envoyer le rapport de plantage aux développeurs d'Amethyst en MP ; aucune information personnelle n'est partagée. Si vous fermez plutôt, Amethyst proposera de l'envoyer à sa prochaine ouverture.</string>

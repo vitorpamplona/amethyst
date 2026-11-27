@@ -55,6 +55,7 @@ import com.vitorpamplona.amethyst.commons.chats.ui.CHAT_GROUP_WINDOW_SECONDS
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatBubbleLayout
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatDivisor
 import com.vitorpamplona.amethyst.commons.chats.ui.ChatGroupPosition
+import com.vitorpamplona.amethyst.commons.chats.ui.chatDayKey
 import com.vitorpamplona.amethyst.commons.chats.ui.chatJumboEmojiAllowed
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiCount
 import com.vitorpamplona.amethyst.commons.chats.ui.jumboEmojiFontSize
@@ -87,6 +88,8 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_reactions_title
 import com.vitorpamplona.amethyst.commons.resources.quick_action_share
 import com.vitorpamplona.amethyst.commons.resources.today
 import com.vitorpamplona.amethyst.commons.resources.yesterday
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.ClickableBox
 import com.vitorpamplona.amethyst.commons.ui.components.TranslatableRichTextViewer
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
@@ -136,12 +139,6 @@ import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.time.Duration
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 
 /**
@@ -871,9 +868,7 @@ private fun CordnMessageDetailsSheet(
 ) {
     val sentAt =
         remember(message.envelope.createdAt) {
-            ZonedDateTime
-                .ofInstant(Instant.ofEpochSecond(message.envelope.createdAt), ZoneId.systemDefault())
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            localTimestampOf(message.envelope.createdAt)
         }
 
     ModalBottomSheet(
@@ -1143,7 +1138,20 @@ fun CordnDeliveredMessage.sameDayAs(older: CordnDeliveredMessage?): Boolean {
     return localDayOf(envelope.createdAt) == localDayOf(older.envelope.createdAt)
 }
 
-private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(epochSeconds).atZone(ZoneId.systemDefault()).toLocalDate()
+private fun localDayOf(epochSeconds: Long): Int = chatDayKey(epochSeconds)
+
+/**
+ * [epochSeconds] on the reader's wall clock as `yyyy-MM-dd HH:mm:ss`, the same in every locale:
+ * the details sheet shows it to quote when a message looks out of place, not to be read in prose.
+ */
+private fun localTimestampOf(epochSeconds: Long): String {
+    val wall = epochSeconds + LocalClock.utcOffsetSeconds(epochSeconds)
+    val day = SearchDate.civilFromDays(wall.floorDiv(TimeUtils.ONE_DAY.toLong()))
+    val secondOfDay = wall.mod(TimeUtils.ONE_DAY.toLong()).toInt()
+
+    fun two(value: Int) = value.toString().padStart(2, '0')
+    return day.ymd() + " " + two(secondOfDay / 3600) + ":" + two(secondOfDay / 60 % 60) + ":" + two(secondOfDay % 60)
+}
 
 /**
  * The day a run of messages belongs to.
@@ -1154,7 +1162,7 @@ private fun localDayOf(epochSeconds: Long): LocalDate = Instant.ofEpochSecond(ep
 @Composable
 fun DaySeparator(
     createdAt: Long,
-    today: LocalDate,
+    today: SearchDate,
 ) {
     // The labels every other chat's dividers use ("Today", "Yesterday", "Aug 20", "Jan 5, 2024",
     // in the locale's own order), so this divider and the pinned day pill or bar above the room
@@ -1181,18 +1189,15 @@ private const val TODAY_POLL_MS = 60_000L
  *
  * Polling rather than a single sleep to the next midnight, because a device clock does
  * not only advance: it is corrected, and the tablet this was found on jumped nine hours
- * in one step. Re-assigning an equal [LocalDate] is not a change, so a quiet minute
+ * in one step. Re-assigning an equal [SearchDate] is not a change, so a quiet minute
  * costs no recomposition.
  */
 @Composable
-fun rememberToday(): LocalDate {
-    val zone = remember { ZoneId.systemDefault() }
-    return produceState(LocalDate.now(zone), zone) {
+fun rememberToday(): SearchDate =
+    produceState(LocalClock.today()) {
         while (true) {
-            val now = ZonedDateTime.now(zone)
-            val untilMidnight = Duration.between(now, now.toLocalDate().plusDays(1).atStartOfDay(zone)).toMillis()
+            val untilMidnight = LocalClock.startOfDay(LocalClock.today().plusDays(1)) * 1000 - TimeUtils.nowMillis()
             delay(untilMidnight.coerceIn(1_000L, TODAY_POLL_MS))
-            value = LocalDate.now(zone)
+            value = LocalClock.today()
         }
     }.value
-}

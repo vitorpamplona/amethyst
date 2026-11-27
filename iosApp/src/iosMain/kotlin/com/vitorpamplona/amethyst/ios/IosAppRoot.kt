@@ -73,7 +73,13 @@ class IosAppRoot(
     ) {
         // A napplet as a screen of its own (plans/2026-11-26-ios-napplets.md, N5), as on the desktop.
         destinations.composableFromEndArgs<Route.NostrApp>(capWidth = false) { route -> IosNostrAppScreen(route, nav, modules.nappletHost, accountViewModel) }
-        // Screens still in jvmAndroid (A4) have ways in from shared menus: show a notice, not a crash.
-        destinations.unavailable { UnavailableScreen(nav) }
+        // The NIP-82 software catalogue ("App Store" in the menu) lists apps to download and install,
+        // mostly Android ones. An app that offers a store of other apps is rejected by App Review
+        // (guideline 3.2.2(i)), so iOS leaves it out; a software app note in a feed still renders,
+        // and opening one shows its note (UnavailableScreen).
+        destinations.withdraw(listOf(Route.SoftwareApps::class, Route.SoftwareAppDetail::class))
+        // Screens still in jvmAndroid (A4) have ways in from links in notes: the closest screen
+        // there is (the note, the system browser) or a notice, never a crash.
+        destinations.unavailable { route -> UnavailableScreen(route, accountViewModel, nav) }
     }
 }

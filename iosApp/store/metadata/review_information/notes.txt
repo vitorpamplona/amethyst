@@ -1,0 +1,31 @@
+Amethyst is a client for Nostr, an open protocol. There is no Amethyst server: posts are signed on the device and sent to independent relays the user picks.
+
+SIGNING IN
+No account or demo login is needed. On the first screen tap "Sign Up", enter a name, accept the terms of use and tap "Create Account": the app creates a key on the device. No email or phone number is asked for. The terms (zero tolerance for objectionable content and abusive users) must be accepted to sign up or sign in.
+
+USER-GENERATED CONTENT (1.2)
+- Report: the three-dot menu on any post or profile > Report, with reasons (spam, nudity, hateful conduct, illegal behavior, impersonation). The report is published to the relays, and the post is hidden for the person who reported it.
+- Block: the same menu > Block, on a post or a profile. Relays can be blocked in Settings > Relays.
+- Filter: Settings > Security filters mutes words and hashtags. Posts marked sensitive are hidden behind a warning by default. Spam from people you don't follow is filtered, and posts reported by people you follow are flagged.
+- Contact: amethyst@vitorpamplona.com. Reports sent there are read within 24 hours and forwarded to the operators of the relays that host the content. Relay operators can remove content; the app cannot delete content from relays it does not run.
+
+ACCOUNT DELETION (5.1.1(v))
+Settings > Danger Zone > Request to Vanish asks every relay to delete all data of the account (NIP-62). Searching settings for "delete account" finds it. Logout in the account menu removes the key from the device.
+
+PAYMENTS (3.1.1, 3.1.5)
+Zaps are optional Bitcoin Lightning gifts from one person to another. They are paid by the user's own wallet (a connected Lightning wallet or a wallet app); the app holds no funds, takes no share, and 100% goes to the recipient. A zap unlocks no content or feature. This build offers no wallet that holds funds, and nothing is sold.
+
+NOSTR APPS AND SITES (4.7)
+Users can open HTML5 web apps and sites published on Nostr (Apps in the menu, which lists them with their names and descriptions). They run in WKWebView with no access to native APIs. Every request to sign or read data with the user's key asks the user first. Notes can also hold small games for a fantasy console, which run in a sandboxed interpreter without device or network access.
+
+PERMISSIONS
+- Camera, microphone: only when the user takes a photo or video, records a voice message, or scans a QR code.
+- Location: approximate, while in use, for the optional "Around me" feed and location chats.
+- Face ID: the optional app lock and the check before showing the secret key.
+- Background audio: audio and video keep playing on the lock screen and in picture in picture.
+
+NETWORK
+The first start connects to several public relays, which can take a few seconds. Tor is optional; with Tor on, the first connection takes longer while Tor starts.
+
+ENCRYPTION
+The app implements standard encryption (NIP-44 and NIP-04 for direct messages, MLS for groups) and includes a Tor client.

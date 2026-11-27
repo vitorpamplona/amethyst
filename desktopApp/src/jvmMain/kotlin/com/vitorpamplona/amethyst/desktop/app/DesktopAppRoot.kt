@@ -261,8 +261,9 @@ class DesktopAppRoot(
             }
         }
         // Screens only Android has (Health Connect, the QR camera, share-as-image...) still have
-        // ways in here: synced bar items, links, shared menus. Show a notice, not a crash.
-        destinations.unavailable { UnavailableScreen(nav) }
+        // ways in here: synced bar items, links, shared menus. Show the closest screen there is
+        // (the note, the system browser) or a notice, not a crash.
+        destinations.unavailable { route -> UnavailableScreen(route, accountViewModel, nav) }
     }
 
     @Composable

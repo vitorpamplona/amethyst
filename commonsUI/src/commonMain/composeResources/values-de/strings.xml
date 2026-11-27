@@ -7100,7 +7100,6 @@
     <string name="privacy_lock_too_many_attempts">Zu viele falsche Passwörter. Versuche es in ein paar Minuten erneut.</string>
     <string name="deck_focus_column">Zu Spalte %1$d wechseln</string>
     <string name="screen_unavailable_title">Hier nicht verfügbar</string>
-    <string name="screen_unavailable_here">Dieser Bildschirm ist in dieser Version von Amethyst noch nicht enthalten. Er ist in der Android-App verfügbar.</string>
     <string name="error_dialog_details">Details</string>
     <string name="crash_window_title">Bei Amethyst ist ein Problem aufgetreten</string>
     <string name="crash_window_body">Etwas ist schiefgelaufen und dieses Fenster muss geschlossen werden. Du kannst den Absturzbericht per DM an die Entwickler von Amethyst senden; dabei werden keine persönlichen Daten geteilt. Wenn du stattdessen schließt, bietet Amethyst beim nächsten Start an, ihn zu senden.</string>

@@ -1,0 +1,29 @@
+Amethyst is a client for Nostr, an open social network that no company runs. There is no Amethyst server and no Amethyst account: you hold your own key, and your posts go straight to the relays you choose. Move to any other Nostr app at any time and take your followers, your posts and your identity with you.
+
+WHAT YOU CAN DO
+
+- Post text, photos, videos, long-form articles, polls and voice notes.
+- Follow people, reply, repost, react and quote.
+- Send private, end-to-end encrypted direct messages, and join encrypted group chats and public channels.
+- Browse dedicated feeds: articles, pictures, short videos, live streams, podcasts, music, communities, classifieds, calendars and more.
+- Find people, posts and hashtags, and see what is happening around you.
+- Send and receive zaps, small Bitcoin Lightning payments, through the Lightning wallet you connect.
+- Open Nostr apps and sites inside Amethyst, signed in with your key only when you allow it.
+
+YOUR FEED, YOUR RULES
+
+- No ranking algorithm decides what you see. Pick from your follows, lists, hashtags, communities or relays.
+- Mute people, words and hashtags, block accounts and relays, and report posts and profiles.
+- Posts marked sensitive stay hidden until you choose to see them.
+- Spam from people you don't follow is filtered, and posts reported by people you follow are flagged.
+
+PRIVACY AND SECURITY
+
+- Your key is stored in the iOS Keychain and never leaves your device. Sign in with an external signer instead if you prefer not to give the app your key at all.
+- Lock the app and your key behind Face ID.
+- Route your connections through the built-in Tor client, for every relay or only for the ones you choose.
+- Amethyst collects no data. The developer runs no server that sees what you do.
+
+FREE AND OPEN SOURCE
+
+Amethyst is free software under the MIT license, built in the open with dozens of contributors. The source code, the issue tracker and the privacy policy are at github.com/vitorpamplona/amethyst.

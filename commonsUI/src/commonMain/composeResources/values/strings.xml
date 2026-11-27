@@ -289,6 +289,7 @@
     <string name="qr_scanner_camera_rationale">Amethyst needs the camera to scan QR codes. Nothing is recorded or uploaded — frames are decoded on the device and discarded.</string>
     <string name="qr_scanner_grant_camera">Allow camera</string>
     <string name="qr_scanner_camera_blocked">Camera access is turned off for Amethyst. You can turn it back on in Android settings.</string>
+    <string name="qr_scanner_camera_blocked_ios">Camera access is turned off for Amethyst. You can turn it back on in Settings, under Amethyst.</string>
     <string name="qr_scanner_open_settings">Open settings</string>
     <string name="qr_scanner_unavailable">The QR decoder could not start on this device. You can still paste the code as text.</string>
     <string name="qr_scanner_torch_on">Turn on the light</string>
@@ -7785,7 +7786,7 @@
     <string name="privacy_lock_too_many_attempts">Too many wrong passwords. Try again in a few minutes.</string>
     <string name="deck_focus_column">Go to column %1$d</string>
     <string name="screen_unavailable_title">Not available here</string>
-    <string name="screen_unavailable_here">This screen isn't in this version of Amethyst yet. It is available in the Android app.</string>
+    <string name="screen_unavailable_on_device">This screen isn't in this version of Amethyst yet.</string>
     <string name="error_dialog_details">Details</string>
     <string name="crash_window_title">Amethyst ran into a problem</string>
     <string name="crash_window_body">Something went wrong and this window has to close. You can send the crash report to Amethyst's developers in a DM; no personal information is shared. If you close instead, Amethyst will offer to send it the next time it opens.</string>

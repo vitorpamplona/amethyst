@@ -7603,7 +7603,6 @@
     <string name="privacy_lock_too_many_attempts">Preveč napačnih gesel. Poskusi znova čez nekaj minut.</string>
     <string name="deck_focus_column">Pojdi na stolpec %1$d</string>
     <string name="screen_unavailable_title">Tu ni na voljo</string>
-    <string name="screen_unavailable_here">Tega zaslona v tej različici Amethysta še ni. Na voljo je v aplikaciji za Android.</string>
     <string name="error_dialog_details">Podrobnosti</string>
     <string name="crash_window_title">Amethyst je naletel na težavo</string>
     <string name="crash_window_body">Nekaj je šlo narobe in to okno se mora zapreti. Poročilo o sesutju lahko pošlješ razvijalcem Amethysta v ZS; osebni podatki se ne delijo. Če namesto tega okno zapreš, bo Amethyst ob naslednjem odprtju ponudil pošiljanje.</string>

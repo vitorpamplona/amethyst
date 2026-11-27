@@ -1,9 +1,9 @@
 # Amethyst Privacy Policy and Terms of Use
 
-**App:** Amethyst (Android Nostr client)<br>
+**App:** Amethyst (Nostr client for Android and iOS)<br>
 **Publisher:** Vitor Pamplona<br>
 **Contact:** amethyst@vitorpamplona.com<br>
-**Last updated:** 2026-09-15
+**Last updated:** 2026-11-27
 
 Amethyst is free, open-source software (MIT License — see `LICENSE`). It is not a service. There is no Amethyst server, no Amethyst account, and the developer has no access to data stored on your device.
 
@@ -23,12 +23,25 @@ Using the app causes the following data to leave your phone:
 - **Workout summaries**, when you choose to publish one — see [Health and fitness data](#health-and-fitness-data-health-connect) below.
 - *(Google Play build, push notifications enabled)* a per-device push token, your public key, and a preferred relay, registered with Google Firebase Cloud Messaging so a notification proxy can wake the app.
 - *(F-Droid build, push notifications enabled)* a per-device token registered with whichever UnifiedPush distributor you install (e.g. ntfy).
+- *(App Store build)* no push token: the iOS app has no push notifications.
+- **Your approximate area**, only while you use the "Around me" feed or a location chat: the geohash of the area (a few kilometres across) is sent to relays as part of the subscription, and added to a post only when you choose to tag a place.
 
 The developer does not run any server that aggregates or stores this data.
 
 ### Data stored on your device
 
-Configuration, cached events, keys, drafts, and other operational data live in the app's local storage. Other apps cannot read it on a standard, non-rooted Android device. You can wipe it by clearing the app's storage or uninstalling.
+Configuration, cached events, keys, drafts, and other operational data live in the app's local storage. Other apps cannot read it on a standard, non-rooted Android device. You can wipe it by clearing the app's storage or uninstalling. On iOS, your key is kept in the iOS Keychain and everything else in the app's own container, which other apps cannot read.
+
+### Device features on iOS
+
+The iOS app asks for each of these only when you use the feature, and you can turn each one off in Settings, under Amethyst:
+
+- **Face ID**, for the optional app lock and before showing your secret key. iOS does the check; the app only learns whether it passed.
+- **Camera and microphone**, when you take a photo or video, record a voice message, or scan a QR code. Nothing is recorded or sent unless you post or send it.
+- **Location**, approximate and only while the app is in use, as described above.
+- **Photo library**, write-only, when you save a picture or video to it. Choosing media to post uses the iOS picker, which gives the app only what you pick.
+
+My Fitness (below) is not in the iOS app.
 
 ### Health and fitness data (Health Connect)
 
@@ -92,7 +105,7 @@ Anything you publish to a relay can be copied to other relays or clients. Once p
 
 ## Child Safety Standards
 
-These are the published Child Safety Standards for **Amethyst**, the Android Nostr client published on Google Play by **Vitor Pamplona**. They are published under Google Play's Child Safety Standards policy.
+These are the published Child Safety Standards for **Amethyst**, the Nostr client published on Google Play and the App Store by **Vitor Pamplona**. They are published under Google Play's Child Safety Standards policy and the App Store Review Guidelines (1.2, user-generated content).
 
 They are a community standard, not a license restriction. Amethyst's source code remains licensed under the MIT License in `LICENSE`.
 
@@ -122,17 +135,17 @@ If you encounter CSAM through Amethyst:
 
 ### Compliance
 
-Amethyst is distributed under Google Play's Child Safety Standards policy and applicable law. Obligations attached to the **hosting** of content rest with relay operators.
+Amethyst is distributed under Google Play's Child Safety Standards policy, the App Store Review Guidelines and applicable law. Obligations attached to the **hosting** of content rest with relay operators.
 
 ### Age rating
 
-Amethyst's Google Play listing is rated 17+. The app does not request or store age information.
+Amethyst is rated for adults on both stores: 17+ on Google Play, and 18+ on the App Store. The app does not request or store age information.
 
 ## Terms of Use
 
-### Google Play build
+### Google Play and App Store builds
 
-You agree not to use the Google Play build of Amethyst to submit Objectionable Content to relays. Objectionable Content includes:
+You agree not to use the Google Play or App Store builds of Amethyst to submit Objectionable Content to relays, or to abuse, harass or threaten other users. There is no tolerance for either. Objectionable Content includes:
 
 - Sexually explicit material.
 - Obscene, defamatory, libelous, slanderous, violent, or unlawful content.
@@ -140,7 +153,11 @@ You agree not to use the Google Play build of Amethyst to submit Objectionable C
 - Content that is deceptive or fraudulent.
 - Content promoting illegal drugs, tobacco, firearms, ammunition, or illegal gambling.
 
-These Terms apply only to the Google Play distribution of Amethyst.
+Accounts that post Objectionable Content or abuse other users can be reported, muted and blocked from inside the app (see [In-app tools](#in-app-tools)), and reports sent to amethyst@vitorpamplona.com are read within 24 hours and forwarded to the operators of the relays that host the content.
+
+For the App Store build, Apple's [Standard Licensed Application End User License Agreement](https://www.apple.com/legal/internet-services/itunes/dev/stdeula/) also applies.
+
+These Terms apply only to the Google Play and App Store distributions of Amethyst.
 
 ### F-Droid and other source-built distributions
 

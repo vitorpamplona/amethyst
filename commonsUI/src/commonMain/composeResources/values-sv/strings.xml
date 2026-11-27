@@ -7098,7 +7098,6 @@
     <string name="privacy_lock_too_many_attempts">För många felaktiga lösenord. Försök igen om några minuter.</string>
     <string name="deck_focus_column">Gå till kolumn %1$d</string>
     <string name="screen_unavailable_title">Inte tillgängligt här</string>
-    <string name="screen_unavailable_here">Den här skärmen finns inte i den här versionen av Amethyst ännu. Den finns i Android-appen.</string>
     <string name="error_dialog_details">Detaljer</string>
     <string name="crash_window_title">Amethyst stötte på ett problem</string>
     <string name="crash_window_body">Något gick fel och det här fönstret måste stängas. Du kan skicka kraschrapporten till Amethysts utvecklare i ett DM; ingen personlig information delas. Om du stänger i stället erbjuder Amethyst att skicka den nästa gång den öppnas.</string>

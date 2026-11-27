@@ -98,6 +98,7 @@ import com.vitorpamplona.amethyst.commons.resources.cordn_voice_record
 import com.vitorpamplona.amethyst.commons.resources.cordn_voice_stop
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlImage
 import com.vitorpamplona.amethyst.commons.richtext.EncryptedMediaUrlVideo
+import com.vitorpamplona.amethyst.commons.service.AppServices
 import com.vitorpamplona.amethyst.commons.service.uploads.MediaUploader
 import com.vitorpamplona.amethyst.commons.service.uploads.SelectedMedia
 import com.vitorpamplona.amethyst.commons.service.uploads.UploadError
@@ -112,6 +113,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.NonClickableUserPictures
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.platform.RenderAudioPlayer
 import com.vitorpamplona.amethyst.commons.ui.note.platform.ZoomableContentView
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.LocalDisplaySettings
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnComposer
@@ -131,6 +133,8 @@ import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.FeedPadding
 import com.vitorpamplona.amethyst.commons.ui.theme.placeholderText
 import com.vitorpamplona.amethyst.commons.ui.uploads.errorResource
+import com.vitorpamplona.amethyst.commons.util.deleteQuietly
+import com.vitorpamplona.amethyst.commons.util.platformFileSystem
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnBlobUpload
 import com.vitorpamplona.cordn.appEncryptedMedia.CordnMediaAttachment
@@ -151,10 +155,12 @@ import com.vitorpamplona.quartz.utils.Log
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import okio.Path
 
 /**
  * One cordn room.
@@ -231,7 +237,7 @@ private fun CordnGroupChat(
             // it after sending. A note recorded and then abandoned — the screen closed,
             // the room switched — never reached that, so it stayed on disk: an
             // unencrypted copy of a message that was never even sent.
-            pendingVoice?.file?.toFile()?.delete()
+            pendingVoice?.file?.let(::discardRecording)
         }
     }
     var attachError by remember { mutableStateOf<String?>(null) }
@@ -244,6 +250,7 @@ private fun CordnGroupChat(
     // and simply never arrived.
     var sendError by remember { mutableStateOf<String?>(null) }
     val uploader = accountViewModel.mediaUploader
+    val services = LocalAppServices.current
     val uploadFailed = stringRes(Res.string.cordn_media_upload_failed)
     val sendFailed = stringRes(Res.string.cordn_send_failed)
     val noSession = stringRes(Res.string.cordn_send_no_session)
@@ -604,7 +611,7 @@ private fun CordnGroupChat(
                             attaching = true
                             attachError = null
                             try {
-                                sendAttachment(uploader, accountViewModel, room, uploadState)
+                                sendAttachment(uploader, services, accountViewModel, room, uploadState)
                                 // Only on success: a failed upload leaves the dialog up
                                 // with what you picked still in it, so retrying is one
                                 // tap rather than the picker again.
@@ -680,11 +687,11 @@ private fun CordnGroupChat(
                 onVoiceNote = { recording ->
                     // Re-recording replaces what was there; the old file is a temp
                     // file this screen owns, so it goes now rather than being leaked.
-                    pendingVoice?.file?.toFile()?.delete()
+                    pendingVoice?.file?.let(::discardRecording)
                     pendingVoice = recording
                 },
                 onRemoveVoice = {
-                    pendingVoice?.file?.toFile()?.delete()
+                    pendingVoice?.file?.let(::discardRecording)
                     pendingVoice = null
                 },
                 attaching = attaching,
@@ -702,7 +709,7 @@ private fun CordnGroupChat(
                             attaching = true
                             attachError = null
                             try {
-                                sendVoiceNote(accountViewModel, room, voice, text)
+                                sendVoiceNote(services, accountViewModel, room, voice, text)
                             } catch (e: Exception) {
                                 currentCoroutineContext().ensureActive()
                                 Log.w("CordnGroupChat", "voice note failed in ${room.gid}: ${e.message}", e)
@@ -1088,6 +1095,7 @@ private class CordnAttachmentException(
  */
 private suspend fun sendAttachment(
     uploader: MediaUploader,
+    services: AppServices,
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
     state: ChatFileUploadState,
@@ -1163,7 +1171,7 @@ private suspend fun sendAttachment(
                 // Null means the chosen host has no base URL, which is a setting the person can
                 // change — the one failure here that is entirely actionable.
                 val tag =
-                    CordnMediaService(accountViewModel.account, accountViewModel.httpClientBuilder)
+                    CordnMediaService(accountViewModel.account, services::blossomClient)
                         .upload(group, bytes, mime, name, state.selectedServer.baseUrl)
                         ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_media_no_server))
 
@@ -1362,6 +1370,7 @@ private const val MAX_RECORDER_AMPLITUDE = 32767f
  * message that was end-to-end encrypted everywhere else.
  */
 private suspend fun sendVoiceNote(
+    services: AppServices,
     accountViewModel: AccountViewModel,
     room: CordnGroupChatroom,
     recording: RecordingResult,
@@ -1377,9 +1386,9 @@ private suspend fun sendVoiceNote(
             ?: throw CordnAttachmentException(loadStringRes(Res.string.cordn_send_no_session))
 
     try {
-        val bytes = withContext(Dispatchers.IO) { recording.file.toFile().readBytes() }
+        val bytes = withContext(Dispatchers.IO) { platformFileSystem.read(recording.file) { readByteArray() } }
         val tag =
-            CordnMediaService(accountViewModel.account, accountViewModel.httpClientBuilder)
+            CordnMediaService(accountViewModel.account, services::blossomClient)
                 .upload(
                     group = group,
                     bytes = bytes,
@@ -1399,6 +1408,14 @@ private suspend fun sendVoiceNote(
         val text = caption.trim()
         room.add(session.manager.send(room.gid, content = text, tags = CordnMessageReferences.withMentions(arrayOf(tag), text)))
     } finally {
-        withContext(Dispatchers.IO) { recording.file.toFile().delete() }
+        withContext(Dispatchers.IO) { discardRecording(recording.file) }
     }
+}
+
+/**
+ * Deletes a voice note's recording: plaintext audio in the cache directory, which must not
+ * outlive the note. Never throws; a file that could not be deleted is logged.
+ */
+private fun discardRecording(file: Path) {
+    if (!platformFileSystem.deleteQuietly(file)) Log.w("CordnGroupChatScreen") { "could not delete the recording $file" }
 }

@@ -8054,7 +8054,6 @@
     <string name="privacy_lock_too_many_attempts">Слишком много неверных паролей. Повторите через несколько минут.</string>
     <string name="deck_focus_column">Перейти к колонке %1$d</string>
     <string name="screen_unavailable_title">Здесь недоступно</string>
-    <string name="screen_unavailable_here">Этого экрана пока нет в этой версии Amethyst. Он доступен в приложении для Android.</string>
     <string name="error_dialog_details">Подробности</string>
     <string name="crash_window_title">В Amethyst возникла проблема</string>
     <string name="crash_window_body">Что-то пошло не так, и это окно нужно закрыть. Вы можете отправить отчёт о сбое разработчикам Amethyst в личном сообщении; личные данные не передаются. Если просто закрыть окно, Amethyst предложит отправить отчёт при следующем запуске.</string>

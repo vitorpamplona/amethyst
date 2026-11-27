@@ -7570,7 +7570,6 @@
     <string name="privacy_lock_too_many_attempts">Příliš mnoho nesprávných hesel. Zkuste to znovu za pár minut.</string>
     <string name="deck_focus_column">Přejít na sloupec %1$d</string>
     <string name="screen_unavailable_title">Zde není k dispozici</string>
-    <string name="screen_unavailable_here">Tato obrazovka v této verzi Amethystu zatím není. Je k dispozici v aplikaci pro Android.</string>
     <string name="error_dialog_details">Podrobnosti</string>
     <string name="crash_window_title">Amethyst narazil na problém</string>
     <string name="crash_window_body">Něco se pokazilo a toto okno se musí zavřít. Záznam o pádu můžete poslat vývojářům Amethystu v soukromé zprávě; nesdílí se žádné osobní údaje. Pokud okno jen zavřete, Amethyst nabídne jeho odeslání při příštím spuštění.</string>

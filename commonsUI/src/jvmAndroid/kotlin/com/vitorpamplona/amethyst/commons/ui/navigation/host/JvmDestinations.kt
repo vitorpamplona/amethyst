@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.ui.navigation.host
 
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
-import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitNewIssueScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitNewPullRequestScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.gitRepo.GitRepositoryCodeScreen
@@ -33,17 +32,14 @@ import com.vitorpamplona.quartz.nip01Core.core.Address
 
 /**
  * The shared screens that need the JVM: the git repository browser (it clones over HTTP with
- * OkHttp) and the cordn group chat (its attachments go through the JVM Blossom client).
- * Android and Desktop both register these next to [sharedDestinations]; iOS has no git browser yet.
+ * OkHttp). Android and Desktop both register these next to [sharedDestinations]; iOS has no git
+ * browser yet.
  */
 fun NavDestinations.jvmDestinations(accountViewModel: AccountViewModel) {
     composableFromEndArgs<Route.GitRepository> { GitRepositoryScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.GitRepositoryCode> { GitRepositoryCodeScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.GitRepositoryIssues> { GitRepositoryIssuesScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composableFromEndArgs<Route.GitRepositoryPulls> { GitRepositoryPullsScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
-    composableFromEndArgs<Route.CordnGroupChat> {
-        CordnGroupChatScreen(it.coordinatorPubKey, it.gid, accountViewModel, nav)
-    }
     composerArgs<Route.GitRepositoryNewIssue>(ComposerSize.FORM, NavFamily.END) { GitNewIssueScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
     composerArgs<Route.GitRepositoryNewPullRequest>(ComposerSize.FORM, NavFamily.END) { GitNewPullRequestScreen(Address(it.kind, it.pubKeyHex, it.dTag), accountViewModel, nav) }
 }

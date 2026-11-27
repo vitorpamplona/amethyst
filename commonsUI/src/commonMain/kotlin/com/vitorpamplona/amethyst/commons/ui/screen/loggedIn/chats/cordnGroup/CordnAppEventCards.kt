@@ -54,6 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.chats.ui.chatDayKey
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
@@ -79,9 +80,13 @@ import com.vitorpamplona.amethyst.commons.resources.poll_single_choice
 import com.vitorpamplona.amethyst.commons.resources.poll_submit
 import com.vitorpamplona.amethyst.commons.resources.poll_unsupported
 import com.vitorpamplona.amethyst.commons.resources.poll_vote
+import com.vitorpamplona.amethyst.commons.search.calendar.LocalClock
+import com.vitorpamplona.amethyst.commons.search.calendar.SearchDate
 import com.vitorpamplona.amethyst.commons.ui.components.rememberModalSheetState
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
+import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.feed.types.observeUserNameByHex
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -100,11 +105,6 @@ import com.vitorpamplona.cordn.spec02Envelopes.CordnPolls
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.delay
-import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * A cordn poll (NIP-88 kind 1068, [CordnPolls]) drawn as a card in its bubble: the question, each
@@ -164,7 +164,7 @@ fun CordnPollCard(
             Text(
                 text =
                     pluralStringRes(Res.plurals.poll_results_option_count, tally.participants, tally.participants) +
-                        (definition.endsAt?.let { " · " + if (tally.isOpen) stringRes(Res.string.cordn_poll_closes, formatDateTime(it)) else stringRes(Res.string.cordn_poll_closed) } ?: ""),
+                        (definition.endsAt?.let { " · " + if (tally.isOpen) stringRes(Res.string.cordn_poll_closes, formatDateTimeSeconds(it)) else stringRes(Res.string.cordn_poll_closed) } ?: ""),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.placeholderText,
                 modifier = Modifier.weight(1f, fill = false),
@@ -455,35 +455,30 @@ private fun calendarWhen(envelope: CordnEnvelope): Pair<String, Boolean>? {
             .firstOrNull { it.size > 1 && it[0] == name }
             ?.get(1)
             ?.trim()
-    val zone = ZoneId.systemDefault()
     return runCatching {
         if (envelope.kind == CordnMessageKinds.CALENDAR_DATE) {
-            val dates = DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-            val start = LocalDate.parse(tag("start"))
-            val last = tag("end")?.takeIf { it.isNotEmpty() }?.let { LocalDate.parse(it).minusDays(1) }
-            val text = if (last == null || !last.isAfter(start)) start.format(dates) else "${start.format(dates)} – ${last.format(dates)}"
+            // ISO days, read strictly (an impossible day is refused, not rolled over), and shown
+            // from the reader's own midnight so the day printed is the day written.
+            fun dateLabel(day: SearchDate) = formatDateTime(LocalClock.startOfDay(day) * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.NONE)
+            val start = SearchDate.parse(tag("start")) ?: return null
+            val last = tag("end")?.takeIf { it.isNotEmpty() }?.let { SearchDate.parse(it)?.plusDays(-1) ?: return null }
+            val text = if (last == null || last <= start) dateLabel(start) else "${dateLabel(start)} – ${dateLabel(last)}"
             text to true
         } else {
-            val start = Instant.ofEpochSecond(tag("start")!!.toDouble().toLong()).atZone(zone)
-            val end = tag("end")?.takeIf { it.isNotEmpty() }?.let { Instant.ofEpochSecond(it.toDouble().toLong()).atZone(zone) }
-            val full = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT)
-            val time = DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
+            val start = tag("start")!!.toDouble().toLong()
+            val end = tag("end")?.takeIf { it.isNotEmpty() }?.toDouble()?.toLong()
             val text =
                 when {
-                    end == null -> start.format(full)
-                    end.toLocalDate() == start.toLocalDate() -> "${start.format(full)} – ${end.format(time)}"
-                    else -> "${start.format(full)} – ${end.format(full)}"
+                    end == null -> formatDateTimeSeconds(start)
+                    chatDayKey(end) == chatDayKey(start) -> "${formatDateTimeSeconds(start)} – ${formatDateTime(end * 1000, DateTimeStyle.NONE, DateTimeStyle.SHORT)}"
+                    else -> "${formatDateTimeSeconds(start)} – ${formatDateTimeSeconds(end)}"
                 }
             text to false
         }
     }.getOrNull()
 }
 
-private fun formatDateTime(epochSeconds: Long): String =
-    Instant
-        .ofEpochSecond(epochSeconds)
-        .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT))
+private fun formatDateTimeSeconds(epochSeconds: Long): String = formatDateTime(epochSeconds * 1000, DateTimeStyle.MEDIUM, DateTimeStyle.SHORT)
 
 /**
  * Now, in Unix seconds, refreshed until [until] has passed, so a poll closes on screen at its

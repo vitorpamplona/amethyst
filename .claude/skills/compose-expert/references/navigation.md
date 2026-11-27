@@ -23,7 +23,7 @@ stack as plain snapshot state and `NavDisplay` renders it. There is no `NavContr
 | `commonsUI/…/ui/navigation/navs/ImeSettler.kt` | Waits for the keyboard to close before every navigation |
 | `commonsUI/…/ui/navigation/host/NavDestinations.kt` | `NavDestinations` registry, the builders, `NavFamily`, the transitions, `canOpen` |
 | `commonsUI/…/ui/navigation/host/SharedDestinations.kt` | `NavDestinations.sharedDestinations`: every shared screen |
-| `commonsUI/src/jvmAndroid/…/ui/navigation/host/JvmDestinations.kt` | `jvmDestinations`: shared screens that need the JVM (git browser, cordn group chat); Android and Desktop both register them |
+| `commonsUI/src/jvmAndroid/…/ui/navigation/host/JvmDestinations.kt` | `jvmDestinations`: shared screens that need the JVM (the git browser); Android and Desktop both register them |
 | `commonsUI/…/ui/navigation/host/NavigationHost.kt` | `NavigationHost`: the `NavDisplay` every front end shows |
 | `commonsUI/…/ui/navigation/routes/RouteNavController.kt` | `isBaseRoute<T>(nav)`, `getRouteWithArguments`, `consumesSharesInPlace` |
 | `commonsUI/…/ui/app/AmethystApp.kt` | Builds the one `NavDestinations` (shared + `AppRoot.registerDestinations`) that the main pane, the deck columns and the screen windows all draw from |

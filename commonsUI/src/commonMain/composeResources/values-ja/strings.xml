@@ -7301,7 +7301,6 @@
     <string name="privacy_lock_too_many_attempts">パスワードの誤入力が多すぎます。数分後に再試行してください。</string>
     <string name="deck_focus_column">列 %1$d へ移動</string>
     <string name="screen_unavailable_title">ここでは利用できません</string>
-    <string name="screen_unavailable_here">この画面はこのバージョンの Amethyst にはまだありません。Android アプリで利用できます。</string>
     <string name="error_dialog_details">詳細</string>
     <string name="crash_window_title">Amethyst で問題が発生しました</string>
     <string name="crash_window_body">問題が発生したため、このウィンドウを閉じる必要があります。クラッシュレポートを DM で Amethyst の開発者に送信できます。個人情報は共有されません。閉じる場合は、次回 Amethyst を開いたときに送信を提案します。</string>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  How .github/workflows/ios-testflight.yml exports the archive: signed for App Store Connect and
+  uploaded straight from xcodebuild (destination upload), with Xcode-managed signing. The workflow
+  sets teamID from the APPLE_TEAM_ID secret before the export; it is left out here so no team is
+  committed.
+-->
+<plist version="1.0">
+<dict>
+    <key>method</key>
+    <string>app-store-connect</string>
+    <key>destination</key>
+    <string>upload</string>
+    <key>signingStyle</key>
+    <string>automatic</string>
+    <key>uploadSymbols</key>
+    <true/>
+    <!-- CFBundleVersion is stamped by the project's pre-build step; App Store Connect must not renumber it. -->
+    <key>manageAppVersionAndBuildNumber</key>
+    <false/>
+    <!-- TestFlight only: the build goes to internal testers, and to review only when submitted by hand. -->
+    <key>testFlightInternalTestingOnly</key>
+    <false/>
+</dict>
+</plist>

@@ -23,6 +23,7 @@ package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.listDetail
 import androidx.compose.runtime.Composable
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.cordnGroup.CordnGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.geohashChat.GeohashChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.marmotGroup.MarmotGroupChatScreen
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.chats.privateDM.ChatroomScreen
@@ -42,7 +43,7 @@ fun isChatDetailRoute(route: Route): Boolean =
         isRelayGroupDetailRoute(route) ||
         route is Route.Concord ||
         route is Route.MarmotGroupChat ||
-        isPlatformChatDetailRoute(route)
+        route is Route.CordnGroupChat
 
 /** A Buzz / NIP-29 relay's channels: chat channels, forums (their threads) and Buzz DMs. */
 fun isRelayGroupDetailRoute(route: Route): Boolean = route is Route.RelayGroup || route is Route.RelayGroupThreads
@@ -52,6 +53,8 @@ fun isConcordDetailRoute(route: Route): Boolean = route is Route.Concord
 fun isMarmotDetailRoute(route: Route): Boolean = route is Route.MarmotGroupChat
 
 fun isGeohashDetailRoute(route: Route): Boolean = route is Route.GeohashChat
+
+fun isCordnDetailRoute(route: Route): Boolean = route is Route.CordnGroupChat
 
 /**
  * Renders a chat [route] in a list/detail screen's detail pane: the same screen the nav host would
@@ -133,8 +136,10 @@ fun ChatDetailPane(
             )
         }
 
-        else -> {
-            PlatformChatDetailPane(route, accountViewModel, nav)
+        is Route.CordnGroupChat -> {
+            CordnGroupChatScreen(route.coordinatorPubKey, route.gid, accountViewModel, nav)
         }
+
+        else -> {}
     }
 }

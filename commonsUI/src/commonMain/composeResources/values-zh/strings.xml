@@ -7338,7 +7338,6 @@
     <string name="privacy_lock_too_many_attempts">密码错误次数过多。请几分钟后重试。</string>
     <string name="deck_focus_column">转到第 %1$d 栏</string>
     <string name="screen_unavailable_title">此处不可用</string>
-    <string name="screen_unavailable_here">此版本的 Amethyst 尚未包含此屏幕。它在 Android 应用中可用。</string>
     <string name="error_dialog_details">详情</string>
     <string name="crash_window_title">Amethyst 遇到了问题</string>
     <string name="crash_window_body">出现错误，此窗口必须关闭。您可以通过私信将崩溃报告发送给 Amethyst 的开发者；不会共享任何个人信息。如果您直接关闭，Amethyst 将在下次打开时提示发送。</string>

@@ -1,0 +1,199 @@
+name: iOS TestFlight
+
+# Builds the iOS app for the App Store, signs it and uploads it to App Store Connect, where it lands
+# in TestFlight. Submitting a build for App Review stays a manual step in App Store Connect, with the
+# listing, answers and review notes from iosApp/store/ (iosApp/store/README.md walks through it).
+#
+# Runs on every release tag (the same `v*` tags create-release.yml builds the Android and desktop
+# assets from) and by hand from the Actions tab. Until the secrets below exist the job reports that
+# and stops green, so a tag push never fails on it.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+# - APPLE_TEAM_ID: the 10-character team ID (developer.apple.com > Membership).
+# - APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID: an App Store Connect API key
+#   (App Store Connect > Users and Access > Integrations > Team Keys). Give it the Admin role:
+#   Xcode's cloud-managed signing creates the distribution certificate and the App Store profile
+#   with it, so no certificate or profile is kept in the repository's secrets.
+# - APP_STORE_CONNECT_KEY: the contents of that key's AuthKey_<id>.p8 file.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      in_app_wallets:
+        description: 'Offer the Cashu and on-chain wallets (App Store guideline 3.1.5(i): only for an organization account)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-testflight-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    # The release archive links AmethystKit for iosArm64 in release mode, which is slower than the
+    # debug simulator link build.yml's build-ios-app runs, on the same small runner.
+    runs-on: macos-latest
+    timeout-minutes: 120
+    env:
+      AMETHYST_IOS_IN_APP_WALLETS: ${{ inputs.in_app_wallets && 'true' || 'false' }}
+    steps:
+      - name: Check for the signing secrets
+        id: secrets
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          if [ -n "$TEAM" ] && [ -n "$KEY_ID" ] && [ -n "$ISSUER" ] && [ -n "$KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No App Store Connect secrets yet (APPLE_TEAM_ID, APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY): skipping the TestFlight upload."
+          fi
+
+      - name: Checkout code
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/checkout@v7
+
+      # Arti's iOS archives are reproducible with the Xcode tools/arti-build/IOS_XCODE_VERSION names.
+      # Use it when the runner image has it; otherwise the image's default, which App Store Connect
+      # also accepts as long as it is a current SDK.
+      - name: Select Xcode
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          WANT=$(cut -d'(' -f1 tools/arti-build/IOS_XCODE_VERSION)
+          if [ -d "/Applications/Xcode_${WANT}.app" ]; then sudo xcode-select -s "/Applications/Xcode_${WANT}.app"; fi
+          xcodebuild -version
+
+      - name: Set up JDK 25
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/setup-java@v6.1.0
+        with:
+          distribution: 'temurin'
+          java-version: 25
+
+      - name: Set up Gradle
+        if: steps.secrets.outputs.ready == 'true'
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: true
+
+      - name: Cache Kotlin/Native toolchain
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-iosrelease-${{ hashFiles('gradle/libs.versions.toml') }}
+          restore-keys: |
+            konan-${{ runner.os }}-iosapp-
+            konan-${{ runner.os }}-
+
+      - name: Set up Rust for Arti
+        if: steps.secrets.outputs.ready == 'true'
+        working-directory: tools/arti-build
+        run: |
+          command -v rustup >/dev/null || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+          export PATH="$HOME/.cargo/bin:$PATH"
+          CHANNEL=$(sed -n 's/^channel = "\(.*\)"$/\1/p' rust-toolchain.toml)
+          rustup toolchain install "$CHANNEL" --profile minimal
+          rustup target add --toolchain "$CHANNEL" aarch64-apple-ios
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Cache the Arti build
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            /tmp/amethyst-arti-build
+          key: arti-ios-device-${{ runner.os }}-${{ hashFiles('tools/arti-build/**') }}
+          restore-keys: |
+            arti-ios-device-${{ runner.os }}-
+
+      # Linked here with the daemon heap capped to what the runner has; the Xcode pre-build step's
+      # embedAndSignAppleFrameworkForXcode then finds it up to date and only copies it.
+      - name: Link AmethystKit for devices (release)
+        if: steps.secrets.outputs.ready == 'true'
+        run: |
+          ./gradlew \
+            -Dorg.gradle.jvmargs="-Xmx4g -Dfile.encoding=UTF-8" \
+            :iosApp:linkReleaseFrameworkIosArm64
+
+      - name: Write the App Store Connect key
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      # The version is the Android one (`app` in libs.versions.toml). The build number is appCode
+      # and this run's number, so a second upload of the same release is still a new build.
+      - name: Archive
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          CODE=$(sed -n 's/^appCode = "\(.*\)"$/\1/p' gradle/libs.versions.toml)
+          export AMETHYST_IOS_BUILD_NUMBER="${CODE}.${GITHUB_RUN_NUMBER}"
+          echo "Build number $AMETHYST_IOS_BUILD_NUMBER"
+          brew install xcodegen
+          cd iosApp/xcode
+          xcodegen
+          xcodebuild \
+            -project Amethyst.xcodeproj \
+            -scheme Amethyst \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Amethyst.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER" \
+            DEVELOPMENT_TEAM="$TEAM" \
+            CODE_SIGN_STYLE=Automatic \
+            archive
+
+      - name: Export and upload to App Store Connect
+        if: steps.secrets.outputs.ready == 'true'
+        env:
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          OPTIONS="$RUNNER_TEMP/ExportOptions.plist"
+          cp iosApp/xcode/ExportOptions.plist "$OPTIONS"
+          /usr/libexec/PlistBuddy -c "Add :teamID string $TEAM" "$OPTIONS"
+          xcodebuild \
+            -exportArchive \
+            -archivePath "$RUNNER_TEMP/Amethyst.xcarchive" \
+            -exportOptionsPlist "$OPTIONS" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER"
+
+      - name: Keep the dSYMs
+        if: steps.secrets.outputs.ready == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Amethyst iOS dSYMs
+          path: ${{ runner.temp }}/Amethyst.xcarchive/dSYMs
+          if-no-files-found: ignore
+
+      - name: Remove the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
