@@ -156,6 +156,15 @@ class NavDestinations {
         destinations[klass] = NavDestination(klass, family, capWidth, content, composer)
     }
 
+    /**
+     * Takes back the screens of [klasses] that a shared registration added, for a front end that
+     * must not offer them (the in-app wallets on an App Store build). Their entry points then see
+     * [has] answer false, and a stale link reaches the [unavailable] screen.
+     */
+    fun withdraw(klasses: Collection<KClass<out Route>>) {
+        klasses.forEach { destinations.remove(it) }
+    }
+
     /** The dialog size of [route]'s composer, or null when it is not one. */
     fun composerSizeOf(route: Route): ComposerSize? = destinations[route::class]?.composer
 

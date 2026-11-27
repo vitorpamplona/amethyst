@@ -33,8 +33,18 @@ class QrMatrix(
 }
 
 /**
- * Encodes [contents] (UTF-8, error correction Q, falling back to M then L for payloads too long
- * for Q) into its module grid, or null when this platform has no encoder yet or the payload does
- * not fit a QR code at all.
+ * Error correction Q first, for codes photographed off a screen; a payload too long for Q at the
+ * largest version still fits at M or L, and a slightly less forgiving code beats the empty square
+ * that used to be drawn in its place.
  */
-expect fun encodeQrMatrix(contents: String): QrMatrix?
+private val ERROR_CORRECTION_FALLBACK = listOf(QrEncoder.Level.Q, QrEncoder.Level.M, QrEncoder.Level.L)
+
+/**
+ * Encodes [contents] (UTF-8, error correction Q, falling back to M then L for payloads too long
+ * for Q) into its module grid, or null when it is empty or does not fit a QR code at all. The
+ * same encoder on every platform ([QrEncoder]), drawing the code ZXing drew on Android.
+ */
+fun encodeQrMatrix(contents: String): QrMatrix? {
+    if (contents.isEmpty()) return null
+    return ERROR_CORRECTION_FALLBACK.firstNotNullOfOrNull { QrEncoder.encode(contents, it) }
+}

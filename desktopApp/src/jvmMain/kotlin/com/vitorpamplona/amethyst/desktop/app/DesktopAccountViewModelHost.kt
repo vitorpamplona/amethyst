@@ -42,14 +42,12 @@ import com.vitorpamplona.quartz.nip19Bech32.bech32.bechToBytes
 import kotlinx.collections.immutable.PersistentMap
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import okio.Path
 import okio.Path.Companion.toOkioPath
-import java.util.concurrent.ConcurrentHashMap
 
 /** What every account's ViewModel reaches on a desktop: the shared graph in [modules]. */
 class DesktopAccountViewModelHost(
@@ -90,17 +88,12 @@ class DesktopAccountViewModelHost(
     override val drawingBackgroundsDir: Path get() = modules.filesDir.toOkioPath() / DRAWING_BACKGROUNDS_DIR
 
     // One flow per login, so the backup nudge watching it hears the change and goes away.
-    private val backedUpKeys = ConcurrentHashMap<String, MutableStateFlow<Boolean>>()
-
-    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = backedUpKeys[npub] ?: MutableStateFlow(modules.sessionStore.hasBackedUpKeys(npub)).let { backedUpKeys.putIfAbsent(npub, it) ?: it }
+    override suspend fun hasBackedUpKeys(npub: String): StateFlow<Boolean> = modules.sessionStore.hasBackedUpKeysFlow(npub)
 
     override suspend fun setHasBackedUpKeys(
         npub: String,
         value: Boolean,
-    ) {
-        modules.sessionStore.setHasBackedUpKeys(value, npub)
-        backedUpKeys[npub]?.value = value
-    }
+    ) = modules.sessionStore.setHasBackedUpKeys(value, npub)
 
     override val savedAccounts: Flow<Set<HexKey>> =
         modules.sessionStore

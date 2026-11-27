@@ -157,6 +157,10 @@ kotlin {
 
         jvmTest {
             dependencies {
+                // ZXing core, the encoder the apps drew QR codes with, as the reference the shared
+                // QrEncoder is checked against (QrEncoderZxingParityTest). Apache-2.0.
+                implementation(libs.zxing)
+
                 // Compose Desktop on the test classpath so composables can be
                 // rendered headlessly to a Skia surface (ImageComposeScene) and
                 // asserted on. No new third-party dependency: this is the same
@@ -194,10 +198,6 @@ kotlin {
                     // org.jetbrains.androidx.lifecycle variant or accept a
                     // platform-specific ViewModel access pattern on iOS.
                     implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-                    // ZXing core encodes the QR codes the shared QrCodeDrawer shows. Pure Java,
-                    // Apache-2.0, and already linked by both apps.
-                    implementation(libs.zxing)
                 }
             }
 

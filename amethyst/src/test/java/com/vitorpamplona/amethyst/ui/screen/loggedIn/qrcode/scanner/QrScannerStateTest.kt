@@ -24,6 +24,8 @@ import com.vitorpamplona.amethyst.commons.qrcode.ScanFrame
 import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.amethyst.commons.qrcode.StructuredAppendAccumulator
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.FrameScan
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.QrScannerState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull

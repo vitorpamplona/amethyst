@@ -23,22 +23,9 @@ package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.vitorpamplona.amethyst.commons.qrcode.ScanFrame
-import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.FrameScan
 import com.vitorpamplona.quartz.utils.Log
 import kotlin.math.max
-
-/** One analysed frame: what was decoded, how big the analysed image was, and how dark it is. */
-data class FrameScan(
-    val results: List<ScanResult>,
-    val frame: ScanFrame,
-    /** Mean luminance over a sparse sample of the Y plane, 0f (black) to 1f (white). */
-    val brightness: Float,
-    /**
-     * Whether this frame got the expensive pass. Only those find a marginal code, so only they
-     * can say a code is truly alone in view.
-     */
-    val thorough: Boolean = true,
-)
 
 /**
  * Decodes every camera frame and reports what it found.

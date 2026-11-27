@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
+package com.vitorpamplona.amethyst.commons.qrcode.ui.scanner
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -72,6 +72,7 @@ import com.vitorpamplona.amethyst.commons.resources.qr_scanner_zoom_reset
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import kotlin.math.max
+import kotlin.math.roundToInt
 
 /**
  * Maps the decoder's image space onto the preview.
@@ -302,7 +303,7 @@ private fun ZoomChip(
         color = Color.Black.copy(alpha = 0.55f),
     ) {
         Text(
-            text = "%.1f×  %s".format(state.zoomRatio, stringRes(Res.string.qr_scanner_zoom_reset)),
+            text = "${oneDecimal(state.zoomRatio)}×  ${stringRes(Res.string.qr_scanner_zoom_reset)}",
             color = Color.White,
             fontSize = 12.sp,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -335,4 +336,10 @@ private fun OverlayButton(
     ) {
         Icon(symbol = symbol, contentDescription = description, modifier = Modifier.size(26.dp))
     }
+}
+
+/** [value] with one decimal ("2.5"), without the JVM's String.format. */
+private fun oneDecimal(value: Float): String {
+    val tenths = (value * 10).roundToInt()
+    return "${tenths / 10}.${tenths % 10}"
 }

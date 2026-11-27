@@ -109,6 +109,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.BaseUserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.DisplayBlankAuthor
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
 import com.vitorpamplona.amethyst.commons.ui.note.buttons.CloseButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.OnchainZapSendDialog
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ButtonBorder
@@ -212,8 +213,10 @@ fun ZapCustomDialog(
 
     // Hides the "Send on-chain instead" hand-off when the user has turned the
     // on-chain wallet off, matching every other on-chain surface.
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+    val showOnchainWalletSetting by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsStateWithLifecycle()
+    // The App Store build may not offer the wallet whose funds the app holds (AppPlatform.offersInAppWallets).
+    val showOnchainWallet = showOnchainWalletSetting && LocalAppPlatform.current.offersInAppWallets
 
     Dialog(
         onDismissRequest = { onClose() },

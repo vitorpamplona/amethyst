@@ -102,6 +102,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberZoomTransition
 import com.vitorpamplona.amethyst.commons.ui.components.urlPreview
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceAnchor
 import com.vitorpamplona.amethyst.commons.ui.components.zoomSourceFor
+import com.vitorpamplona.amethyst.commons.ui.map.TileLocationPreviewMap
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.elements.DisplayUncitedHashtags
 import com.vitorpamplona.amethyst.commons.ui.note.platform.EpisodeControl
@@ -118,7 +119,6 @@ import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.desktop.service.media.ChromiumVideoRoute
 import com.vitorpamplona.amethyst.desktop.service.media.GlobalMediaPlayer
 import com.vitorpamplona.amethyst.desktop.service.media.VideoThumbnailCache
-import com.vitorpamplona.amethyst.desktop.ui.map.DesktopLocationPreviewMap
 import com.vitorpamplona.amethyst.desktop.ui.media.AudioPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopTrimPreviewPlayer
 import com.vitorpamplona.amethyst.desktop.ui.media.DesktopVideoPlayer
@@ -645,7 +645,7 @@ object DesktopNotePlatform : NotePlatform {
         pinAlpha: Float,
         modifier: Modifier,
         zoom: Double?,
-    ) = DesktopLocationPreviewMap(
+    ) = TileLocationPreviewMap(
         latitude = latitude,
         longitude = longitude,
         modifier = modifier,

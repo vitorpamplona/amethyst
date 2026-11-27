@@ -18,9 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.navigation.topbars
+package com.vitorpamplona.amethyst.commons.ui.navigation.topbars
 
-import android.Manifest
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.material3.Text
@@ -31,27 +30,27 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import com.vitorpamplona.amethyst.commons.model.location.LocationResult
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.lack_location_permissions
 import com.vitorpamplona.amethyst.commons.resources.loading_location
 import com.vitorpamplona.amethyst.commons.ui.components.LoadingAnimation
+import com.vitorpamplona.amethyst.commons.ui.components.rememberCoarseLocationPermission
 import com.vitorpamplona.amethyst.commons.ui.note.platform.LoadCityName
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.Font12SP
 import com.vitorpamplona.amethyst.commons.ui.theme.StdHorzSpacer
 
-/** The "around me" feed's subtitle: asks for location, then shows the city it resolved to. */
-@OptIn(ExperimentalPermissionsApi::class)
+/**
+ * The "around me" feed's subtitle: asks for location, then shows the city it resolved to. For the
+ * platforms with a location source (Android, iOS); AmethystApp hands the permission to it.
+ */
 @Composable
-fun AndroidAroundMeLocationLabel() {
-    val locationPermissionState = rememberPermissionState(Manifest.permission.ACCESS_COARSE_LOCATION)
-    if (!locationPermissionState.status.isGranted) {
-        LaunchedEffect(locationPermissionState) { locationPermissionState.launchPermissionRequest() }
+fun DeviceAroundMeLocationLabel() {
+    val locationPermission = rememberCoarseLocationPermission()
+    if (!locationPermission.isGranted) {
+        LaunchedEffect(locationPermission) { locationPermission.launchRequest() }
 
         Text(
             text = stringRes(Res.string.lack_location_permissions),

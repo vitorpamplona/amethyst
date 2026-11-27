@@ -51,6 +51,7 @@ import com.vitorpamplona.amethyst.commons.resources.settings_section_profile_sec
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.EmptyNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackButton
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.ui.theme.ThemeComparisonRow
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
@@ -129,13 +130,15 @@ fun ProfileUiSettingsContent(
                 checked = showFollowers,
                 onCheckedChange = { ui.showProfileFollowersFeed.tryEmit(it) },
             )
-            SettingsDivider()
-            SettingsSwitchTile(
-                icon = MaterialSymbols.AccountBalanceWallet,
-                title = Res.string.profile_ui_setting_onchain_wallet,
-                checked = showOnchainWallet,
-                onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
-            )
+            if (LocalAppPlatform.current.offersInAppWallets) {
+                SettingsDivider()
+                SettingsSwitchTile(
+                    icon = MaterialSymbols.AccountBalanceWallet,
+                    title = Res.string.profile_ui_setting_onchain_wallet,
+                    checked = showOnchainWallet,
+                    onCheckedChange = { ui.showOnchainWallet.tryEmit(it) },
+                )
+            }
         }
 
         SettingsSection(Res.string.settings_section_appearance) {

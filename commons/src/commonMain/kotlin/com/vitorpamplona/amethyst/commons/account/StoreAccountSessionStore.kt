@@ -374,10 +374,22 @@ class StoreAccountSessionStore(
         npub: String,
     ) {
         settingsStores.identity(npub).setHasBackedUpKeys(value)
+        backedUpKeysMutex.withLock { backedUpKeys[npub] }?.value = value
     }
 
     /** Whether [npub]'s key was backed up; true unless a freshly generated key is still waiting on it. */
     suspend fun hasBackedUpKeys(npub: String): Boolean = settingsStores.identity(npub).hasBackedUpKeys()
+
+    // One flow per login, seeded from the store, so the backup nudge watching it goes away the
+    // moment the key is backed up or the nudge dismissed.
+    private val backedUpKeys = mutableMapOf<String, MutableStateFlow<Boolean>>()
+    private val backedUpKeysMutex = Mutex()
+
+    /** [hasBackedUpKeys] as a flow that [setHasBackedUpKeys] updates. */
+    suspend fun hasBackedUpKeysFlow(npub: String): StateFlow<Boolean> =
+        backedUpKeysMutex.withLock {
+            backedUpKeys.getOrPut(npub) { MutableStateFlow(hasBackedUpKeys(npub)) }
+        }
 
     override suspend fun deleteAccount(accountInfo: AccountInfo) {
         val npub = accountInfo.npub

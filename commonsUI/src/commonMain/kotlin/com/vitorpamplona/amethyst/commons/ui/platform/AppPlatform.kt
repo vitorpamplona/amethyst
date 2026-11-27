@@ -80,6 +80,15 @@ interface AppPlatform {
     /** Where the composer dialogs' sizes the user picked are kept; only for as long as the app runs by default. */
     val composerDialogSizes: ComposerDialogSizes get() = ComposerDialogSizes.InMemory
 
+    /**
+     * Whether the wallets whose funds the app itself holds are offered: the NIP-60 Cashu wallet
+     * (the app keeps the ecash proofs) and the on-chain wallet (the app signs the spends). NWC and
+     * external wallets, where the funds stay in the user's own wallet, are not affected. The App
+     * Store allows such wallets only from developers enrolled as an organization (guideline
+     * 3.1.5(i)), so an iOS build turns them off unless it is built for one.
+     */
+    val offersInAppWallets: Boolean get() = true
+
     /** Whether this build can cast media to a TV (the Play flavour's Cast SDK). */
     val isCastingAvailable: Boolean get() = false
 

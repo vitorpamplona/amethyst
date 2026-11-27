@@ -82,6 +82,11 @@ kotlin {
                 implementation(libs.djot)
                 // Markdown into the document model (commons/content), on every target.
                 implementation(libs.jetbrains.markdown)
+                // Chess engine behind ChessEngine: move validation and legal move generation for
+                // live NIP-64 games, on every target (Kotlin Multiplatform, iOS variants published).
+                // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
+                // TODO: Test if 1.0.0 works, or fork library to fix
+                implementation(libs.kchesslib)
                 // The MLS bindings: Marmot (MarmotManager and the group pipeline) and cordn.
                 implementation(libs.marmot)
                 implementation(libs.cordn)
@@ -165,12 +170,6 @@ kotlin {
                     // the same parser the Nostr Observer validates with. MIT.
                     implementation(libs.jsoup)
 
-                    // Chess engine behind ChessEngine's JVM/Android actual: move validation and
-                    // legal move generation for live NIP-64 games. Moved here from quartz, whose
-                    // protocol code only carries PGN/SAN.
-                    // NOTE: 1.0.4+ uses Java 21's removeLast() which crashes on Android API < 34
-                    // TODO: Test if 1.0.0 works, or fork library to fix
-                    implementation(libs.kchesslib)
                 }
             }
 

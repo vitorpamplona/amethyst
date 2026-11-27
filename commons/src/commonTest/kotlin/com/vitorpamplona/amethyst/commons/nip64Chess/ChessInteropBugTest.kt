@@ -621,10 +621,10 @@ class ChessInteropBugTest {
         val earlier = if (last.move() == null) history.size else history.size - 1
         return (1..earlier).map { n ->
             createMoveEvent(
-                id = "move-%03d".format(n),
+                id = "move-" + n.toString().padStart(3, '0'),
                 pubKey = if (n % 2 == 1) whitePubkey else blackPubkey,
                 startEventId = startEventId,
-                headEventId = if (n == 1) startEventId else "move-%03d".format(n - 1),
+                headEventId = if (n == 1) startEventId else "move-" + (n - 1).toString().padStart(3, '0'),
                 move = history[n - 1],
                 fen = "",
                 history = history.take(n),

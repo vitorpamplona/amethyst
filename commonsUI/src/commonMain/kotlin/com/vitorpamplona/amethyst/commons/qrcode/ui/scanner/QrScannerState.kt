@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.ui.screen.loggedIn.qrcode.scanner
+package com.vitorpamplona.amethyst.commons.qrcode.ui.scanner
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue

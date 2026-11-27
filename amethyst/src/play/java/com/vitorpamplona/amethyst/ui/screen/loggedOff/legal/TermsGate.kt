@@ -20,65 +20,13 @@
  */
 package com.vitorpamplona.amethyst.ui.screen.loggedOff.legal
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.buildAnnotatedString
-import com.vitorpamplona.amethyst.commons.resources.Res
-import com.vitorpamplona.amethyst.commons.resources.acceptance_of_terms_is_required
-import com.vitorpamplona.amethyst.commons.resources.i_accept_the
-import com.vitorpamplona.amethyst.commons.resources.terms_of_use
-import com.vitorpamplona.amethyst.commons.ui.components.appendLink
-import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.account.ui.legal.StoreTermsGate
 
+/** The Play build asks a first login to accept the terms, with the App Store's checkbox. */
 @Composable
 fun TermsGate(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     showError: Boolean,
-) {
-    // One block, so the error hugs the checkbox instead of taking a row of the form's spacing.
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        AcceptTerms(checked = checked, onCheckedChange = onCheckedChange)
-
-        if (showError) {
-            Text(
-                text = stringRes(Res.string.acceptance_of_terms_is_required),
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AcceptTerms(
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
-
-        val uri = LocalUriHandler.current
-        val primary = MaterialTheme.colorScheme.primary
-
-        Text(
-            buildAnnotatedString {
-                append(stringRes(Res.string.i_accept_the))
-                appendLink(stringRes(Res.string.terms_of_use), primary) {
-                    runCatching {
-                        uri.openUri("https://github.com/vitorpamplona/amethyst/blob/main/PRIVACY.md")
-                    }
-                }
-            },
-        )
-    }
-}
+) = StoreTermsGate(checked, onCheckedChange, showError)

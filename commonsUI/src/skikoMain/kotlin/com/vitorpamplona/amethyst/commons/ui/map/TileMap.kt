@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.map
+package com.vitorpamplona.amethyst.commons.ui.map
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -190,7 +190,7 @@ private val MutedTileFilter =
  * stays where it was, or at 0,0.
  */
 @Stable
-class DesktopMapState(
+class TileMapState(
     lat: Double,
     lon: Double,
     zoom: Int,
@@ -245,11 +245,11 @@ class DesktopMapState(
 }
 
 @Composable
-fun rememberDesktopMapState(
+fun rememberTileMapState(
     lat: Double,
     lon: Double,
     zoom: Int,
-): DesktopMapState = remember(lat, lon, zoom) { DesktopMapState(lat, lon, zoom) }
+): TileMapState = remember(lat, lon, zoom) { TileMapState(lat, lon, zoom) }
 
 /**
  * A pin. [label] is the emoji (or a cluster's count) on its head, else a white dot. [centered]
@@ -274,8 +274,8 @@ class MapMarker(
  */
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun DesktopTileMap(
-    state: DesktopMapState,
+fun TileMap(
+    state: TileMapState,
     markers: List<MapMarker>,
     modifier: Modifier = Modifier,
     wheelZoom: Boolean = false,

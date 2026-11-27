@@ -18,7 +18,11 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.qrcode
+package com.vitorpamplona.amethyst.commons.model.location
 
-/** No encoder on iOS yet: the drawer shows its blank frame. */
-actual fun encodeQrMatrix(contents: String): QrMatrix? = null
+/** A place a geocoder found by name: a one-line label ("Lisbon, Lisbon, Portugal") and its point. */
+data class PlaceHit(
+    val label: String,
+    val latitude: Double,
+    val longitude: Double,
+)

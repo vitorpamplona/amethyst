@@ -105,6 +105,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.TopBarWithBackBu
 import com.vitorpamplona.amethyst.commons.ui.note.LoadUser
 import com.vitorpamplona.amethyst.commons.ui.note.UserPicture
 import com.vitorpamplona.amethyst.commons.ui.note.UsernameDisplay
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.FeeTier
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.wallet.rateFor
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -207,8 +208,10 @@ private fun SendPaymentLoaded(
     // on-chain rail for the whole composition if the screen won the race.
     // Also honors the user's "show on-chain wallet" preference — off hides the
     // rail everywhere, matching the wallet screen and profile chips.
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+    val showOnchainWalletSetting by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsStateWithLifecycle()
+    // The App Store build may not offer the wallet whose funds the app holds (AppPlatform.offersInAppWallets).
+    val showOnchainWallet = showOnchainWalletSetting && LocalAppPlatform.current.offersInAppWallets
     val onchainAvailable = showOnchainWallet && LocalCache.onchainBackend != null
     // When navigated from a `bitcoin` payment target, the on-chain rail pays
     // that announced address directly (plain send, no NIP-BC receipt) instead

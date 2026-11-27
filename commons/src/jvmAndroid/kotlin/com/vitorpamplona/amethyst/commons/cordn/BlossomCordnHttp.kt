@@ -21,23 +21,14 @@
 package com.vitorpamplona.amethyst.commons.cordn
 
 import com.vitorpamplona.amethyst.commons.service.upload.BlossomClient
-import com.vitorpamplona.cordn.client.CordnBlobStore
 import com.vitorpamplona.cordn.client.CordnBlossomHttp
 import com.vitorpamplona.cordn.client.CordnTipBlobStore
 
-/**
- * Where a migration's sealed documents are stored: cordn-kmp's [CordnTipBlobStore], which holds
- * the §12 rules (a throwaway signer for every upload, opaque bytes, servers tried in order), over
- * the app's [BlossomClient] and so over the network route the user picked for uploads.
- *
- * Not the attachment path. Message attachments are signed by the account
- * (`account.createBlossomUploadAuth`, see [CordnMediaService]) because they already ride inside a
- * group; the point of a migration blob is that nothing links it to anyone.
- */
-class BlossomCordnBlobStore(
+/** A migration's blob store over the OkHttp [BlossomClient] for each server. */
+fun BlossomCordnBlobStore(
     servers: List<String>,
     clientFor: (serverBaseUrl: String) -> BlossomClient,
-) : CordnBlobStore by CordnTipBlobStore(servers, BlossomCordnHttp(clientFor))
+): BlossomCordnBlobStore = BlossomCordnBlobStore(servers, BlossomCordnHttp(clientFor))
 
 private class BlossomCordnHttp(
     private val clientFor: (serverBaseUrl: String) -> BlossomClient,

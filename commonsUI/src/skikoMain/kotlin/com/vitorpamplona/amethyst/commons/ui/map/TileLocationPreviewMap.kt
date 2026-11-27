@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.map
+package com.vitorpamplona.amethyst.commons.ui.map
 
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -37,7 +37,7 @@ private const val DEFAULT_ZOOM = 16.0
  * a relay group), so the mouse wheel stays with the page, as on Brainstorm's place page.
  */
 @Composable
-fun DesktopLocationPreviewMap(
+fun TileLocationPreviewMap(
     latitude: Double,
     longitude: Double,
     modifier: Modifier,
@@ -48,10 +48,10 @@ fun DesktopLocationPreviewMap(
     pinAlpha: Float,
     tileUrl: (zoom: Int, x: Int, y: Int) -> String = ::osmTileUrl,
 ) {
-    val state = rememberDesktopMapState(latitude, longitude, (zoom ?: DEFAULT_ZOOM).roundToInt())
+    val state = rememberTileMapState(latitude, longitude, (zoom ?: DEFAULT_ZOOM).roundToInt())
     val color = pinColor ?: MaterialTheme.colorScheme.primary
     val markers = remember(latitude, longitude, color, pinEmoji, pinAlpha) { listOf(MapMarker("pin", latitude, longitude, color, pinEmoji, pinAlpha)) }
-    DesktopTileMap(
+    TileMap(
         state = state,
         markers = markers,
         modifier = modifier.fillMaxWidth().aspectRatio(aspectRatio),

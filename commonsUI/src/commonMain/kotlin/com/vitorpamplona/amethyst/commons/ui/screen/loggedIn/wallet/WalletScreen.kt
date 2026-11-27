@@ -164,6 +164,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.DateTimeStyle
 import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
@@ -193,14 +194,18 @@ fun WalletScreen(
     // the first composition pass. init() is idempotent — just sets refs.
     cashuWalletViewModel.init(accountViewModel)
 
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+    // An App Store build may not offer the wallets whose funds the app holds (AppPlatform.offersInAppWallets):
+    // then neither the on-chain wallet nor a Cashu wallet made elsewhere shows here.
+    val offersInAppWallets = LocalAppPlatform.current.offersInAppWallets
+    val showOnchainWalletSetting by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsState()
+    val showOnchainWallet = showOnchainWalletSetting && offersInAppWallets
     val hideBalances by accountViewModel.settings.uiSettingsFlow.hideWalletBalances
         .collectAsState()
     val hasNwcWallet by walletViewModel.hasWalletSetup.collectAsState()
     val cashuWalletEvent by cashuWalletViewModel.walletEvent.collectAsState()
     val cashuDiscovering by cashuWalletViewModel.discovering.collectAsState()
-    val hasCashuWallet = cashuWalletEvent != null
+    val hasCashuWallet = offersInAppWallets && cashuWalletEvent != null
     val hasWallet = hasNwcWallet || hasCashuWallet
     val cashuBalanceSats by cashuWalletViewModel.balanceSats.collectAsState()
     val cashuMints by cashuWalletViewModel.mints.collectAsState()
@@ -288,7 +293,7 @@ fun WalletScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
-            if (!hasWallet && cashuDiscovering) {
+            if (!hasWallet && cashuDiscovering && offersInAppWallets) {
                 // The Cashu wallet loads async; don't flash the empty state meanwhile.
                 Column(
                     modifier = Modifier.fillMaxSize(),

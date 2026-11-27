@@ -45,6 +45,7 @@ import com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobPrefetcher
 import com.vitorpamplona.amethyst.commons.napplet.webxdc.WebxdcApp
 import com.vitorpamplona.amethyst.commons.tor.TorType
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.navigation.topbars.DeviceAroundMeLocationLabel
 import com.vitorpamplona.amethyst.commons.ui.payments.PayToAppProbe
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
 import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
@@ -65,7 +66,6 @@ import com.vitorpamplona.amethyst.napplet.WebSitePermissionRegistry
 import com.vitorpamplona.amethyst.ui.call.CallActivity
 import com.vitorpamplona.amethyst.ui.call.rememberCallWithPermission
 import com.vitorpamplona.amethyst.ui.components.SelectNotificationProvider
-import com.vitorpamplona.amethyst.ui.navigation.topbars.AndroidAroundMeLocationLabel
 import com.vitorpamplona.amethyst.ui.note.DrawPlayName
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.embed.InlineNappletView
 import com.vitorpamplona.amethyst.ui.screen.loggedIn.nests.room.activity.NestActivity
@@ -206,7 +206,7 @@ object AndroidAppPlatform : AppPlatform {
     ) = AppBottomBarImpl(selectedRoute, nav, accountViewModel, onClick)
 
     @Composable
-    override fun AroundMeLocationLabel() = AndroidAroundMeLocationLabel()
+    override fun AroundMeLocationLabel() = DeviceAroundMeLocationLabel()
 
     @Composable
     override fun GeohashLocationPickerDialog(

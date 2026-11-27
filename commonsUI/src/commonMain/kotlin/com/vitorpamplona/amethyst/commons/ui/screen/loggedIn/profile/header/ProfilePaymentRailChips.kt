@@ -70,6 +70,7 @@ import com.vitorpamplona.amethyst.commons.ui.components.rememberShortNotice
 import com.vitorpamplona.amethyst.commons.ui.components.util.setText
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.note.LoadAddressableNote
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.Bolt12OffersDialog
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.header.abbreviateBolt12Offer
 import com.vitorpamplona.amethyst.commons.ui.screen.loggedIn.profile.payment.ProfilePaymentMethod
@@ -116,8 +117,10 @@ fun DisplayPaymentRailChips(
                 ?.target
                 ?.mintUrl
         }
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+    val showOnchainWalletSetting by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsStateWithLifecycle()
+    // The App Store build may not offer the wallet whose funds the app holds (AppPlatform.offersInAppWallets).
+    val showOnchainWallet = showOnchainWalletSetting && LocalAppPlatform.current.offersInAppWallets
     val onchainAvailable = showOnchainWallet && LocalCache.onchainBackend != null
 
     val targetsAddress =

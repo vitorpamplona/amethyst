@@ -18,7 +18,7 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-package com.vitorpamplona.amethyst.desktop.ui.map
+package com.vitorpamplona.amethyst.commons.ui.map
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -67,7 +67,7 @@ import kotlin.math.roundToInt
  * sheet and the clustering are shared in commonsUI.
  */
 @Composable
-fun DesktopGeocacheMapTab(
+fun TileGeocacheMapTab(
     feedContentState: FeedContentState,
     accountViewModel: AccountViewModel,
     nav: INav,
@@ -79,7 +79,7 @@ fun DesktopGeocacheMapTab(
     val palette = rememberGeocachePalette()
 
     var peek by remember { mutableStateOf<GeocacheListingEvent?>(null) }
-    val state = remember { DesktopMapState(0.0, 0.0, GEOCACHE_MAP_INITIAL_ZOOM.roundToInt()) }
+    val state = remember { TileMapState(0.0, 0.0, GEOCACHE_MAP_INITIAL_ZOOM.roundToInt()) }
 
     // The cell size tracks zoom, so zooming in splits clusters apart.
     val marks = remember(listings, state.zoom) { geocacheMapMarks(listings, state.zoom.toDouble()) }
@@ -112,7 +112,7 @@ fun DesktopGeocacheMapTab(
         }
 
     Box(Modifier.fillMaxSize()) {
-        DesktopTileMap(
+        TileMap(
             state = state,
             markers = markers,
             modifier = Modifier.fillMaxSize(),

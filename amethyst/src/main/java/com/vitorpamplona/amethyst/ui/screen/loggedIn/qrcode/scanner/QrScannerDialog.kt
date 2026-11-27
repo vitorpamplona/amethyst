@@ -100,6 +100,14 @@ import com.vitorpamplona.amethyst.commons.qrcode.ScanResult
 import com.vitorpamplona.amethyst.commons.qrcode.classifyScannedPayload
 import com.vitorpamplona.amethyst.commons.qrcode.ui.QrImageCodeChooser
 import com.vitorpamplona.amethyst.commons.qrcode.ui.ScanOutcomeSheet
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.FrameScan
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.QrScannerControls
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.QrScannerState
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.ScanViewMapping
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.centerInView
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.drawViewfinderBrackets
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.longestSideInView
+import com.vitorpamplona.amethyst.commons.qrcode.ui.scanner.toViewPath
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.close
 import com.vitorpamplona.amethyst.commons.resources.point_to_the_qr_code

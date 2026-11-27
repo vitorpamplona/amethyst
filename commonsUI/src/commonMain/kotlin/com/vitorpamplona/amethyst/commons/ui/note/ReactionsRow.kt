@@ -2058,8 +2058,10 @@ fun observeZapRailCapability(
     // Honors the user's "show on-chain wallet" preference: off hides the on-chain
     // rail from the zap chips too, matching the wallet screen, profile chips, and
     // Send Payment screen.
-    val showOnchainWallet by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
+    val showOnchainWalletSetting by accountViewModel.settings.uiSettingsFlow.showOnchainWallet
         .collectAsStateWithLifecycle()
+    // The App Store build may not offer the wallet whose funds the app holds (AppPlatform.offersInAppWallets).
+    val showOnchainWallet = showOnchainWalletSetting && LocalAppPlatform.current.offersInAppWallets
 
     // Pay-to hand-off inputs. Same "read only to drive the recompute" contract as
     // the four above: the recipient's kind:10133 already rides in

@@ -43,6 +43,9 @@ import com.vitorpamplona.amethyst.commons.resources.napplet_desktop_open_failed
 import com.vitorpamplona.amethyst.commons.resources.nsite_open_failed
 import com.vitorpamplona.amethyst.commons.resources.webxdc_open_failed
 import com.vitorpamplona.amethyst.commons.service.spellcheck.SpellCheckService
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeocacheMapTab
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeohashLocationPickerContent
+import com.vitorpamplona.amethyst.commons.ui.map.TileGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.commons.ui.navigation.host.ComposerDialogSizes
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
 import com.vitorpamplona.amethyst.commons.ui.platform.AppLauncher
@@ -60,9 +63,6 @@ import com.vitorpamplona.amethyst.desktop.napplet.HeldPaperSession
 import com.vitorpamplona.amethyst.desktop.napplet.InlineNappletPane
 import com.vitorpamplona.amethyst.desktop.platform.WaylandDisplay
 import com.vitorpamplona.amethyst.desktop.spellcheck.DesktopSpellCheck
-import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeocacheMapTab
-import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeohashLocationPickerContent
-import com.vitorpamplona.amethyst.desktop.ui.map.DesktopGeohashLocationPickerDialog
 import com.vitorpamplona.amethyst.desktop.ui.qrcode.DesktopQrScannerDialog
 import com.vitorpamplona.quartz.concord.cord02Community.ImagePointer
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -243,7 +243,7 @@ class DesktopAppPlatform(
         feedContentState: FeedContentState,
         accountViewModel: AccountViewModel,
         nav: INav,
-    ) = DesktopGeocacheMapTab(feedContentState, accountViewModel, nav)
+    ) = TileGeocacheMapTab(feedContentState, accountViewModel, nav)
 
     // The tile map with a pin at its centre; no place search or GPS, which need what the desktop lacks.
     @Composable
@@ -252,7 +252,7 @@ class DesktopAppPlatform(
         onDismiss: () -> Unit,
         onConfirm: (String) -> Unit,
         precision: Int?,
-    ) = DesktopGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
+    ) = TileGeohashLocationPickerDialog(initialGeohash, onDismiss, onConfirm, precision)
 
     @Composable
     override fun GeohashLocationPickerContent(
@@ -260,7 +260,7 @@ class DesktopAppPlatform(
         confirmLabel: String,
         onConfirm: (String) -> Unit,
         modifier: Modifier,
-    ) = DesktopGeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
+    ) = TileGeohashLocationPickerContent(initialGeohash, confirmLabel, onConfirm, modifier)
 
     @Composable
     override fun platformScreenTitle(route: Route): String? {

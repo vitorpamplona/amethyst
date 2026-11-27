@@ -101,6 +101,7 @@ import com.vitorpamplona.amethyst.commons.ui.navigation.navs.rememberNav
 import com.vitorpamplona.amethyst.commons.ui.navigation.routes.getRouteWithArguments
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.AppShellLayout
 import com.vitorpamplona.amethyst.commons.ui.navigation.shell.rememberLayoutChrome
+import com.vitorpamplona.amethyst.commons.ui.platform.AppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppServices
 import com.vitorpamplona.amethyst.commons.ui.privacylock.PrivacyLockGate
@@ -128,6 +129,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.withContext
 import org.jetbrains.compose.resources.ExperimentalResourceApi
 import org.jetbrains.compose.resources.LocalResourceReader
+import kotlin.reflect.KClass
 
 /**
  * The whole app below the platform's window: the login screens while logged off, and the logged-in
@@ -351,10 +353,12 @@ private fun AppNavigation(
 
     // Built here rather than inside the navigation host, so the drawer, bars and menus can ask it
     // which screens exist before offering a way into one.
+    val offersInAppWallets = LocalAppPlatform.current.offersInAppWallets
     val destinations =
-        remember(accountViewModel) {
+        remember(accountViewModel, offersInAppWallets) {
             NavDestinations().apply {
                 sharedDestinations(accountViewModel)
+                if (!offersInAppWallets) withdraw(IN_APP_WALLET_ROUTES)
                 root.registerDestinations(this, accountViewModel)
             }
         }
@@ -512,3 +516,15 @@ private fun TrackScreen(
         onDispose { root.onScreen(null) }
     }
 }
+
+/** The screens of the wallets whose funds the app holds (see [AppPlatform.offersInAppWallets]). */
+private val IN_APP_WALLET_ROUTES: List<KClass<out Route>> =
+    listOf(
+        Route.CashuWallet::class,
+        Route.CashuWalletMints::class,
+        Route.CashuWalletWizard::class,
+        Route.CashuWalletCreated::class,
+        Route.CashuWalletSettings::class,
+        Route.CashuMintRecommendations::class,
+        Route.OnchainTransactions::class,
+    )

@@ -61,6 +61,7 @@ import com.vitorpamplona.amethyst.commons.resources.wallet_add_clink_title
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_description
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_nwc_title
 import com.vitorpamplona.amethyst.commons.ui.navigation.navs.INav
+import com.vitorpamplona.amethyst.commons.ui.platform.LocalAppPlatform
 import com.vitorpamplona.amethyst.commons.ui.stringRes
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import androidx.compose.material3.Icon as Material3Icon
@@ -111,16 +112,18 @@ fun AddWalletScreen(
                 // pointless dead end.
                 onClick = { nav.popUpTo(Route.WalletAddNwc(), Route.WalletAdd::class) },
             )
-            WalletTypeCard(
-                icon = PaymentBrandIcons.Cashu,
-                title = stringRes(Res.string.wallet_add_cashu_title),
-                description = stringRes(Res.string.wallet_add_cashu_description),
-                // Route through the find-or-create wizard, not straight to the
-                // mint manager: a portable NIP-60 wallet may already exist on
-                // relays, and creating one here would clobber it (kind:17375 is
-                // replaceable). The wizard offers "create new" when none is found.
-                onClick = { nav.popUpTo(Route.CashuWalletWizard, Route.WalletAdd::class) },
-            )
+            if (LocalAppPlatform.current.offersInAppWallets) {
+                WalletTypeCard(
+                    icon = PaymentBrandIcons.Cashu,
+                    title = stringRes(Res.string.wallet_add_cashu_title),
+                    description = stringRes(Res.string.wallet_add_cashu_description),
+                    // Route through the find-or-create wizard, not straight to the
+                    // mint manager: a portable NIP-60 wallet may already exist on
+                    // relays, and creating one here would clobber it (kind:17375 is
+                    // replaceable). The wizard offers "create new" when none is found.
+                    onClick = { nav.popUpTo(Route.CashuWalletWizard, Route.WalletAdd::class) },
+                )
+            }
             WalletTypeCard(
                 icon = PaymentBrandIcons.Clink,
                 title = stringRes(Res.string.wallet_add_clink_title),

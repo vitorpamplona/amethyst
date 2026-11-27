@@ -29,6 +29,7 @@ import com.vitorpamplona.amethyst.commons.frontpage.FrontPagePrinters
 import com.vitorpamplona.amethyst.commons.frontpage.FrontPageScheduler
 import com.vitorpamplona.amethyst.commons.model.dock.DockLayoutPreferences
 import com.vitorpamplona.amethyst.commons.model.location.DeviceLocation
+import com.vitorpamplona.amethyst.commons.model.location.PlaceHit
 import com.vitorpamplona.amethyst.commons.model.preferences.AppPreferenceStores
 import com.vitorpamplona.amethyst.commons.model.preferences.CALENDAR_REMINDER_SETTINGS_STORE
 import com.vitorpamplona.amethyst.commons.model.preferences.CalendarReminderSettingsStore
@@ -165,6 +166,12 @@ interface AppServices {
 
     /** The place name already reverse-geocoded for [geohash], or null when none is cached yet. */
     fun cachedPlaceName(geohash: String): String? = null
+
+    /** Whether [searchPlaces] can find places by name here (a geocoder); the picker hides its search when not. */
+    val hasPlaceSearch: Boolean get() = false
+
+    /** Places matching [query] (a city, an address, a landmark), best first; empty when none or no geocoder. */
+    suspend fun searchPlaces(query: String): List<PlaceHit> = emptyList()
 
     /** A new on-device alt-text suggester for image uploads, or null where the platform has none. */
     fun createAltTextSuggester(): AltTextSuggester? = null
