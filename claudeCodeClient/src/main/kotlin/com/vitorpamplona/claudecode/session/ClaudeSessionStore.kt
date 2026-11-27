@@ -364,18 +364,23 @@ class ClaudeSessionStore(
     ): List<TranscriptEntry> {
         val nodes = LinkedHashMap<String, Node>()
         var leaf: String? = null
-        file.bufferedReader(Charsets.UTF_8).useLines { lines ->
-            lines.forEach { line ->
-                if (!line.contains("\"uuid\"")) return@forEach
-                val obj = parseObject(line) ?: return@forEach
-                val uuid = obj.string("uuid") ?: return@forEach
-                if (!sidechain && obj.boolean("isSidechain") == true) return@forEach
-                // A compaction starts a new chain whose root points at the old one logically.
-                val parent = obj.string("parentUuid") ?: obj.string("logicalParentUuid")
-                nodes[uuid] = Node(uuid, parent, obj)
-                val type = obj.string("type")
-                if (type == "user" || type == "assistant") leaf = uuid
+        try {
+            file.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                lines.forEach { line ->
+                    if (!line.contains("\"uuid\"")) return@forEach
+                    val obj = parseObject(line) ?: return@forEach
+                    val uuid = obj.string("uuid") ?: return@forEach
+                    if (!sidechain && obj.boolean("isSidechain") == true) return@forEach
+                    // A compaction starts a new chain whose root points at the old one logically.
+                    val parent = obj.string("parentUuid") ?: obj.string("logicalParentUuid")
+                    nodes[uuid] = Node(uuid, parent, obj)
+                    val type = obj.string("type")
+                    if (type == "user" || type == "assistant") leaf = uuid
+                }
             }
+        } catch (_: IOException) {
+            // Gone or unreadable between the lookup and the open: the same as never written.
+            return emptyList()
         }
         val chain = ArrayList<Node>()
         val visited = HashSet<String>()
