@@ -110,6 +110,31 @@ class MarkdownToDocumentTest {
     }
 
     @Test
+    fun fenceWrittenOnTheLinesOfItsCodeClosesThere() {
+        // Notes often put the fences on the first and last lines of the code. CommonMark reads the
+        // opening line's text as a language and finds no closing fence, so the code ran to the end
+        // of the note and took the mention after it.
+        val note = "Lyrics:\n\n```[18:41:43]  It's so dark\n[18:41:51]  This black woman is going to...\n[18:42:55]  and the cat in his good country```\n\nnostr:nevent1abc"
+        assertEquals(
+            """
+            P["Lyrics:"]
+            CODE()"[18:41:43]  It's so dark\n[18:41:51]  This black woman is going to...\n[18:42:55]  and the cat in his good country"
+            P[nostr:BechSegment("nostr:nevent1abc")]
+            """.trimIndent(),
+            dump(note),
+        )
+        // Only the closing fence on the code's line; a language stays a language.
+        assertEquals(listOf("CODE(kotlin)\"val x = 1\\nval y = 2\""), codes("```kotlin\nval x = 1\nval y = 2```\n\nafter"))
+        // A proper closing fence: the opening line's text is kept when it is not a language.
+        assertEquals(listOf("CODE()\"[1] first\\nsecond\""), codes("```[1] first\nsecond\n```"))
+        assertEquals(listOf("CODE(kotlin)\"x\""), codes("```kotlin title\nx\n```"))
+        // One line is a code span, not a fence.
+        assertEquals(emptyList(), codes("```code```"))
+        // A fence inside a fence that is longer stays code.
+        assertEquals(listOf("CODE(md)\"```kotlin\\nx```\\nmore\""), codes("````md\n```kotlin\nx```\nmore\n````"))
+    }
+
+    @Test
     fun links() {
         assertEquals(
             """
