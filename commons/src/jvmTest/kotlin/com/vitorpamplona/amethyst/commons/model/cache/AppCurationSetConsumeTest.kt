@@ -32,6 +32,8 @@ import kotlin.test.assertTrue
  * "Event Not Supported", so a set arriving from a relay was dropped and its card never rendered.
  */
 class AppCurationSetConsumeTest {
+    private val pins = NotePins()
+
     private val zapstoreGames =
         """
         {"id":"0389c8b10882df52226b116745e65060561d5165abd842953d9a7bc466cae479","pubkey":"aa1f96f685d0ac3e28a52feb87a20399a91afb3ac3137afeb7698dfcc99bc454","created_at":1775252298,"kind":30267,"tags":[["name","Games"],["d","games"],["f","android-arm64-v8a"],["h","acfeaea6e51420e8068fac446ca9d17d7a9ef6a5d20d93894e50fee3d4902a84"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.gitlab.ardash.appleflinger.android"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.adilhanney.ricochlime"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:net.minetest.minetest"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:de.rainerhock.eightbitwonders"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:org.moire.opensudoku"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:de.chadenas.cpudefense"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:de.sesu8642.feudaltactics"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.peaceray.codeword"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.serwylo.retrowars"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:de.mlex.same"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.github.thewierdnut.endless_mobile"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.tacticmaster"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:io.github.lime3ds.android"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.unciv.app"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:org.wesnoth.Wesnoth"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:com.agateau.burgerparty"],["a","32267:b95162b5280fa639f779d1e96d05bfa4a00159214c2a578b5244b2fb75b642d3:com.magius.lightningreaction"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:de.z11.roboyard"],["a","32267:78ce6faa72264387284e647ba6938995735ec8c7d5c5a65737e55130f026307d:me.lecaro.breakout"]],"content":"","sig":"b46c90094ba55ea46e86dba9e3ec47f77b6e7369e0244644da7d1b4a3d13031d9a385861d976529a47887ed2063bcbc8176e6dc40d3b305fddd81c2688a7b38e"}
@@ -43,7 +45,7 @@ class AppCurationSetConsumeTest {
         assertIs<AppCurationSetEvent>(event)
 
         val cache = EventCache()
-        assertTrue(cache.justConsume(event, null, true))
+        assertTrue(pins.consume(cache, event))
 
         val note = cache.getAddressableNoteIfExists(event.address())
         assertSame(event, note?.event)
