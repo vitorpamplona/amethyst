@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownFootnotes
 import com.vitorpamplona.amethyst.commons.icons.symbols.Icon
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.ImmutableListOfLists
@@ -137,7 +138,8 @@ fun ExpandableTextViewer(
                 if (showFullText) {
                     content
                 } else {
-                    content.take(whereToCut)
+                    // The notes the preview still calls keep their definitions.
+                    MarkdownFootnotes.crop(content, whereToCut)
                 }
             }
         }

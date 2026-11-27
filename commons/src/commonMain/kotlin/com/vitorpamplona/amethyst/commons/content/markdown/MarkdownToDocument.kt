@@ -81,20 +81,23 @@ class MarkdownToDocument(
         val src = capQuoteDepth(extracted.source)
         val root = parser.buildMarkdownTreeFromString(src)
         val definitions = linkDefinitions(src, root)
-        val calls = FootnoteCalls(extracted.notes)
-        val blocks = Context(src, definitions, calls).blocks(root.children).toMutableList()
+        // Definitions inside a quote or a list item are still in the tree, as paragraphs.
+        val nested = nestedFootnotes(src, root)
+        val notes = if (nested.notes.isEmpty()) extracted.notes else LinkedHashMap(extracted.notes).apply { nested.notes.forEach { (k, v) -> if (k !in this) this[k] = v } }
+        val calls = FootnoteCalls(notes)
+        val blocks = Context(src, definitions, calls, nested.nodes).blocks(root.children).toMutableList()
 
         // Notes may call others, which then join the list: each is parsed once, in call order.
-        val notes = ArrayList<Footnote>()
+        val drawn = ArrayList<Footnote>()
         var i = 0
         while (i < calls.order.size) {
             val key = calls.order[i]
-            val noteSrc = capQuoteDepth(extracted.notes[key] ?: "")
+            val noteSrc = capQuoteDepth(notes[key] ?: "")
             val noteRoot = parser.buildMarkdownTreeFromString(noteSrc)
-            notes.add(Footnote(calls.labels[i], i + 1, Context(noteSrc, definitions, calls).blocks(noteRoot.children)))
+            drawn.add(Footnote(calls.labels[i], i + 1, Context(noteSrc, definitions, calls, emptySet()).blocks(noteRoot.children)))
             i++
         }
-        if (notes.isNotEmpty()) blocks.add(Footnotes(notes))
+        if (drawn.isNotEmpty()) blocks.add(Footnotes(drawn))
         return Document(blocks)
     }
 
@@ -121,6 +124,8 @@ class MarkdownToDocument(
         val src: String,
         val definitions: Map<String, LinkDefinition>,
         val footnotes: FootnoteCalls,
+        /** Footnote definitions found in the tree: they draw nothing where they were written. */
+        val definitionNodes: Set<ASTNode>,
     ) {
         fun text(node: ASTNode) = src.substring(node.startOffset, node.endOffset)
 
@@ -143,6 +148,13 @@ class MarkdownToDocument(
         fun flatParagraph(nodes: List<ASTNode>): List<Block> = flatText(nodes).let { if (it.isEmpty()) emptyList() else listOf(Paragraph(listOf(Text(it)))) }
 
         fun block(node: ASTNode): Block? =
+            if (node in definitionNodes) {
+                null
+            } else {
+                blockOf(node)
+            }
+
+        private fun blockOf(node: ASTNode): Block? =
             when (val type = node.type) {
                 MarkdownElementTypes.PARAGRAPH -> paragraph(node)
                 MarkdownElementTypes.ATX_1, MarkdownElementTypes.ATX_2, MarkdownElementTypes.ATX_3,
@@ -592,6 +604,58 @@ class MarkdownToDocument(
             lineStart = lineEnd + 1
         }
         return if (changed) out.toString() else src
+    }
+
+    private class NestedFootnotes(
+        /** Each note's Markdown, by normalized label. The first definition of a label wins. */
+        val notes: Map<String, String>,
+        /** The paragraphs (and link definitions) that held them. */
+        val nodes: Set<ASTNode>,
+    )
+
+    /**
+     * `[^label]: text` inside a quote or a list item, which [MarkdownFootnotes.extract] leaves to
+     * the parser: it comes out as a paragraph, or as a link definition when the text is one word.
+     * Only the definition's own paragraph is the note; its quote markers and indentation go.
+     */
+    private fun nestedFootnotes(
+        src: String,
+        root: ASTNode,
+    ): NestedFootnotes {
+        if (!src.contains("[^")) return NestedFootnotes(emptyMap(), emptySet())
+        val notes = LinkedHashMap<String, String>()
+        val nodes = HashSet<ASTNode>()
+        // A stack, not recursion, as in [linkDefinitions]; children in reverse, so the first wins.
+        val stack = ArrayList<ASTNode>()
+        stack.add(root)
+        while (stack.isNotEmpty()) {
+            val node = stack.removeAt(stack.size - 1)
+            when (node.type) {
+                MarkdownElementTypes.PARAGRAPH, MarkdownElementTypes.LINK_DEFINITION -> {
+                    val text = src.substring(node.startOffset, node.endOffset)
+                    val start = MarkdownFootnotes.definitionStart(text.substringBefore('\n'))
+                    if (start != null) {
+                        nodes.add(node)
+                        val key = MarkdownFootnotes.normalize(start.first)
+                        if (key !in notes) {
+                            val rest = text.substringAfter('\n', "").split('\n').joinToString("\n") { stripContainer(it) }
+                            notes[key] = if (rest.isEmpty()) start.second else start.second + "\n" + rest
+                        }
+                    }
+                }
+                MarkdownElementTypes.MARKDOWN_FILE, MarkdownElementTypes.BLOCK_QUOTE, GFMElementTypes.ALERT,
+                MarkdownElementTypes.UNORDERED_LIST, MarkdownElementTypes.ORDERED_LIST, MarkdownElementTypes.LIST_ITEM,
+                -> for (i in node.children.indices.reversed()) stack.add(node.children[i])
+            }
+        }
+        return NestedFootnotes(notes, nodes)
+    }
+
+    /** A continuation line without what its containers put before it: indentation and `>` markers. */
+    private fun stripContainer(line: String): String {
+        var i = 0
+        while (i < line.length && (line[i] == ' ' || line[i] == '\t' || line[i] == '>')) i++
+        return line.substring(i)
     }
 
     /** Every `[label]: destination "title"`, by normalized label. The first definition of a label wins. */

@@ -28,7 +28,7 @@ package com.vitorpamplona.amethyst.commons.content.markdown
  * [extract] takes the definitions out of the source before it is parsed, so they do not show as
  * paragraphs where they were written, and keeps each one's text to be parsed on its own.
  */
-internal object MarkdownFootnotes {
+object MarkdownFootnotes {
     class Extracted(
         /** The source without its definitions; each one left a blank line in its place. */
         val source: String,
@@ -114,6 +114,41 @@ internal object MarkdownFootnotes {
         return if (changed) Extracted(out.toString(), notes) else Extracted(src, NO_NOTES)
     }
 
+    /**
+     * [full] cut to its first [cut] characters for a preview, with the definitions of the notes
+     * the preview still calls put back at its end: cropping usually drops them (they sit at the
+     * bottom), and a call without its definition would show as `[^label]`. Djot writes footnotes
+     * the same way.
+     */
+    fun crop(
+        full: String,
+        cut: Int,
+    ): String {
+        if (cut >= full.length) return full
+        val cropped = full.take(cut)
+        if (!cropped.contains("[^")) return cropped
+        val notes = extract(full).notes
+        if (notes.isEmpty()) return cropped
+        val kept = extract(cropped).notes
+        val out = StringBuilder(cropped)
+        val added = HashSet<String>()
+        CALL.findAll(cropped).forEach { match ->
+            val label = match.groupValues[1]
+            val key = normalize(label)
+            if (key in kept || !added.add(key)) return@forEach
+            val note = notes[key] ?: return@forEach
+            out.append("\n\n[^").append(label).append("]: ")
+            // Its other lines, indented again so they stay in the note.
+            note.split('\n').forEachIndexed { i, line ->
+                if (i > 0) out.append('\n').append(if (line.isBlank()) "" else "    ")
+                out.append(line)
+            }
+        }
+        return out.toString()
+    }
+
+    private val CALL = Regex("\\[\\^([^\\]\\[\\s]+)\\](?!:)")
+
     /** `[^label]` as a call: the label, or null when [text] is not one. */
     fun referenceLabel(text: String): String? {
         if (text.length < 4 || !text.startsWith("[^") || !text.endsWith("]")) return null
@@ -127,7 +162,7 @@ internal object MarkdownFootnotes {
     private fun isLabel(label: String): Boolean = label.isNotEmpty() && label.none { it == ']' || it == '[' || it.isWhitespace() }
 
     /** `[^label]: text` with at most three spaces before it: the label and the text. */
-    private fun definitionStart(line: String): Pair<String, String>? {
+    fun definitionStart(line: String): Pair<String, String>? {
         var i = 0
         while (i < line.length && i < 3 && line[i] == ' ') i++
         if (!line.startsWith("[^", i)) return null
