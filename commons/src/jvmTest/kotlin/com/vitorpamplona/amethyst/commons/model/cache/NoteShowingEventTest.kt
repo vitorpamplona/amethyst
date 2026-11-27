@@ -21,7 +21,6 @@
 package com.vitorpamplona.amethyst.commons.model.cache
 
 import com.vitorpamplona.amethyst.commons.model.AddressableNote
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
@@ -37,9 +36,7 @@ import kotlin.test.assertSame
 class NoteShowingEventTest {
     private val signer = NostrSignerSync(KeyPair())
 
-    // The cache holds notes weakly (LargeSoftCache): pin the ones a test consumes, or a GC before
-    // the lookup drops them and it comes back null.
-    private val pinned = mutableListOf<Note>()
+    private val pins = NotePins()
 
     private fun consumed(
         kind: Int,
@@ -47,9 +44,7 @@ class NoteShowingEventTest {
         vararg tags: Array<String>,
     ): Event {
         val event = signer.sign<Event>(EventTemplate(createdAt, kind, arrayOf(*tags), "v$createdAt"))
-        if (event is AddressableEvent) pinned.add(LocalCache.getOrCreateAddressableNote(event.address()))
-        pinned.add(LocalCache.getOrCreateNote(event.id))
-        LocalCache.justConsume(event, null, false)
+        pins.consume(LocalCache, event, wasVerified = false)
         return event
     }
 

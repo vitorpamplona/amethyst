@@ -20,7 +20,6 @@
  */
 package com.vitorpamplona.amethyst.commons.model.cache
 
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.quartz.nip01Core.core.Address
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.utils.EventFactory
@@ -35,23 +34,13 @@ import kotlin.test.assertTrue
  * one by its id, a replaceable or addressable one at its address (newest version wins), and an
  * ephemeral one not at all.
  *
- * Stored events go in through [consumePinned]: the cache holds notes weakly (LargeSoftCache), so a
- * GC between consuming and asserting would drop a note nothing else references, such as the older
- * version of an addressable, and the lookup would come back null.
+ * Stored events go in through [NotePins], or a GC could drop a note nothing else references, such
+ * as the older version of an addressable, before the lookup.
  */
 class EventCacheUnknownKindTest {
     private val alice = "460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c"
 
-    private val pinned = mutableListOf<Note>()
-
-    private fun EventCache.consumePinned(
-        event: Event,
-        address: Address? = null,
-    ): Boolean {
-        if (address != null) pinned.add(getOrCreateAddressableNote(address))
-        pinned.add(getOrCreateNote(event.id))
-        return justConsume(event, null, true)
-    }
+    private val pins = NotePins()
 
     private fun event(
         idSeed: Char,
@@ -64,7 +53,7 @@ class EventCacheUnknownKindTest {
     fun regularUnknownKindIsKeptById() {
         val cache = EventCache()
         val e = event('1', 4_242, 1_000)
-        assertTrue(cache.consumePinned(e))
+        assertTrue(pins.consume(cache, e))
         assertEquals(e, cache.getNoteIfExists(e.id)?.event)
     }
 
@@ -74,8 +63,8 @@ class EventCacheUnknownKindTest {
         val v1 = event('1', 35_123, 1_000, arrayOf(arrayOf("d", "bread")))
         val v2 = event('2', 35_123, 2_000, arrayOf(arrayOf("d", "bread")))
         val address = Address(35_123, alice, "bread")
-        cache.consumePinned(v2, address)
-        cache.consumePinned(v1, address)
+        pins.consume(cache, v2, address = address)
+        pins.consume(cache, v1, address = address)
 
         assertEquals(v2.id, cache.getAddressableNoteIfExists(address)?.event?.id)
         // Each version is still reachable by its id, as an nevent link would ask for it.
@@ -87,7 +76,7 @@ class EventCacheUnknownKindTest {
         val cache = EventCache()
         val e = event('3', 17_777, 1_000)
         val address = Address(17_777, alice, "")
-        cache.consumePinned(e, address)
+        pins.consume(cache, e, address = address)
         assertEquals(e.id, cache.getAddressableNoteIfExists(address)?.event?.id)
     }
 

@@ -20,8 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.nip15Marketplace
 
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
+import com.vitorpamplona.amethyst.commons.model.cache.NotePins
 import com.vitorpamplona.quartz.nip01Core.core.AddressableEvent
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip15Marketplace.auction.AuctionEvent
@@ -38,10 +38,9 @@ import kotlin.test.assertTrue
  * bids and confirmations under the auction they name), other apps' records on the same
  * kind numbers do not, and the auction card's bid summary reads what the cache filed.
  *
- * Marketplace events go in through [consumePinned]: the cache holds notes weakly (LargeSoftCache),
- * so a GC could drop the auction's version note, which nothing else references. A confirmation
- * consumed after that names the auction by id, finds an empty note it cannot upgrade to the
- * auction's address, and is filed there instead of beside the bids.
+ * Marketplace events go in through [NotePins]: without it a GC could drop the auction's version
+ * note, and a confirmation consumed after that, naming the auction by id, would be filed under an
+ * empty note instead of beside the bids.
  */
 class MarketplaceConsumeTest {
     private val merchant = "aa".repeat(32)
@@ -49,13 +48,7 @@ class MarketplaceConsumeTest {
     private val bidder2 = "cc".repeat(32)
     private val sig = "22".repeat(64)
 
-    private val pinned = mutableListOf<Note>()
-
-    private fun EventCache.consumePinned(event: Event): Boolean {
-        if (event is AddressableEvent) pinned.add(getOrCreateAddressableNote(event.address()))
-        pinned.add(getOrCreateNote(event.id))
-        return justConsume(event, null, true)
-    }
+    private val pins = NotePins()
 
     private fun event(
         idByte: String,
@@ -78,7 +71,7 @@ class MarketplaceConsumeTest {
         val auction = event("04", 30020, 1_700_000_000L, "Digital Art", arrayOf("d", "a1"), arrayOf("title", "Roatan"), arrayOf("start_price", "1000"))
 
         listOf(stall, product, market, auction).forEach {
-            assertTrue(cache.consumePinned(it), it.toJson())
+            assertTrue(pins.consume(cache, it), it.toJson())
             assertSame(it, cache.stored(it))
         }
 
@@ -95,7 +88,7 @@ class MarketplaceConsumeTest {
     fun bidsAreFiledUnderTheAuctionVersionAndSummarized() {
         val cache = EventCache()
         val auction = event("04", 30020, 1_700_000_000L, """{"id":"a1","name":"Painting","starting_bid":1000,"start_date":1700000000,"duration":3600}""", arrayOf("d", "a1")) as AuctionEvent
-        assertTrue(cache.consumePinned(auction))
+        assertTrue(pins.consume(cache, auction))
 
         val low = event("10", 1021, 1_700_000_100L, "1500", arrayOf("e", auction.id), author = bidder1)
         val high = event("11", 1021, 1_700_000_200L, "3000", arrayOf("e", auction.id), author = bidder2)

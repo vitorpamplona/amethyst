@@ -20,9 +20,8 @@
  */
 package com.vitorpamplona.amethyst.commons.model.observables
 
-import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.EventCache
-import com.vitorpamplona.quartz.nip01Core.core.Event
+import com.vitorpamplona.amethyst.commons.model.cache.NotePins
 import com.vitorpamplona.quartz.nip01Core.crypto.KeyPair
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSignerSync
@@ -47,19 +46,13 @@ class CandidateSetTest {
     private val signer = NostrSignerSync(KeyPair())
     private val relay = NormalizedRelayUrl("wss://relay.example.com/")
 
-    // The cache holds notes weakly (LargeSoftCache) and nothing else references these, so a GC
-    // during the walk would drop some and the snapshot would come back short.
-    private val pinned = mutableListOf<Note>()
-
-    private fun EventCache.consumePinned(event: Event) {
-        pinned.add(getOrCreateNote(event.id))
-        justConsume(event, relay, true)
-    }
+    // Nothing else references these notes: without the pins a GC during the walk would drop some.
+    private val pins = NotePins()
 
     @Test
     fun aRebuildDuringTheBackgroundWalkWaitsForItInsteadOfWalkingAgain() {
         val cache = EventCache()
-        repeat(50) { cache.consumePinned(signer.sign(1_000L + it, TextNoteEvent.KIND, emptyArray(), "n$it")) }
+        repeat(50) { pins.consume(cache, signer.sign(1_000L + it, TextNoteEvent.KIND, emptyArray(), "n$it"), relay) }
 
         val walkStarted = CountDownLatch(1)
         val slowFilter =
@@ -85,7 +78,7 @@ class CandidateSetTest {
     @Test
     fun theFirstSnapshotStartsTheSetAndReturnsItsWalk() {
         val cache = EventCache()
-        repeat(10) { cache.consumePinned(signer.sign(2_000L + it, TextNoteEvent.KIND, emptyArray(), "m$it")) }
+        repeat(10) { pins.consume(cache, signer.sign(2_000L + it, TextNoteEvent.KIND, emptyArray(), "m$it"), relay) }
 
         val scope = CoroutineScope(SupervisorJob())
         try {
