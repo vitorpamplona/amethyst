@@ -95,8 +95,13 @@ class HostileInputTest {
     @Test
     fun deepGluedQuotes() = check("glued quotes", ">".repeat(3000) + " deep", "deep")
 
+    /**
+     * Each level indents two more spaces, so the input grows with the square of the depth: 2,000
+     * levels was 4 MB of spaces, which the Markdown parser alone took over 3 s to read in the
+     * iOS simulator's debug build. 500 levels (250 KB) is still 15 times [Document.MAX_DEPTH].
+     */
     @Test
-    fun deepLists() = check("lists", (0 until 2000).joinToString("\n") { "  ".repeat(it) + "- item$it" }, "item0")
+    fun deepLists() = check("lists", (0 until 500).joinToString("\n") { "  ".repeat(it) + "- item$it" }, "item0")
 
     @Test
     fun deepEmphasis() = check("emphasis", "*_".repeat(5000) + "deep" + "_*".repeat(5000), "deep")
