@@ -1,3 +1,5 @@
 build/
 /xcode/Amethyst.xcodeproj/
 /xcode/Amethyst/Info.plist
+# build-arti-ios.sh staging, left behind only if it was killed
+/libs/.arti-staging.*/

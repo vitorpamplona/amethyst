@@ -255,11 +255,12 @@ tools/arti-build/
 ├── build-arti.sh        # Build script (Android targets, shipped in APK)
 ├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
 ├── build-arti-ios.sh    # Build script (iOS static libraries, C ABI) — see "iOS"
-├── IOS_XCODE_VERSION    # Xcode the iOS archives were measured with (warn-only)
+├── IOS_XCODE_VERSION    # Pinned Xcode for the iOS archives (reproducibility)
+├── verify-reproducible-ios.sh # Two clean iOS builds (one from elsewhere) + compare with the committed archives
 ├── verify-reproducible.sh # Builds twice + diffs to prove byte-for-byte reproducibility
 ├── include/
 │   └── arti_ffi.h       # C header of the iOS ABI (hand-written, checked by build-arti-ios.sh)
-├── out/                 # build-arti-ios.sh output, git-ignored
+├── out/                 # build-arti-ios.sh logs, git-ignored (the archives go to iosApp/libs/arti)
 └── src/
     ├── lib.rs           # JNI bridge (Rust → Kotlin)
     └── ffi.rs           # C ABI for iOS, only with `--features ffi`
@@ -357,48 +358,68 @@ same, and `verify-reproducible.sh` passes on the changed ones (results in the pl
 
 ### Building
 
+iOS follows the Android model: the archives are built here by hand and **committed**, in
+`iosApp/libs/arti/` (the counterpart of `amethyst/src/main/jniLibs/`). Building the app or its
+tests only reads them, so neither needs Rust; only a change to this directory does.
+
 ```bash
 cd tools/arti-build
-./build-arti-ios.sh                              # device + simulator
+./build-arti-ios.sh                              # device + simulator, into iosApp/libs/arti
 ./build-arti-ios.sh --target=aarch64-apple-ios-sim
+./verify-reproducible-ios.sh                     # then prove they reproduce, and commit them
 ```
 
-You rarely run it by hand: `:iosApp:buildArtiIos` runs it before anything that links Arti (the
-app, from Xcode's pre-build step, and the simulator tests) and is up to date while its inputs
-(`src/`, `include/`, `Cargo.*`, `ARTI_VERSION`, the toolchain and the script) are unchanged. From
-Xcode it builds only the slice of the SDK being built (`PLATFORM_NAME`); elsewhere both. It needs
-macOS, Xcode and rustup; the two iOS targets are added on first use. The first build takes about
-2.5 minutes for both targets, then about 35 seconds per target after a change to `src/`.
-
-Output goes to `out/ios/`, which git ignores:
+Run it after any change to `src/`, `include/`, `Cargo.*`, `ARTI_VERSION`, `rust-toolchain.toml`,
+`IOS_XCODE_VERSION`, `repro-env.sh` or `build-arti-ios.sh`, and commit `iosApp/libs/arti` with that
+change, as you would the `.so` files; `:iosApp:verifyArtiIosArchives` (and so CI) fails until you
+do. It needs macOS, the pinned Xcode (another is refused; `--any-xcode` builds anyway) and rustup;
+the two iOS targets are added on first use. It builds into a staging directory and moves the
+archives and `BUILD_INFO` into place only once every check passed, so a failed run leaves the
+committed files alone.
+About 70 seconds per target cold, 35 after a change to `src/`.
 
 ```
-out/ios/
-├── aarch64-apple-ios/libarti.a       # device, ~18 MB unlinked
-├── aarch64-apple-ios-sim/libarti.a   # simulator, ~18 MB unlinked
-├── Arti.xcframework                  # both slices + header (only when both are built; unused by the app)
-├── include/arti_ffi.h
-└── BUILD_INFO                        # rustc, Xcode, sha256 per slice, native-static-libs
+iosApp/libs/arti/                     # committed
+├── aarch64-apple-ios/libarti.a       # device, ~12.7 MB (debug info stripped)
+├── aarch64-apple-ios-sim/libarti.a   # simulator, ~12.7 MB
+└── BUILD_INFO                        # rustc, Xcode, SDKs, native-static-libs, per slice its
+                                      # sha256 and the digest of the inputs it was built from
 ```
 
-Why not committed, unlike Android's `.so`: about 36 MB per Arti bump (both slices, unlinked
-objects), against about 5 MB linked. Committing them would want Git LFS or a release asset
-checked by SHA-256; building them where the iOS app is built needs only rustup. That is a
-maintainer call, recorded in the plan.
+What committing costs: git stores the two archives compressed, about 8.3 MB per Arti bump,
+against about 11.3 MB for Android's four `.so` files. Before stripping they were 18.9 MB each
+(11.8 MB compressed); `strip -S` removes the DWARF of Rust's prebuilt std and of ring's `-gfull`
+objects, which nothing needs: linked into a stripped app the result is the same size.
 
 How the iOS build finds them:
 
 - **Compiling** `:iosApp` needs only `include/arti_ffi.h` (committed): the cinterop
   (`iosApp/src/nativeInterop/cinterop/arti.def`) names the header, not the library. The cinterop
   and `src/iosArtiMain` are set up on a macOS host only (cinterop needs the Apple SDK).
-- **Test executables** link `out/ios/<triple>/libarti.a` with `-larti -liconv`
-  (`iosApp/build.gradle.kts`); the link task depends on `buildArtiIos` and takes the archive as
-  an input, so a rebuilt archive relinks.
-- **The app** (B12d): `AmethystKit` is a static framework, so Kotlin/Native leaves its `_arti_*`
+- **`:iosApp:verifyArtiIosArchives`**, like Android's `verifyNativeAbis`: both archives must exist
+  and be static archives whose every member is an arm64 Mach-O object built for the slice's
+  platform (the `LC_BUILD_VERSION` / `LC_VERSION_MIN_IPHONEOS` load commands: iOS in the device
+  slice, the iOS simulator in the other, so swapped slices fail), export every function the
+  header declares, and match `BUILD_INFO`: its sha256 per slice, its Xcode against
+  `IOS_XCODE_VERSION`, and its `<triple>.inputs` against the digest of the sources here now. So
+  a change to this directory that lands without rebuilt archives fails CI. The test links and
+  Xcode's pre-build step depend on it, so a missing or wrong archive fails with the fix instead
+  of with undefined symbols. It streams the archives and writes a stamp, so it is up to date (and
+  cacheable) until an input changes.
+
+  The input digest, computed alike by `build-arti-ios.sh` (`inputs_digest`,
+  `--print-inputs-digest`) and the task: for `ARTI_VERSION`, `Cargo.lock`, `Cargo.toml`,
+  `IOS_XCODE_VERSION`, `build-arti-ios.sh`, `include/arti_ffi.h`, `repro-env.sh`,
+  `rust-toolchain.toml` and every `src/*.rs` (paths relative to `tools/arti-build`, sorted
+  bytewise), one line `"<hex sha256 of the file>  <path>\n"` each (the format of `shasum -a 256`),
+  and the sha256 of those lines concatenated. Change the list or the format in both places; a
+  build followed by the task shows at once whether they still agree.
+- **Test executables** link `iosApp/libs/arti/<triple>/libarti.a` with `-larti -liconv`
+  (`iosApp/build.gradle.kts`) and take the archive as a link input, so a new one relinks.
+- **The app:** `AmethystKit` is a static framework, so Kotlin/Native leaves its `_arti_*`
   references undefined and Xcode resolves them when it links the app:
-  `iosApp/xcode/project.yml` sets `LIBRARY_SEARCH_PATHS` to `out/ios/<triple>` per SDK and adds
-  `-larti -liconv`. Its pre-build step runs `:iosApp:embedAndSignAppleFrameworkForXcode`, which
-  depends on `buildArtiIos`, so building the app in Xcode (or with `xcodebuild`) builds Arti first.
+  `iosApp/xcode/project.yml` sets `LIBRARY_SEARCH_PATHS` to `iosApp/libs/arti/<triple>` per SDK
+  and adds `-larti -liconv`.
 
 Differences from the Android build:
 
@@ -409,12 +430,58 @@ Differences from the Android build:
 - `IPHONEOS_DEPLOYMENT_TARGET=16.0`, matching `iosApp/xcode/project.yml`.
 - `fs-mistrust` is off (`dangerously_trust_everyone`), as on every non-Android target: the iOS
   app container is OS-sandboxed, and the simulator's container sits under the developer's home.
-- Reproducibility is not claimed yet. Xcode's clang compiles `ring`, `zstd-sys` and
-  `libsqlite3-sys`, so it is an input like the NDK; `IOS_XCODE_VERSION` records the Xcode the
-  archives were measured with and the script only warns on a mismatch. One data point: two builds
-  from fresh Arti clones at the canonical path, on the same Mac, gave the same archive sha256s.
+- Reproducible, with the Xcode as a pin of its own; see "iOS reproducibility" below.
 - Xcode's `nm` cannot read the `compiler_builtins` members (they carry bitcode from Rust's
   newer LLVM) and exits 1; the script ignores that. The linker is unaffected.
+
+### iOS reproducibility
+
+As for the Android `.so`, anyone can rebuild the committed archives from a tag and confirm the
+bytes match:
+
+```bash
+./verify-reproducible-ios.sh                 # two clean builds, then git diff against the committed ones
+./verify-reproducible-ios.sh --any-xcode     # another Xcode: reproducibility only (bytes will differ)
+```
+
+Its first build writes `iosApp/libs/arti` (through `build-arti-ios.sh`'s staging, so only a
+successful build replaces anything), so a clean `git diff` afterwards is the proof that the
+committed archives and `BUILD_INFO` are the reproducible ones. With `--any-xcode` both builds go
+to scratch directories and `iosApp/libs/arti` is left alone.
+
+The second of its two builds runs from a copy of `tools/arti-build` (without `out/` and other
+build products) at another path, with an empty `CARGO_HOME` elsewhere whose path holds a space,
+another `HOME` and another `TMPDIR`, so it sees what another machine sees; neither build inherits
+the calling shell's environment; two builds in one place
+cannot show a leaked path. Both compile at the canonical `/tmp/amethyst-arti-build`.
+
+| Source of non-determinism | Pinned by |
+|---|---|
+| rustc, std and the iOS targets | `rust-toolchain.toml` |
+| Xcode: the clang that compiles `ring`, `zstd-sys`, `libsqlite3-sys`, the SDK, and the `strip` that post-processes the archives | `IOS_XCODE_VERSION`; both scripts refuse another (override: `--any-xcode`), and `verifyArtiIosArchives` checks `BUILD_INFO`'s |
+| the symbol table `strip` rewrites (it stamped the builder's uid/gid and the time on `__.SYMDEF`) | `ZERO_AR_DATE=1` |
+| dependency versions | `Cargo.lock`, `--locked` |
+| paths rustc embeds | `--remap-path-prefix` (`repro-env.sh`) |
+| paths the C and assembly objects embed (`ring` builds them with `-gfull`: each source under `CARGO_HOME`, the compile directory, the SDK under the Xcode install) | `-ffile-prefix-map` for `CARGO_HOME`, the Arti clone and Xcode's developer dir, each in every spelling (as given, normalised, symlinks resolved), through `CFLAGS_<target>` (iOS targets only, so Android's bytes cannot move), shell-quoted with `CC_SHELL_ESCAPED_FLAGS=1` so a path with a space (`/Applications/Xcode 27.1.app`) stays one flag; rustc's maps go through `CARGO_ENCODED_RUSTFLAGS` for the same reason |
+| the caller's environment (Xcode's pre-build phase exports its build settings; a stray `RUSTFLAGS`, `RUSTC_BOOTSTRAP`, `RUSTUP_TOOLCHAIN`, `CARGO_UNSTABLE_*`, `CFLAGS`, `CC_*`, a hyphenated `CFLAGS_aarch64-apple-ios` or `SDKROOT`) | every tool runs under `env -i` with an allowlist (`HOME`, `TMPDIR`, `USER`, `DEVELOPER_DIR`, `RUSTUP_HOME`, proxies) and a fixed `PATH` (rustup's proxies, then `/usr/bin` and the system dirs, since cc-rs finds `clang` on it); the toolchain is named with `RUSTUP_TOOLCHAIN` from `rust-toolchain.toml` |
+| cargo config files (`[env]`, `[profile]`, `[build] rustflags`) in `CARGO_HOME` or above the working directory | cargo runs in the canonical build path with a `CARGO_HOME` of its own (`/tmp/amethyst-arti-build/cargo-home`, whose `registry/` and `git/` link to the real ones, so the downloads are shared); a `.cargo/config*` above the build path (`/tmp/.cargo/config.toml`) is refused |
+| deployment target, panic strategy | `IPHONEOS_DEPLOYMENT_TARGET=16.0` and `panic = "unwind"`, set in the script |
+
+What was measured (2026-11-27, one Mac, Xcode 27.1): before the C path mapping, a build from
+another checkout and `CARGO_HOME` differed from the first in exactly `ring`'s 23 objects, by those
+absolute paths. After it, the simulator archive was byte-identical across a different checkout
+path, a different `CARGO_HOME`, `DEVELOPER_DIR` reaching Xcode through a symlink, and a calling
+environment with `CFLAGS=-O0`, `RUSTFLAGS="-C opt-level=0"`, `CC_aarch64_apple_ios_sim=/usr/bin/false`,
+`SDKROOT=/nonexistent` and another `TMPDIR`. A `CARGO_HOME` under `/var/folders` then still
+leaked, twice: clang records the compile directory with symlinks resolved (`/private/var/…`),
+and cargo hands the build scripts `CARGO_HOME` verbatim (`…/T//…`, from a `TMPDIR` ending in
+`/`). So each path is mapped in every spelling. The only absolute paths left in the archive are
+virtual (`/cargo`, `/arti`, `/xcode`, `/rustc/<hash>`) or come from Rust's own prebuilt `std`
+(`/Applications/Xcode_26.2.app`, fixed by the toolchain pin). Archive members carry uid/gid 0 and
+mtime 0. **Not yet verified:** the same bytes from a second Mac with the same Xcode.
+
+The app binary itself cannot be byte-reproducible (code signing, and the App Store re-processes
+it), so the claim stops at the committed archives that go into it.
 
 ### Tests
 

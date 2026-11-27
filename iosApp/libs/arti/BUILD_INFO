@@ -1,0 +1,13 @@
+arti: arti-v2.6.0
+rustc: rustc 1.98.1 (48a229cea 2026-09-01)
+xcode: 27.1(27A9275)
+iphoneos_sdk: 27.1 (24A94232)
+iphonesimulator_sdk: 27.1 (24A94232)
+iphoneos_deployment_target: 16.0
+panic: unwind
+strip: -S
+native-static-libs: -liconv -lSystem -lc -lm
+aarch64-apple-ios: 645503512ea51c61354d7f1960618f86773af286a48388cd98f48988c74f9a75
+aarch64-apple-ios.inputs: 85bc81c484c141ac8ce308d9d26771eaa4d78516fd6895af38fbb65835800be6
+aarch64-apple-ios-sim: 42de080f0eb4045dbdd0e3ec76326234219f78686fc9e4e58e6b49b723f37bf9
+aarch64-apple-ios-sim.inputs: 85bc81c484c141ac8ce308d9d26771eaa4d78516fd6895af38fbb65835800be6
