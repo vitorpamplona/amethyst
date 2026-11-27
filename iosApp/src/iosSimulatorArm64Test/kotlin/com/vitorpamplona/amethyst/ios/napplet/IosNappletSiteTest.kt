@@ -400,7 +400,7 @@ class IosNappletSiteTest {
     // ---- the harness ----
 
     private class Opened(
-        val core: NappletSessionCore<String>,
+        val core: NappletSessionCore,
         val engine: IosNappletWebEngine,
     )
 
@@ -421,7 +421,7 @@ class IosNappletSiteTest {
         val shell = NSString.stringWithContentsOfFile(NappletTestFiles.SHELL_HTML, NSUTF8StringEncoding, null) ?: error("no shell at ${NappletTestFiles.SHELL_HTML}")
         val route = IosNappletStoreRoute(stores, account, plan.usesNetwork, { torPort }, awaitPort, { true }, { true })
         val core =
-            NappletSessionCore(
+            NappletSessionCore.inProcess(
                 owner = "site-" + Random.nextLong(),
                 launch = launch,
                 accountPubKey = account,

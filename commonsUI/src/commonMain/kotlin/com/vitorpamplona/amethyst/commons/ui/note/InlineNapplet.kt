@@ -310,15 +310,18 @@ private fun Poster(
 /**
  * A tap on a running app is the app's, whether it reached the page or not (it is still loading,
  * say): it must never open the note around it. Presses and releases are consumed in the
- * [PointerEventPass.Initial] pass, before the note's click detector looks at them, so the note
- * neither opens nor takes the keyboard (Space would then open it); the surface below forwards
- * them to the page all the same. Movement is left alone, so the feed still scrolls.
+ * [PointerEventPass.Main] pass, after the surface has had them and before the note's click
+ * detector (an ancestor, so later in that pass) looks at them, so the note neither opens nor takes
+ * the keyboard (Space would then open it). Not in the Initial pass: that one runs outside in, so it
+ * would consume them before Android's view interop, which hands a press and a release to the
+ * sandbox's view only while nothing has consumed them, and no tap would reach the page.
+ * Movement is left alone, so the feed still scrolls.
  */
 private fun Modifier.swallowTaps(): Modifier =
     pointerInput(Unit) {
         awaitPointerEventScope {
             while (true) {
-                val event = awaitPointerEvent(PointerEventPass.Initial)
+                val event = awaitPointerEvent(PointerEventPass.Main)
                 event.changes.forEach {
                     if (it.changedToDownIgnoreConsumed() || it.changedToUpIgnoreConsumed()) it.consume()
                 }

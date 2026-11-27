@@ -153,26 +153,27 @@ class CefNappletSession(
     // of choosing a separate jar as Android does.
     private val plan = NappletLaunchPlan.of(launch, accountPubKey, useTor, runtime.nappletBlobsUseTor(), sharedStorageJar = true)
 
-    private val core: NappletSessionCore<CefNappletSession> =
-        NappletSessionCore(
-            owner = this,
-            launch = launch,
-            accountPubKey = accountPubKey,
-            plan = plan,
-            account = account,
-            broker = broker,
-            services = NappletSessionServices(runtime.attendance, runtime.liveSubscriptions, runtime.incBus) { runtime.intents },
-            route = Routes(),
-            files = ::filesFor,
-            shellHtml = { NappletWebResources.shellHtml() },
-            shimJs = { NappletWebResources.shimJs().decodeToString() },
-            links = Links,
-            filePort = filePort,
-            // A window is looked at for as long as it is open.
-            attendedWhenShown = true,
-            // The cache is shared, so it is trimmed as windows close.
-            onClosed = runtime::trimBlobCache,
-        ).also { it.engine = Engine() }
+    private val core: NappletSessionCore =
+        NappletSessionCore
+            .inProcess(
+                owner = this,
+                launch = launch,
+                accountPubKey = accountPubKey,
+                plan = plan,
+                account = account,
+                broker = broker,
+                services = NappletSessionServices(runtime.attendance, runtime.liveSubscriptions, runtime.incBus) { runtime.intents },
+                route = Routes(),
+                files = ::filesFor,
+                shellHtml = { NappletWebResources.shellHtml() },
+                shimJs = { NappletWebResources.shimJs().decodeToString() },
+                links = Links,
+                filePort = filePort,
+                // A window is looked at for as long as it is open.
+                attendedWhenShown = true,
+                // The cache is shared, so it is trimmed as windows close.
+                onClosed = runtime::trimBlobCache,
+            ).also { it.engine = Engine() }
 
     val state: StateFlow<NappletSessionState> get() = core.state
 

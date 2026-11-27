@@ -20,6 +20,10 @@
  */
 package com.vitorpamplona.amethyst.napplethost
 
+import android.os.Bundle
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletFailure
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionState
+
 /**
  * Messenger contract between the main app (client) and [NappletHostService] (provider, in the keyless
  * `:napplet` process) for an **embedded** nsite/napplet — the in-app-tab counterpart of the full-screen
@@ -164,6 +168,44 @@ object NappletEmbedContract {
      * spinner. A webxdc archive downloads before its page loads. No [KEY_DOWNLOAD_BYTES]: the download ended.
      */
     const val MSG_DOWNLOAD = 28
+
+    /**
+     * Provider → client: where the tab's launch is in the shared session core ([KEY_SESSION_STATE], and
+     * [KEY_SESSION_FAILURE] when it failed), so a run inside a note says what every host says
+     * (`inlineStatusOf`): waiting for Tor, no Tor, failed, showing. Read with [sessionStateOf].
+     */
+    const val MSG_SESSION_STATE = 29
+
+    const val KEY_SESSION_STATE = "sessionState"
+    const val KEY_SESSION_FAILURE = "sessionFailure"
+
+    /** [state] as [MSG_SESSION_STATE]'s data. */
+    fun putSessionState(
+        data: Bundle,
+        state: NappletSessionState,
+    ) {
+        val name =
+            when (state) {
+                NappletSessionState.Loading -> "LOADING"
+                NappletSessionState.WaitingForTor -> "WAITING_FOR_TOR"
+                NappletSessionState.Showing -> "SHOWING"
+                is NappletSessionState.Failed -> {
+                    data.putString(KEY_SESSION_FAILURE, state.reason.name)
+                    "FAILED"
+                }
+            }
+        data.putString(KEY_SESSION_STATE, name)
+    }
+
+    /** The state in [data], or null when it carries none. */
+    fun sessionStateOf(data: Bundle?): NappletSessionState? =
+        when (data?.getString(KEY_SESSION_STATE)) {
+            "LOADING" -> NappletSessionState.Loading
+            "WAITING_FOR_TOR" -> NappletSessionState.WaitingForTor
+            "SHOWING" -> NappletSessionState.Showing
+            "FAILED" -> NappletSessionState.Failed(NappletFailure.entries.firstOrNull { it.name == data.getString(KEY_SESSION_FAILURE) } ?: NappletFailure.ENGINE)
+            else -> null
+        }
 
     const val KEY_FIND_QUERY = "findQuery"
     const val KEY_FIND_FORWARD = "findForward"

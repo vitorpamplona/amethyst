@@ -94,7 +94,7 @@ class NappletSessionCoreTest {
     private fun broker() = NappletBroker(signer, NappletPermissionLedger(InMemoryNappletPermissionStore()), Prompt(), relay = Relay())
 
     private class Opened(
-        val core: NappletSessionCore<String>,
+        val core: NappletSessionCore,
         val engine: FakeNappletWebEngine,
         val route: FakeRoute,
         val files: FakeFiles,
@@ -113,26 +113,27 @@ class NappletSessionCoreTest {
     ): Opened {
         val links = FakeLinks()
         val core =
-            NappletSessionCore(
-                owner = owner,
-                launch = launch,
-                accountPubKey = account,
-                plan = NappletLaunchPlan.of(launch, account, useTor, appletBlobsUseTor, sharedStorageJar = true),
-                account = null,
-                broker = broker(),
-                services = services,
-                route = route,
-                files = { files },
-                shellHtml = { shellTemplate },
-                shimJs = { "/*shim*/" },
-                links = links,
-                filePort = null,
-                attendedWhenShown = attended,
-            ).also { it.engine = engine }
+            NappletSessionCore
+                .inProcess(
+                    owner = owner,
+                    launch = launch,
+                    accountPubKey = account,
+                    plan = NappletLaunchPlan.of(launch, account, useTor, appletBlobsUseTor, sharedStorageJar = true),
+                    account = null,
+                    broker = broker(),
+                    services = services,
+                    route = route,
+                    files = { files },
+                    shellHtml = { shellTemplate },
+                    shimJs = { "/*shim*/" },
+                    links = links,
+                    filePort = null,
+                    attendedWhenShown = attended,
+                ).also { it.engine = engine }
         return Opened(core, engine, route, files, links)
     }
 
-    private suspend fun NappletSessionCore<String>.settle(): NappletSessionState =
+    private suspend fun NappletSessionCore.settle(): NappletSessionState =
         withContext(Dispatchers.Default) {
             withTimeout(5_000) { state.first { it is NappletSessionState.Showing || it is NappletSessionState.Failed } }
         }
@@ -235,7 +236,8 @@ class NappletSessionCoreTest {
             val launch = TestLaunches.napplet(author)
             val engine = FakeNappletWebEngine()
             val core =
-                NappletSessionCore("w", launch, account, NappletLaunchPlan.of(launch, account, false, true, true), null, broker(), services, waiting, { FakeFiles() }, { shellTemplate }, { "" }, FakeLinks(), null)
+                NappletSessionCore
+                    .inProcess("w", launch, account, NappletLaunchPlan.of(launch, account, false, true, true), null, broker(), services, waiting, { FakeFiles() }, { shellTemplate }, { "" }, FakeLinks(), null)
                     .also { it.engine = engine }
             core.start()
             withContext(Dispatchers.Default) { withTimeout(5_000) { core.state.first { it == NappletSessionState.WaitingForTor } } }

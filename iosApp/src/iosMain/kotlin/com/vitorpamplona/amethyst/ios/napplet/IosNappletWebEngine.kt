@@ -166,7 +166,7 @@ class IosNappletWebEngine(
     private val inspectable: Boolean = Platform.isDebugBinary,
 ) : NappletWebEngine {
     /** Set once, before the core starts. */
-    lateinit var core: NappletSessionCore<*>
+    lateinit var core: NappletSessionCore
 
     /** Shows the page's dialogs; null answers them without asking. */
     @Volatile

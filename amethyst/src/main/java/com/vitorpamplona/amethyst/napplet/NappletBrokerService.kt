@@ -39,11 +39,9 @@ import com.vitorpamplona.amethyst.commons.connectedApps.signers.NostrSignerPermi
 import com.vitorpamplona.amethyst.commons.favorites.FavoriteApp
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.napplet.DataStoreNappletStorage
-import com.vitorpamplona.amethyst.commons.napplet.NappletActingRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletAttendance
 import com.vitorpamplona.amethyst.commons.napplet.NappletBroker
 import com.vitorpamplona.amethyst.commons.napplet.NappletCapability
-import com.vitorpamplona.amethyst.commons.napplet.NappletHeldRequests
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentity
 import com.vitorpamplona.amethyst.commons.napplet.NappletIdentityWatch
 import com.vitorpamplona.amethyst.commons.napplet.NappletIncBus
@@ -54,6 +52,8 @@ import com.vitorpamplona.amethyst.commons.napplet.NappletRequestRouter
 import com.vitorpamplona.amethyst.commons.napplet.fs.NappletFsSession
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletProtocolJson
 import com.vitorpamplona.amethyst.commons.napplet.protocol.NappletResponse
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionRouting
+import com.vitorpamplona.amethyst.commons.napplet.session.NappletSessionServices
 import com.vitorpamplona.amethyst.favorites.WebShortcuts
 import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletFilePort
 import com.vitorpamplona.amethyst.napplet.gateways.AndroidNappletGateways
@@ -67,7 +67,6 @@ import com.vitorpamplona.quartz.nip5dNapplets.NappletManifest
 import com.vitorpamplona.quartz.nip5dNapplets.named.NamedNappletEvent
 import com.vitorpamplona.quartz.utils.Log
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -110,49 +109,83 @@ class NappletBrokerService : Service() {
 
     private val incoming by lazy { Messenger(Handler(Looper.getMainLooper(), ::handleMessage)) }
 
-    // Live relay subscriptions, keyed by the requesting surface plus the applet's subId. The account comes per-open from the
-    // requesting surface's launch token, so a surface's REQs always target the account it acts as.
-    // Which surfaces the user is looking at: relay reads are decrypted for a page only while it is.
-    private val attendance = NappletAttendance<Messenger>()
-    private val liveSubscriptions = NappletLiveSubscriptions(scope, attendance)
-
-    // NAP-RESOURCE cancellation is keyed by the trusted launch token plus the caller's request id.
-    // Cancelling removes the job before it can emit a late terminal envelope to the sandbox.
-    private val resourceRequests = ConcurrentHashMap<String, Job>()
-
-    // NAP-FS: what the user picked for each running surface, keyed by its launch token. Picks belong to
-    // that one surface, so they go when it gives its token back (or when this service ends).
-    private val files = ConcurrentHashMap<String, NappletFsSession>()
-    private val filePort by lazy { AndroidNappletFilePort(applicationContext) }
-
-    private fun filesFor(
-        launchToken: String?,
-        declared: Set<NappletCapability>,
-    ): NappletFsSession? {
-        if (launchToken == null || NappletCapability.FS !in declared) return null
-        return files.getOrPut(launchToken) { NappletFsSession(filePort) }
-    }
-
-    private fun dropFiles(launchToken: String) {
-        files.remove(launchToken)?.close()
-    }
-
-    // NAP-INC between the live napplet surfaces. A surface is its reply Messenger plus the launch token
-    // it runs under, so a tab that loads another napplet becomes a new endpoint, not the old one.
-    private val incBus = NappletIncBus<IncEndpoint>()
-
-    private data class IncEndpoint(
+    /**
+     * One launch as the broker serves it: the surface's reply Messenger plus the launch token it runs
+     * under. A sandbox session has a Messenger of its own, so a retry or a tab that loads another napplet
+     * is a new launch here; a browser tab is one Messenger with a token per origin.
+     */
+    private data class Surface(
         val replyTo: Messenger,
         val launchToken: String,
     )
 
-    // NAP-INTENT: a handler is one of the napplets the user pinned, opened full screen. Keyed by the
-    // launch token the target runs under, which is what its `intent.ready` arrives with.
+    // What every launch shares, keyed by its [Surface]: which ones the user is looking at (relay reads are
+    // decrypted for a page only while it is), the live relay subscriptions (whose account comes from the
+    // launch token, so a surface's REQs always target the account it acts as) and NAP-INC between them.
+    // NAP-INTENT keys a launch by its token instead: that is what the launcher knows before the target's
+    // surface exists, and what its `intent.ready` arrives with.
+    private val attendance = NappletAttendance<Any>()
+    private val liveSubscriptions = NappletLiveSubscriptions<Any>(scope, attendance)
+    private val incBus = NappletIncBus<Any>()
+
+    // NAP-INTENT: a handler is one of the napplets the user pinned, opened full screen.
     private val intents by lazy {
-        NappletIntentDispatcher(
+        NappletIntentDispatcher<Any>(
             catalog = { NappletIntentCatalog.of(Amethyst.instance.favoriteApps) },
             launch = { handler -> withContext(Dispatchers.Main) { launchHandler(handler.manifest) } },
         )
+    }
+
+    private val services = NappletSessionServices(attendance, liveSubscriptions, incBus) { intents }
+
+    // NAP-FS's picker and file bytes, for the launches that declared FS (each has its own picks).
+    private val filePort by lazy { AndroidNappletFilePort(applicationContext) }
+
+    // The shared routing of each live launch: decode → broker → encode, subscriptions, NAP-INC, NAP-INTENT,
+    // identity changes, cancellable resource requests, and decrypting reads that wait for the user.
+    private val routings = ConcurrentHashMap<Surface, NappletSessionRouting<Any>>()
+
+    // The surfaces (reply Messengers) that last said the user is looking at them. A browser tab reports
+    // once for all its origins, and a launch whose first request comes later starts from it. Main thread.
+    private val attendedSurfaces = HashSet<Messenger>()
+
+    private fun routingFor(
+        surface: Surface,
+        session: NappletLaunchRegistry.Session,
+    ): NappletSessionRouting<Any> =
+        routings.getOrPut(surface) {
+            NappletSessionRouting<Any>(
+                owner = surface,
+                identity = session.identity,
+                declared = session.declared,
+                // The launch token decides whose key signs, not the active account: a surface opened by one
+                // account can never be handed another's signer, even while it stays open across a switch.
+                accountPubKey = session.accountPubKey,
+                account = { accountFor(session.accountPubKey) },
+                broker = { brokerFor(session.accountPubKey) },
+                services = services,
+                // NAP-FS: what the user picks belongs to this one launch, and goes when it does.
+                fsSession = if (NappletCapability.FS in session.declared) NappletFsSession(filePort) else null,
+                scope = scope,
+                reply = { id, payload -> reply(surface.replyTo, id.orEmpty(), payload) },
+                push = { push(surface.replyTo, it) },
+                intentKey = surface.launchToken,
+                identityWatch = identityWatch,
+                identityWatchId = surface.launchToken,
+                readsWaitForAttendance = true,
+            ).also { if (surface.replyTo in attendedSurfaces) it.setAttended(true) }
+        }
+
+    /** Ends every launch [matches] picks: its subscriptions, channels, intents, picks and requests. */
+    private fun closeRoutings(matches: (Surface) -> Boolean) {
+        routings.keys.filter(matches).forEach { routings.remove(it)?.close() }
+    }
+
+    /** [token] will never be used again: whatever runs under it goes, with or without a launch here yet. */
+    private fun closeToken(token: String) {
+        closeRoutings { it.launchToken == token }
+        intents.remove(token)
+        identityWatch.stop(token)
     }
 
     // Opens [manifest] in the sandbox host and returns the launch token it runs under, or null when refused.
@@ -189,11 +222,7 @@ class NappletBrokerService : Service() {
     override fun onCreate() {
         super.onCreate()
         // A token that the registry's cap pushed out was never given back: its surface is gone.
-        NappletLaunchRegistry.onEvicted = { token ->
-            dropFiles(token)
-            incBus.removeAll { endpoint -> endpoint.launchToken == token }
-            intents.remove(token)
-        }
+        NappletLaunchRegistry.onEvicted = { token -> closeToken(token) }
         scope.launch(Dispatchers.Main.immediate) {
             Amethyst.instance.uiPrefs.value.theme
                 .collect { broadcastTheme() }
@@ -222,11 +251,12 @@ class NappletBrokerService : Service() {
     override fun onBind(intent: Intent?): IBinder? = incoming.binder
 
     override fun onDestroy() {
+        closeRoutings { true }
         liveSubscriptions.closeAll()
         incBus.removeAll { true }
         identityWatch.stopAll()
         NappletLaunchRegistry.onEvicted = null
-        files.keys.toList().forEach(::dropFiles)
+        attendedSurfaces.clear()
         themeRecipients.clear()
         // Every applet/browser surface has unbound, so the "session" the user granted for is over.
         // The ledger and the broker cache are now app-wide singletons that outlive this service, so
@@ -262,23 +292,17 @@ class NappletBrokerService : Service() {
         // client's Messenger keeps a binder alive, which pins that surface's whole Activity (and its
         // WebView) in the `:napplet` process past onDestroy — reclaimable only by killing the process.
         if (msg.what == NappletIpc.MSG_RELEASE_CLIENT) {
-            msg.replyTo?.let {
-                incBus.removeAll { endpoint -> endpoint.replyTo == it }
-                liveSubscriptions.closeAllFor(it)
-                attendance.forget(it)
-                themeRecipients.remove(it)
+            msg.replyTo?.let { replyTo ->
+                closeRoutings { it.replyTo == replyTo }
+                attendedSurfaces.remove(replyTo)
+                themeRecipients.remove(replyTo)
             }
             // Tokens the surface will never use again: drop their sessions and whatever runs under them.
             // Only the surface that minted a token holds it (tokens are unguessable), so it can only ever
             // give back its own.
             msg.data?.getStringArray(NappletIpc.KEY_RELEASED_TOKENS)?.forEach { token ->
                 NappletLaunchRegistry.unregister(token)
-                incBus.removeAll { endpoint -> endpoint.launchToken == token }
-                intents.remove(token)
-                identityWatch.stop(token)
-                dropFiles(token)
-                val prefix = "$token\u0000"
-                resourceRequests.keys.filter { it.startsWith(prefix) }.forEach { key -> resourceRequests.remove(key)?.cancel() }
+                closeToken(token)
             }
             // Release its foreground lease too; otherwise a destroyed surface keeps the main process
             // pinned resumed until the lease watchdog expires it.
@@ -295,15 +319,15 @@ class NappletBrokerService : Service() {
         if (msg.what == NappletIpc.MSG_SET_ATTENDED) {
             val owner = msg.replyTo ?: return true
             val attended = msg.data?.getBoolean(NappletIpc.KEY_ATTENDED, false) ?: false
-            attendance.set(owner, attended)
+            if (attended) attendedSurfaces.add(owner) else attendedSurfaces.remove(owner)
+            // Encrypted events its subscriptions received meanwhile can be decrypted and delivered now.
+            routings.filterKeys { it.replyTo == owner }.values.forEach { it.setAttended(attended) }
             val token = msg.data?.getString(NappletIpc.KEY_LAUNCH_TOKEN)
             if (token != null && NappletLaunchRegistry.resolve(token)?.declared?.contains(NappletCapability.THEME) == true) {
                 themeRecipients[owner] = token
             } else {
                 themeRecipients.remove(owner)
             }
-            // Encrypted events its subscriptions received meanwhile can be decrypted and delivered now.
-            if (attended) liveSubscriptions.onAttended(owner)
             return true
         }
 
@@ -512,15 +536,13 @@ class NappletBrokerService : Service() {
         val payload = data.getString(NappletIpc.KEY_PAYLOAD) ?: return true
 
         val requestType = runCatching { NappletProtocolJson.readType(payload) }.getOrNull() ?: "napplet"
-        // Stamped now, before anything suspends: orders this request against a later close of its subscription.
-        val arrivedAt = liveSubscriptions.arrival()
 
         // Resolve the launch token to the trusted identity + declared set. The sandbox never states
         // its own coordinate, so a compromised :napplet process can only ever act as the napplet it
         // was launched as (it holds only its own token). An unknown token = no session; refuse.
         val launchToken = data.getString(NappletIpc.KEY_LAUNCH_TOKEN)
         val session = NappletLaunchRegistry.resolve(launchToken)
-        if (session == null) {
+        if (launchToken == null || session == null) {
             reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("Unknown napplet session.")))
             // Tell the surface its token is gone, so a browser tab re-mints instead of failing every call.
             if (launchToken != null) {
@@ -532,89 +554,9 @@ class NappletBrokerService : Service() {
             }
             return true
         }
-        val identity = session.identity
-        val declared = session.declared
-        val resourceRequestKey = "$launchToken\u0000$requestId"
-        if (requestType == "resource.cancel") {
-            resourceRequests.remove(resourceRequestKey)?.cancel()
-            return true
-        }
-        // NAP-INC is routed here, on the thread the message came in on, so a napplet's messages reach
-        // the bus in the order it sent them (the request coroutines below run on a thread pool).
-        // The bus only connects surfaces launched as the same account.
-        if (launchToken != null && requestType.startsWith("inc.")) {
-            when (val outcome = NappletRequestRouter.routeInc(declared, payload, requestType)) {
-                null -> {}
-                is NappletRequestRouter.Outcome.Inc -> {
-                    incBus.handle(IncEndpoint(replyTo, launchToken), session.accountPubKey, { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) }
-                    return true
-                }
-                is NappletRequestRouter.Outcome.Reply -> {
-                    reply(replyTo, requestId, outcome.payload)
-                    return true
-                }
-                else -> return true
-            }
-        }
-        // NAP-INTENT: an invoke may open the handler, which waits on the main thread, so it runs in a coroutine.
-        if (launchToken != null && requestType.startsWith("intent.")) {
-            when (val outcome = NappletRequestRouter.routeIntent(declared, payload, requestType)) {
-                null -> {}
-                is NappletRequestRouter.Outcome.Intent -> {
-                    scope.launch { intents.handle(launchToken, identity, { push(replyTo, it) }, outcome.request)?.let { reply(replyTo, requestId, it) } }
-                    return true
-                }
-                is NappletRequestRouter.Outcome.Reply -> {
-                    reply(replyTo, requestId, outcome.payload)
-                    return true
-                }
-                else -> return true
-            }
-        }
-        val tracksResourceRequest = requestType == "resource.bytes" || requestType == "resource.bytesMany"
-
-        val requestJob =
-            scope.launch(start = if (tracksResourceRequest) CoroutineStart.LAZY else CoroutineStart.DEFAULT) {
-                // The shared, host-agnostic router owns decode → broker → encode and the subscribe-vs-reply
-                // decision (it stays wire-identical with the future desktop host). This service only supplies
-                // the broker, the Messenger transport, and the live relay subscription each Outcome implies.
-                // The launch token decides whose key signs — not the active account. A surface opened by
-                // one account can never be handed another's signer, even while it stays open across a switch.
-                val broker = brokerFor(session.accountPubKey)
-                if (broker == null) {
-                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed("That account is no longer signed in.")))
-                    return@launch
-                }
-                // A query's results are decrypted with the user's key: while nobody is looking at the page it
-                // waits (as its sign / decrypt requests do), and gives up like them.
-                if (NappletActingRequests.readsForUser(requestType) && !attendance.awaitAttended(replyTo, NappletHeldRequests.MAX_AGE_MS)) {
-                    reply(replyTo, requestId, NappletProtocolJson.encodeResponse(requestType, NappletResponse.Failed(NappletHeldRequests.EXPIRED)))
-                    return@launch
-                }
-                when (val outcome = NappletRequestRouter.route(broker, identity, declared, payload, filesFor(launchToken, declared))) {
-                    is NappletRequestRouter.Outcome.Ignore -> {}
-                    is NappletRequestRouter.Outcome.Reply -> {
-                        reply(replyTo, requestId, outcome.payload)
-                        // NAP-IDENTITY has no watch/unwatch request. Once the consent-gated startup
-                        // snapshot succeeds, the runtime owns identity.changed delivery for this
-                        // trusted launch token until the broker service closes.
-                        if (requestType == "identity.getPublicKey" && outcome.response is NappletResponse.PublicKey && launchToken != null) {
-                            identityWatch.start(launchToken, session.accountPubKey) { push(replyTo, it) }
-                        }
-                    }
-                    is NappletRequestRouter.Outcome.OpenSubscription ->
-                        liveSubscriptions.open(replyTo, outcome.subId, outcome.filters, accountFor(session.accountPubKey), arrivedAt, outcome.relays, outcome.outbox, outcome.mayDecrypt) { push(replyTo, it) }
-                    is NappletRequestRouter.Outcome.CloseSubscription -> liveSubscriptions.close(replyTo, outcome.subId, arrivedAt)
-                    is NappletRequestRouter.Outcome.Push -> outcome.payloads.forEach { push(replyTo, it) }
-                    // Routed above, before this coroutine started.
-                    is NappletRequestRouter.Outcome.Inc, is NappletRequestRouter.Outcome.Intent -> {}
-                }
-            }
-        if (tracksResourceRequest) {
-            resourceRequests.put(resourceRequestKey, requestJob)?.cancel()
-            requestJob.invokeOnCompletion { resourceRequests.remove(resourceRequestKey, requestJob) }
-            requestJob.start()
-        }
+        // The shared routing, on the thread the message came in on, so a napplet's NAP-INC messages reach
+        // the bus in the order it sent them. Answers go back under the id the surface sent this with.
+        routingFor(Surface(replyTo, launchToken), session).handle(payload, requestId)
         return true
     }
 

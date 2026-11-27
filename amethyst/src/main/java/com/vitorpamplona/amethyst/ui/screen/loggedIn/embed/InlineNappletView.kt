@@ -38,6 +38,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.privacysandbox.ui.client.view.SandboxedSdkView
 import com.vitorpamplona.amethyst.commons.napplet.NappletInlineDownloads
+import com.vitorpamplona.amethyst.commons.napplet.ui.inlineStatusOf
 import com.vitorpamplona.amethyst.commons.ui.platform.InlineNappletStatus
 import com.vitorpamplona.amethyst.napplet.NappletLauncher
 import com.vitorpamplona.amethyst.napplethost.NappletHostContract
@@ -144,9 +145,18 @@ fun InlineNappletView(
     )
 }
 
-private fun EmbeddedLoadStatus.toInline(): InlineNappletStatus =
-    when {
+/**
+ * What the run says about itself: the shared core's state, as every host words it ([inlineStatusOf]),
+ * Tor said apart from other failures. A page that failed to load after the core showed it is a failure
+ * too; before the provider reports a state, the load alone decides.
+ */
+private fun EmbeddedLoadStatus.toInline(): InlineNappletStatus {
+    val core = session?.let { inlineStatusOf(it, painted = hasLoadedReal) }
+    return when {
+        core == InlineNappletStatus.WAITING_FOR_TOR || core == InlineNappletStatus.NO_TOR -> core
         failed -> InlineNappletStatus.FAILED
+        core != null -> core
         hasLoadedReal -> InlineNappletStatus.SHOWING
         else -> InlineNappletStatus.LOADING
     }
+}

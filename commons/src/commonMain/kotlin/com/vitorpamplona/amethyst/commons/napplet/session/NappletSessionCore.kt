@@ -157,29 +157,36 @@ interface NappletLinkOpener {
  * a site runs at its own origin under napplet.local and talks to the web through the claimed route;
  * only the shell may reach the bridge; every request is decided by the broker.
  */
-class NappletSessionCore<K : Any>(
-    /** The host's surface, which keys the shared [services]. */
-    private val owner: K,
+class NappletSessionCore(
     val launch: NappletLaunch,
-    /** The account that opened it: the launch keeps signing as this account, whoever is active later. */
-    val accountPubKey: HexKey,
     val plan: NappletLaunchPlan,
-    private val account: Account?,
-    private val broker: NappletBroker,
-    private val services: NappletSessionServices<K>,
     private val route: NappletRoutePort,
     /** The launch's files ([com.vitorpamplona.amethyst.commons.napplet.blobs.NappletBlobStore], webxdc, paper), fetched per [plan]. */
     private val files: (NappletLaunchPlan) -> NappletFiles,
     private val shellHtml: suspend () -> ByteArray,
     private val shimJs: suspend () -> String,
     private val links: NappletLinkOpener,
-    /** NAP-FS's picker and file bytes; null, or a launch that didn't declare FS, gets no FS session. */
-    filePort: NappletFilePort?,
+    /**
+     * Makes the launch's trusted half, which answers the page through `deliver`: [NappletSessionRouting]
+     * in-process ([inProcess]), or the IPC to Android's broker service.
+     */
+    trusted: (scope: CoroutineScope, deliver: (String) -> Unit) -> NappletTrustedBridge,
     /**
      * Whether the launch is attended as soon as it shows. Desktop's windows are; a host that knows when
      * its surface is on screen (iOS, Android) says so through [setAttended] instead.
      */
     private val attendedWhenShown: Boolean = false,
+    /**
+     * Whether the shim relays the focused text field to the host's keyboard: a surface drawn in another
+     * process (Android's embedded tabs) has none of its own.
+     */
+    private val imeProxy: Boolean = false,
+    /**
+     * Hands a batch of payloads to the shell's own document, for a browser whose bridge can answer the
+     * document that called it (Android's reply proxy). Null runs [NappletPageBridge.deliveryScript] through
+     * [NappletWebEngine.evaluateInShell].
+     */
+    toPage: ((List<String>) -> Unit)? = null,
     /** After the launch's teardown, before the engine's: a host trims its shared cache. */
     private val onClosed: () -> Unit = {},
     private val clock: () -> Long = NappletPageBridge.monotonicMillis(),
@@ -211,15 +218,10 @@ class NappletSessionCore<K : Any>(
     @Volatile
     private var openFiles: NappletFiles? = null
 
-    // NAP-FS: the files the user picked for this launch, gone when it closes.
-    private val fsSession: NappletFsSession? =
-        if (filePort != null && NappletCapability.FS in launch.declared) NappletFsSession(filePort) else null
-
     private val page: NappletPageBridge =
-        NappletPageBridge(scope, toTrusted = { routing.handle(it) }, evaluateInShell = { engine.evaluateInShell(it) }, clock = clock)
+        NappletPageBridge(scope, toTrusted = { routing.handle(it) }, evaluateInShell = { engine.evaluateInShell(it) }, clock = clock, toPage = toPage)
 
-    private val routing: NappletSessionRouting<K> =
-        NappletSessionRouting(owner, launch, accountPubKey, account, broker, services, fsSession, scope, send = page::deliver)
+    private val routing: NappletTrustedBridge = trusted(scope, page::deliver)
 
     private val coordinate get() = launch.identity.coordinate
 
@@ -265,6 +267,7 @@ class NappletSessionCore<K : Any>(
                 appOrigin = plan.appOrigin,
                 profile = launch.profile,
                 declaredDomains = launch.declaredDomains,
+                imeProxy = imeProxy,
                 shellHead = plan.shellHead(engine.bridgeHead()),
                 origins = plan.origins,
             )
@@ -313,11 +316,8 @@ class NappletSessionCore<K : Any>(
      * and the broker's decrypting reads wait for them.
      */
     fun setAttended(isAttended: Boolean) {
-        lock.withLock {
-            if (closed) return
-            services.attendance.set(owner, isAttended)
-        }
-        if (isAttended) services.liveSubscriptions.onAttended(owner)
+        if (closed) return
+        routing.setAttended(isAttended)
         page.setAttended(isAttended)
     }
 
@@ -448,5 +448,48 @@ class NappletSessionCore<K : Any>(
 
     companion object {
         private const val TAG = "NappletSessionCore"
+
+        /**
+         * A launch whose trusted half runs here, next to the page (Desktop, iOS): [NappletSessionRouting]
+         * over [broker], keyed by the host's surface [owner] in the shared [services].
+         */
+        fun <K : Any> inProcess(
+            /** The host's surface, which keys the shared [services]. */
+            owner: K,
+            launch: NappletLaunch,
+            /** The account that opened it: the launch keeps signing as this account, whoever is active later. */
+            accountPubKey: HexKey,
+            plan: NappletLaunchPlan,
+            account: Account?,
+            broker: NappletBroker,
+            services: NappletSessionServices<K>,
+            route: NappletRoutePort,
+            files: (NappletLaunchPlan) -> NappletFiles,
+            shellHtml: suspend () -> ByteArray,
+            shimJs: suspend () -> String,
+            links: NappletLinkOpener,
+            /** NAP-FS's picker and file bytes; null, or a launch that didn't declare FS, gets no FS session. */
+            filePort: NappletFilePort?,
+            attendedWhenShown: Boolean = false,
+            onClosed: () -> Unit = {},
+            clock: () -> Long = NappletPageBridge.monotonicMillis(),
+        ): NappletSessionCore =
+            NappletSessionCore(
+                launch = launch,
+                plan = plan,
+                route = route,
+                files = files,
+                shellHtml = shellHtml,
+                shimJs = shimJs,
+                links = links,
+                trusted = { scope, deliver ->
+                    // NAP-FS: the files the user picked for this launch, gone when it closes.
+                    val fsSession = if (filePort != null && NappletCapability.FS in launch.declared) NappletFsSession(filePort) else null
+                    NappletSessionRouting(owner, launch, accountPubKey, account, broker, services, fsSession, scope, send = deliver)
+                },
+                attendedWhenShown = attendedWhenShown,
+                onClosed = onClosed,
+                clock = clock,
+            )
     }
 }

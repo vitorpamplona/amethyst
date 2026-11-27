@@ -362,7 +362,7 @@ class IosNappletWebEngineTest {
     // ---- the harness ----
 
     private class Opened(
-        val core: NappletSessionCore<String>,
+        val core: NappletSessionCore,
         val engine: IosNappletWebEngine,
     )
 
@@ -378,7 +378,7 @@ class IosNappletWebEngineTest {
         val broker = NappletBroker(signer, NappletPermissionLedger(InMemoryNappletPermissionStore()), AllowOnce, relay = NoRelay, storage = reports)
         val shell = NSString.stringWithContentsOfFile(NappletTestFiles.SHELL_HTML, NSUTF8StringEncoding, null) ?: error("no shell at ${NappletTestFiles.SHELL_HTML}")
         val core =
-            NappletSessionCore(
+            NappletSessionCore.inProcess(
                 owner = "probe-" + html.hashCode(),
                 launch = launch,
                 accountPubKey = "bb".repeat(32),
