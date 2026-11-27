@@ -72,6 +72,7 @@ import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * An OpenAI-compatible chat-completions endpoint: what the user's AI key (NIP-FA) reaches.
@@ -356,8 +357,16 @@ class OnlineAgentConnection(
     private val persist: Boolean,
     private val scope: CoroutineScope,
 ) : AgentConnection {
-    @Volatile
-    private var session = session
+    /**
+     * The conversation, changed only through [update]: a turn appends to it while the chat renames
+     * the session or switches its model from another thread, and a plain read-copy-write there
+     * would put back the history it read, dropping a message the turn had just added.
+     */
+    private val current = AtomicReference(session)
+    private val session: OnlineSession get() = current.get()
+
+    /** Saves one at a time, each the history as it is then: a slower save never writes an older one over a newer. */
+    private val saves = Mutex()
 
     private val out = Channel<AgentEvent>(Channel.UNLIMITED)
     override val events: Flow<AgentEvent> = out.receiveAsFlow()
@@ -568,14 +577,24 @@ class OnlineAgentConnection(
         return server.call(tool, arguments)
     }
 
+    private fun update(change: (OnlineSession) -> OnlineSession): OnlineSession = current.updateAndGet(change)
+
     private suspend fun append(message: JsonObject) {
-        session = session.copy(messages = session.messages + message, modifiedAt = System.currentTimeMillis())
-        if (persist) {
-            withContext(Dispatchers.IO) {
+        update { it.copy(messages = it.messages + message, modifiedAt = System.currentTimeMillis()) }
+        save()
+    }
+
+    /** Writes the session as it is now, its pictures left out. */
+    private suspend fun save() {
+        if (!persist) return
+        withContext(Dispatchers.IO) {
+            saves.withLock {
+                val now = session
+                if (now.messages.isEmpty()) return@withLock
                 try {
-                    store.save(session.copy(messages = session.messages.map(::withoutPictures)))
+                    store.save(now.copy(messages = now.messages.map(::withoutPictures)))
                 } catch (e: IOException) {
-                    Log.w("OnlineAgentConnection", "Could not save the session", e)
+                    Log.w(TAG, "Could not save the session", e)
                 }
             }
         }
@@ -597,12 +616,12 @@ class OnlineAgentConnection(
     override suspend fun setPermissionMode(mode: PermissionMode) {}
 
     override suspend fun setModel(model: String?) {
-        session = session.copy(model = model ?: models.firstOrNull())
+        update { it.copy(model = model ?: models.firstOrNull()) }
     }
 
     override suspend fun rename(title: String): Boolean {
-        session = session.copy(title = title)
-        if (persist && session.messages.isNotEmpty()) withContext(Dispatchers.IO) { store.save(session) }
+        update { it.copy(title = title) }
+        save()
         return true
     }
 
@@ -623,6 +642,7 @@ class OnlineAgentConnection(
     companion object {
         /** Tool rounds in one turn before it stops: a loop the model can't get out of ends here. */
         const val MAX_STEPS = 24
+        private const val TAG = "OnlineAgentConnection"
         private const val MAX_OUTPUT_TOKENS = 4_096
     }
 }

@@ -20,6 +20,7 @@
  */
 package com.vitorpamplona.amethyst.commons.claudecode
 
+import com.vitorpamplona.agents.AgentEvent
 import com.vitorpamplona.agents.ImageInput
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.UiSettingsFlow
@@ -33,9 +34,13 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -46,6 +51,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -271,6 +277,53 @@ class OnlineAssistantTest {
                     .last()
                     .text,
             )
+        }
+
+    /**
+     * A new chat names its session as the first turn starts: the rename runs on another thread
+     * while the turn appends the model's reply, and must not put back the history it read (CI once
+     * sent a second turn without the assistant message that proposed the post).
+     */
+    @Test
+    fun aRenameDuringATurnKeepsEveryMessage() =
+        runBlocking {
+            val turns = 200
+            val provider = ScriptedProvider(*Array(turns) { done })
+            val connection =
+                OnlineAgentConnection(
+                    session = OnlineSession("s1", null, root.path, 0L, "vendor/claude-sonnet-9", emptyList()),
+                    key = key,
+                    api = provider,
+                    store = OnlineSessionStore(File(root, "online")),
+                    tools = emptyList(),
+                    preApproved = emptySet(),
+                    instructions = null,
+                    models = emptyList(),
+                    // In memory only: a rename then is a bare read-copy-write, as fast as it can race.
+                    persist = false,
+                    scope = scope,
+                )
+            val ended = AtomicInteger(0)
+            val events = scope.launch { connection.events.collect { if (it is AgentEvent.TurnEnded) ended.incrementAndGet() } }
+            val renaming =
+                List(4) { n ->
+                    scope.launch {
+                        var i = 0
+                        while (isActive) {
+                            connection.rename("title ${n * 1_000_000 + i++}")
+                            yield()
+                        }
+                    }
+                }
+            repeat(turns) { connection.send("prompt $it", emptyList()) }
+            waitFor { ended.get() == turns }
+            renaming.forEach { it.cancelAndJoin() }
+            events.cancel()
+
+            // Each turn saw every earlier prompt and reply.
+            val last = provider.sent.last()
+            repeat(turns - 1) { assertTrue(last.contains("\"prompt $it\""), "prompt $it is missing from the last request") }
+            assertEquals(turns - 1, Regex("\"role\":\"assistant\"").findAll(last).count(), "a reply is missing from the last request")
         }
 
     @Test
