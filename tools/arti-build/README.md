@@ -255,7 +255,9 @@ tools/arti-build/
 ├── build-arti.sh        # Build script (Android targets, shipped in APK)
 ├── build-arti-host.sh   # Build script (host target, for JVM integration tests)
 ├── build-arti-ios.sh    # Build script (iOS static libraries, C ABI) — see "iOS"
-├── IOS_XCODE_VERSION    # Xcode the iOS archives were measured with (warn-only)
+├── IOS_XCODE_VERSION    # Pinned Xcode for the iOS archives (reproducibility)
+├── IOS_ARCHIVES.sha256  # Expected sha256 of each iOS archive with that Xcode
+├── verify-reproducible-ios.sh # Two clean iOS builds (one from elsewhere) + compare with the hashes
 ├── verify-reproducible.sh # Builds twice + diffs to prove byte-for-byte reproducibility
 ├── include/
 │   └── arti_ffi.h       # C header of the iOS ABI (hand-written, checked by build-arti-ios.sh)
@@ -409,12 +411,50 @@ Differences from the Android build:
 - `IPHONEOS_DEPLOYMENT_TARGET=16.0`, matching `iosApp/xcode/project.yml`.
 - `fs-mistrust` is off (`dangerously_trust_everyone`), as on every non-Android target: the iOS
   app container is OS-sandboxed, and the simulator's container sits under the developer's home.
-- Reproducibility is not claimed yet. Xcode's clang compiles `ring`, `zstd-sys` and
-  `libsqlite3-sys`, so it is an input like the NDK; `IOS_XCODE_VERSION` records the Xcode the
-  archives were measured with and the script only warns on a mismatch. One data point: two builds
-  from fresh Arti clones at the canonical path, on the same Mac, gave the same archive sha256s.
+- Reproducible, with the Xcode as a pin of its own; see "iOS reproducibility" below.
 - Xcode's `nm` cannot read the `compiler_builtins` members (they carry bitcode from Rust's
   newer LLVM) and exits 1; the script ignores that. The linker is unaffected.
+
+### iOS reproducibility
+
+The archives are not committed, so what makes them checkable is that anyone building a tag gets
+the same bytes, and `IOS_ARCHIVES.sha256` (committed) says which bytes those are.
+
+```bash
+./verify-reproducible-ios.sh                 # two clean builds + compare with IOS_ARCHIVES.sha256
+./verify-reproducible-ios.sh --write-hashes  # after changing src/, Cargo.*, a pin or the script
+```
+
+The second of its two builds runs from a copy of `tools/arti-build` at another path with an
+empty `CARGO_HOME` elsewhere, so it sees what another machine sees; two builds in one place
+cannot show a leaked path. Both compile at the canonical `/tmp/amethyst-arti-build`.
+
+| Source of non-determinism | Pinned by |
+|---|---|
+| rustc, std and the iOS targets | `rust-toolchain.toml` |
+| Xcode: the clang that compiles `ring`, `zstd-sys`, `libsqlite3-sys`, and the SDK | `IOS_XCODE_VERSION`; `verify-reproducible-ios.sh` refuses another (override: `--any-xcode`), `build-arti-ios.sh` only warns so a developer's build still works |
+| dependency versions | `Cargo.lock`, `--locked` |
+| paths rustc embeds | `--remap-path-prefix` (`repro-env.sh`) |
+| paths the C and assembly objects embed (`ring` builds them with `-gfull`: each source under `CARGO_HOME`, the compile directory, the SDK under the Xcode install) | `-ffile-prefix-map` for `CARGO_HOME`, the Arti clone and Xcode's developer dir, each in every spelling (as given, normalised, symlinks resolved), through `CFLAGS_<target>` (iOS targets only, so Android's bytes cannot move) |
+| the caller's environment (Xcode's pre-build phase exports its build settings; a stray `RUSTFLAGS`, `CFLAGS`, `CC_*` or `SDKROOT`) | `build-arti-ios.sh` unsets every variable rustc, cargo or cc-rs would read before it builds |
+| deployment target, panic strategy | `IPHONEOS_DEPLOYMENT_TARGET=16.0` and `panic = "unwind"`, set in the script |
+
+What was measured (2026-11-27, one Mac, Xcode 27.1): before the C path mapping, a build from
+another checkout and `CARGO_HOME` differed from the first in exactly `ring`'s 23 objects, by those
+absolute paths. After it, the simulator archive was byte-identical across a different checkout
+path, a different `CARGO_HOME`, `DEVELOPER_DIR` reaching Xcode through a symlink, and a calling
+environment with `CFLAGS=-O0`, `RUSTFLAGS="-C opt-level=0"`, `CC_aarch64_apple_ios_sim=/usr/bin/false`,
+`SDKROOT=/nonexistent` and another `TMPDIR`. A `CARGO_HOME` under `/var/folders` then still
+leaked, twice: clang records the compile directory with symlinks resolved (`/private/var/…`),
+and cargo hands the build scripts `CARGO_HOME` verbatim (`…/T//…`, from a `TMPDIR` ending in
+`/`). So each path is mapped in every spelling. The only absolute paths left in the archive are
+virtual (`/cargo`, `/arti`, `/xcode`, `/rustc/<hash>`) or come from Rust's own prebuilt `std`
+(`/Applications/Xcode_26.2.app`, fixed by the toolchain pin). Archive members carry uid/gid 0 and
+mtime 0. **Not yet verified:** the same hashes from a second Mac with the same Xcode.
+
+The app binary itself cannot be byte-reproducible (code signing, and the App Store re-processes
+it), so the claim stops at the archive: a release records the archive hashes in `out/ios/BUILD_INFO`,
+and they can be checked against `IOS_ARCHIVES.sha256` at the tag.
 
 ### Tests
 

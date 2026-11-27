@@ -1,0 +1,5 @@
+# sha256 of tools/arti-build/out/ios/<triple>/libarti.a, as build-arti-ios.sh builds them
+# with the Xcode in IOS_XCODE_VERSION (27.1(27A9275)). Refresh with
+# ./verify-reproducible-ios.sh --write-hashes after any change to what they are built from.
+8739358b906d75ebd55a91ed05f45901fd16710286243a6fbf48e45e6e90b0e8  aarch64-apple-ios-sim/libarti.a
+428502997e201004b248082e827a26b1bb70180d760e806c4512b29c9c452f0a  aarch64-apple-ios/libarti.a
