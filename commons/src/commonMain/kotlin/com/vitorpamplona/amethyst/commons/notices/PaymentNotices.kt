@@ -147,6 +147,98 @@ data class ClinkDebitFailed(
     val detail: String?,
 ) : UserNotice
 
+/**
+ * A cashu melt — paying a BOLT-11 with ecash — that did not go through, or went through but
+ * could not be recorded. Only facts travel here: the melt exceptions carry one of these and
+ * `UserNoticeText` words it, so no English sentence reaches the screen. Every case but
+ * [PaidUnrecorded] leaves the wallet whole — nothing was spent, or the sats set aside for the
+ * melt are back — so the payment may be retried through another rail.
+ */
+sealed interface CashuMeltNotice : UserNotice {
+    /** No mint can fund the invoice with room for its fees. [heldSats] is null when nothing looked it up. */
+    data class CannotFund(
+        val heldSats: Long?,
+        val neededSats: Long,
+    ) : CashuMeltNotice
+
+    /** The mint would not quote the invoice; [detail] is its own error text. */
+    data class NoQuote(
+        val detail: String,
+    ) : CashuMeltNotice
+
+    /** The mint quoted [quotedSats] for an invoice of [invoiceSats]. */
+    data class WrongQuote(
+        val invoiceSats: Long,
+        val quotedSats: Long,
+    ) : CashuMeltNotice
+
+    /** The mint asks [feeSats] of fees for an invoice of [invoiceSats]; the wallet allows [maxFeeSats]. */
+    data class FeeTooHigh(
+        val invoiceSats: Long,
+        val feeSats: Long,
+        val maxFeeSats: Long,
+    ) : CashuMeltNotice
+
+    /** The mint refused the melt without spending anything; [detail] is its own error text. */
+    data class Refused(
+        val detail: String,
+    ) : CashuMeltNotice
+
+    /** The mint refused the melt after the wallet had swapped proofs for it; those [returnedSats] are back. */
+    data class Refunded(
+        val returnedSats: Long,
+        val detail: String,
+    ) : CashuMeltNotice
+
+    /**
+     * The signer denied the swap that prepares a melt, so the mint never saw the invoice.
+     * [returnedSats] are back in the wallet; [recoverableFromSeedSats] come back only with
+     * "Recover from seed".
+     */
+    data class Aborted(
+        val returnedSats: Long,
+        val recoverableFromSeedSats: Long = 0L,
+    ) : CashuMeltNotice
+
+    /**
+     * The invoice was paid [paidSats]; only the wallet's own recording failed. Paying again
+     * would pay the recipient twice. [recoverableFromSeedSats] is change that comes back only
+     * with "Recover from seed".
+     */
+    data class PaidUnrecorded(
+        val paidSats: Long,
+        val recoverableFromSeedSats: Long = 0L,
+    ) : CashuMeltNotice
+
+    /** Anything else that stopped a melt; [detail] is the technical error text. */
+    data class Failed(
+        val detail: String,
+    ) : CashuMeltNotice
+}
+
+/** How a melt that pays an invoice ended; the screen words a [CashuMeltNotice] itself. */
+sealed interface CashuMeltOutcome {
+    /** The invoice is settled: it took [paidSats] and the mint kept [feeSats] on top. */
+    data class Paid(
+        val paidSats: Long,
+        val feeSats: Long,
+        /** The Lightning preimage the mint returned. */
+        val preimage: String?,
+    ) : CashuMeltOutcome
+
+    /**
+     * The invoice is settled all the same; only the wallet's own recording failed
+     * ([failure]). Never a reason to pay again: that would pay the recipient twice.
+     */
+    data class PaidUnrecorded(
+        val failure: CashuMeltNotice.PaidUnrecorded,
+    ) : CashuMeltOutcome
+
+    data class NotPaid(
+        val failure: CashuMeltNotice,
+    ) : CashuMeltOutcome
+}
+
 /** No wallet app could open the invoice. */
 data object NoWalletFound : UserNotice
 
@@ -175,6 +267,15 @@ sealed interface ZapNotice : UserNotice {
     /** The BOLT11 retry of a refused BOLT12 offer failed too. */
     data class FallbackFailed(
         val message: String,
+    ) : ZapNotice
+
+    /**
+     * Melting cashu to settle a zap invoice did not go through — or did, and only the wallet's
+     * recording failed ([CashuMeltNotice.PaidUnrecorded]), which is never phrased as a reason
+     * to zap again.
+     */
+    data class CashuMeltFailed(
+        val failure: CashuMeltNotice,
     ) : ZapNotice
 }
 

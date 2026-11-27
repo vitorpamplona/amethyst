@@ -48,8 +48,11 @@ import com.vitorpamplona.amethyst.commons.model.MIN_ONCHAIN_ZAP_SATS
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.routes.routeToMessage
+import com.vitorpamplona.amethyst.commons.model.payments.EXTERNAL_WALLET_APP_ID
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
+import com.vitorpamplona.amethyst.commons.notices.ui.loadText
 import com.vitorpamplona.amethyst.commons.onchain.OnchainZapSendResult
 import com.vitorpamplona.amethyst.commons.onchain.ui.technicalDetail
 import com.vitorpamplona.amethyst.commons.onchain.ui.userMessage
@@ -228,19 +231,35 @@ private fun SendPaymentLoaded(
         .collectAsStateWithLifecycle()
     val clinkDebitWallets by accountViewModel.account.settings.clinkDebitWallets
         .collectAsStateWithLifecycle()
+    val cashuWalletEvent by accountViewModel.account.cashuWalletState.walletEvent
+        .collectAsStateWithLifecycle()
     val externalWalletLabel = stringRes(Res.string.send_payment_source_external)
+    val cashuMeltSourceLabel = stringRes(Res.string.send_payment_source_cashu_wallet)
+    // The picker is resolved against this same list when it pays: a source listed here must
+    // also be payable here.
+    val bolt11PaymentSources =
+        remember(nwcWallets, clinkDebitWallets, cashuWalletEvent) {
+            PaymentSourceResolver.all(nwcWallets, clinkDebitWallets, cashuWalletConfigured = cashuWalletEvent != null)
+        }
     val bolt11Sources =
-        remember(nwcWallets, clinkDebitWallets, externalWalletLabel) {
+        remember(bolt11PaymentSources, externalWalletLabel, cashuMeltSourceLabel) {
             (
-                PaymentSourceResolver.all(nwcWallets, clinkDebitWallets).map { PaymentFromUi(it.id, it.name) } +
-                    PaymentFromUi(EXTERNAL_WALLET_SOURCE_ID, externalWalletLabel, isExternal = true)
+                bolt11PaymentSources
+                    .map { source ->
+                        // The cashu source's label is localized; NWC/CLINK names are user-set.
+                        if (source is PaymentSource.Cashu) {
+                            PaymentFromUi(source.id, cashuMeltSourceLabel)
+                        } else {
+                            PaymentFromUi(source.id, source.name)
+                        }
+                    } + PaymentFromUi(EXTERNAL_WALLET_APP_ID, externalWalletLabel, isExternal = true)
             ).toImmutableList()
         }
     var selectedBolt11SourceId by remember {
         mutableStateOf(
             accountViewModel.account.settings
                 .defaultPaymentSource()
-                ?.id ?: EXTERNAL_WALLET_SOURCE_ID,
+                ?.id ?: EXTERNAL_WALLET_APP_ID,
         )
     }
     // Re-resolve if the selected wallet disappears (e.g. removed in Settings
@@ -250,7 +269,7 @@ private fun SendPaymentLoaded(
             selectedBolt11SourceId =
                 accountViewModel.account.settings
                     .defaultPaymentSource()
-                    ?.id ?: EXTERNAL_WALLET_SOURCE_ID
+                    ?.id ?: EXTERNAL_WALLET_APP_ID
         }
     }
 
@@ -415,14 +434,11 @@ private fun SendPaymentLoaded(
      * entry hands off to another wallet app (which confirms on its own).
      */
     suspend fun payBolt11(invoice: String) {
-        val settings = accountViewModel.account.settings
         val pickedSource =
-            if (selectedBolt11SourceId == EXTERNAL_WALLET_SOURCE_ID) {
+            if (selectedBolt11SourceId == EXTERNAL_WALLET_APP_ID) {
                 null
             } else {
-                PaymentSourceResolver
-                    .all(settings.nwcWallets.value, settings.clinkDebitWallets.value)
-                    .firstOrNull { it.id == selectedBolt11SourceId }
+                bolt11PaymentSources.firstOrNull { it.id == selectedBolt11SourceId }
             }
         when (val source = pickedSource) {
             is PaymentSource.Nwc -> {
@@ -451,6 +467,22 @@ private fun SendPaymentLoaded(
                                 PaymentFlowStage.Success(successTitle)
                             } else {
                                 PaymentFlowStage.Failure(response?.failureDetail() ?: clinkNoResponseLabel)
+                            },
+                        )
+                    }
+                }
+            }
+
+            is PaymentSource.Cashu -> {
+                postStage(PaymentFlowStage.InProgress(loadStringRes(Res.string.send_payment_paying_via, cashuMeltSourceLabel)))
+                // Synchronous melt; one that paid but could not be recorded is a
+                // success too, so the flow never invites a double payment.
+                accountViewModel.payInvoiceViaCashuMelt(invoice) { outcome ->
+                    scope.launch {
+                        postStage(
+                            when (outcome) {
+                                is CashuMeltOutcome.Paid, is CashuMeltOutcome.PaidUnrecorded -> PaymentFlowStage.Success(successTitle)
+                                is CashuMeltOutcome.NotPaid -> PaymentFlowStage.Failure(outcome.failure.loadText())
                             },
                         )
                     }
@@ -714,9 +746,6 @@ private fun SendPaymentLoaded(
 }
 
 private fun String.shortenMiddle(): String = if (length > 20) take(12) + "…" + takeLast(6) else this
-
-/** "Pay from" id for the hand-off to another wallet app (no in-app source). */
-private const val EXTERNAL_WALLET_SOURCE_ID = "external-wallet-app"
 
 /** Fixed "Pay from" ids for the rails that are bound to their own wallet. */
 private const val ONCHAIN_WALLET_SOURCE_ID = "onchain-wallet"

@@ -1076,6 +1076,43 @@
     <string name="cashu_settings_edit_wallet_subtitle">أضف أو أزل الـ mints التي تستخدمها محفظتك.</string>
     <string name="cashu_settings_my_recommendations">توصياتي بالـ mints</string>
     <string name="cashu_settings_recommendations_subtitle">أوصِ علنًا بالـ mints التي تثق بها، وسحب التوصيات.</string>
+    <string name="zap_cashu_melt_failed">فشل الدفع عبر Cashu: %1$s</string>
+    <string name="cashu_melt_cannot_fund">لا يمكن لمحفظة Cashu تغطية هذه الفاتورة مع هامش لرسومها.</string>
+    <string name="cashu_melt_insufficient">لا يوجد ecash كافٍ لدى هذه المينت: المحفظة تملك %1$s والدفع يحتاج %2$s.</string>
+    <string name="cashu_melt_no_quote">رفضت المينت تسعير الفاتورة (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">سعّرت المينت %1$s لفاتورة بقيمة %2$s. لم يتم دفع أي شيء.</string>
+    <string name="cashu_melt_fee_too_high">تطلب المينت %1$s رسومًا لدفع فاتورة بقيمة %2$s، وهو أكثر من %3$s الذي تسمح به هذه المحفظة. لم يتم دفع أي شيء.</string>
+    <string name="cashu_melt_refused">لم تدفع المينت الفاتورة (%1$s).</string>
+    <string name="cashu_melt_aborted">تم رفض التوقيع، لذا لم يتم دفع أي شيء.</string>
+    <string name="cashu_melt_paid_unrecorded">تم دفع الفاتورة (%1$s)، لكن فشل تسجيلها في المحفظة. لا تدفعها مرة أخرى.</string>
+    <string name="payment_paid_but_not_recorded">تم الدفع، لكن لم يُسجَّل في المحفظة</string>
+    <string name="cashu_recover_from_seed_hint">استخدم «الاسترداد من البذرة» في إعدادات محفظة Cashu لاستعادة %1$s التي تعذّر تسجيلها.</string>
+    <string name="nutzap_sent_unrecorded">تم إرسال nutzap (%1$s)، لكن فشل تسجيله في المحفظة.</string>
+    <string name="nutzap_not_sent_denied">لم يتم إرسال nutzap: تم رفض التوقيع أو النشر.</string>
+    <plurals name="cashu_sats">
+        <item quantity="zero">%1$s سات</item>
+        <item quantity="one">%1$s سات</item>
+        <item quantity="two">%1$s ساتان</item>
+        <item quantity="few">%1$s ساتات</item>
+        <item quantity="many">%1$s ساتًا</item>
+        <item quantity="other">%1$s سات</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="zero">عاد إلى المحفظة: %1$s.</item>
+        <item quantity="one">عاد إلى المحفظة: %1$s.</item>
+        <item quantity="two">عاد إلى المحفظة: %1$s.</item>
+        <item quantity="few">عاد إلى المحفظة: %1$s.</item>
+        <item quantity="many">عاد إلى المحفظة: %1$s.</item>
+        <item quantity="other">عاد إلى المحفظة: %1$s.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="zero">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+        <item quantity="one">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+        <item quantity="two">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+        <item quantity="few">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+        <item quantity="many">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+        <item quantity="other">أُنفقت لدى المينت ولا يمكن استعادتها: %1$s.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">لم توصِ بأي mints بعد. اضغط على إشارة الإعجاب بجانب أي mint للتوصية به علنًا.</string>
     <string name="cashu_settings_delete_recommendation">حذف التوصية</string>
     <string name="cashu_settings_delete_confirm_title">سحب التوصية؟</string>

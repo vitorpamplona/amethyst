@@ -1020,6 +1020,28 @@
     <string name="cashu_settings_edit_wallet_subtitle">Tambah atau hapus mint yang digunakan dompet Anda.</string>
     <string name="cashu_settings_my_recommendations">Rekomendasi mint saya</string>
     <string name="cashu_settings_recommendations_subtitle">Rekomendasikan mint yang Anda percaya secara publik, dan tarik kembali rekomendasi.</string>
+    <string name="zap_cashu_melt_failed">Pembayaran Cashu gagal: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Dompet Cashu tidak dapat menanggung invoice ini beserta cadangan biayanya.</string>
+    <string name="cashu_melt_insufficient">Ecash di mint ini tidak cukup: dompet memiliki %1$s dan pembayaran membutuhkan %2$s.</string>
+    <string name="cashu_melt_no_quote">Mint menolak memberikan penawaran untuk invoice ini (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Mint memberikan penawaran %1$s untuk invoice sebesar %2$s. Tidak ada yang dibayar.</string>
+    <string name="cashu_melt_fee_too_high">Mint meminta biaya %1$s untuk membayar invoice sebesar %2$s, melebihi %3$s yang diizinkan dompet ini. Tidak ada yang dibayar.</string>
+    <string name="cashu_melt_refused">Mint tidak membayar invoice ini (%1$s).</string>
+    <string name="cashu_melt_aborted">Penandatanganan ditolak, jadi tidak ada yang dibayar.</string>
+    <string name="cashu_melt_paid_unrecorded">Invoice telah dibayar (%1$s), tetapi pencatatannya di dompet gagal. Jangan bayar lagi.</string>
+    <string name="payment_paid_but_not_recorded">Dibayar, tetapi tidak tercatat di dompet</string>
+    <string name="cashu_recover_from_seed_hint">Gunakan “Pulihkan dari seed” di pengaturan dompet Cashu untuk mendapatkan kembali %1$s yang tidak dapat dicatat.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) telah dikirim, tetapi pencatatannya di dompet gagal.</string>
+    <string name="nutzap_not_sent_denied">Nutzap tidak terkirim: penandatanganan atau publikasi ditolak.</string>
+    <plurals name="cashu_sats">
+        <item quantity="other">%1$s sat</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="other">%1$s kembali ke dompet.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="other">%1$s dibelanjakan di mint dan tidak dapat dipulihkan.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Anda belum merekomendasikan mint apa pun. Ketuk ikon jempol di sebelah mint untuk merekomendasikannya secara publik.</string>
     <string name="cashu_settings_delete_recommendation">Hapus rekomendasi</string>
     <string name="cashu_settings_delete_confirm_title">Tarik rekomendasi?</string>

@@ -1028,6 +1028,28 @@
     <string name="cashu_settings_edit_wallet_subtitle">지갑에서 사용하는 mint를 추가하거나 제거합니다.</string>
     <string name="cashu_settings_my_recommendations">내 mint 추천</string>
     <string name="cashu_settings_recommendations_subtitle">신뢰하는 mint를 공개적으로 추천하거나 추천을 철회합니다.</string>
+    <string name="zap_cashu_melt_failed">Cashu 결제 실패: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashu 지갑이 수수료 여유를 두고 이 인보이스를 지불할 수 없습니다.</string>
+    <string name="cashu_melt_insufficient">이 mint의 ecash가 부족합니다: 지갑에 %1$s이(가) 있고 결제에는 %2$s이(가) 필요합니다.</string>
+    <string name="cashu_melt_no_quote">mint가 인보이스 견적을 거절했습니다(%1$s).</string>
+    <string name="cashu_melt_wrong_quote">mint가 %2$s짜리 인보이스에 대해 %1$s을(를) 견적했습니다. 아무것도 지불되지 않았습니다.</string>
+    <string name="cashu_melt_fee_too_high">mint가 %2$s짜리 인보이스 결제에 %1$s의 수수료를 요구해 이 지갑이 허용하는 %3$s을(를) 넘었습니다. 아무것도 지불되지 않았습니다.</string>
+    <string name="cashu_melt_refused">mint가 인보이스를 지불하지 않았습니다(%1$s).</string>
+    <string name="cashu_melt_aborted">서명이 거부되어 아무것도 지불되지 않았습니다.</string>
+    <string name="cashu_melt_paid_unrecorded">인보이스가 지불되었습니다(%1$s). 하지만 지갑에 기록하지 못했습니다. 다시 지불하지 마세요.</string>
+    <string name="payment_paid_but_not_recorded">지불되었지만 지갑에 기록하지 못했습니다</string>
+    <string name="cashu_recover_from_seed_hint">기록하지 못한 %1$s을(를) 되찾으려면 Cashu 지갑 설정의 “시드에서 복구”을(를) 사용하세요.</string>
+    <string name="nutzap_sent_unrecorded">nutzap(%1$s)이(가) 전송되었지만 지갑에 기록하지 못했습니다.</string>
+    <string name="nutzap_not_sent_denied">nutzap이(가) 전송되지 않았습니다: 서명 또는 게시가 거부되었습니다.</string>
+    <plurals name="cashu_sats">
+        <item quantity="other">%1$s sat</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="other">%1$s이(가) 지갑으로 돌아왔습니다.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="other">%1$s이(가) mint에서 사용되어 복구할 수 없습니다.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">아직 추천한 mint가 없습니다. Mint 옆의 엄지손가락 아이콘을 탭하여 공개적으로 추천하세요.</string>
     <string name="cashu_settings_delete_recommendation">추천 삭제</string>
     <string name="cashu_settings_delete_confirm_title">추천을 철회하시겠습니까?</string>

@@ -28,6 +28,7 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupPayl
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.send_payment_failed
 import com.vitorpamplona.amethyst.commons.resources.wallet_backup_all_already_added
@@ -217,9 +218,9 @@ class WalletViewModel : ViewModel() {
     private var observedAccount: Account? = null
 
     val walletInfoList =
-        combine(_wallets, _debitWallets, _defaultWalletId, walletInfoMap, backedUpWalletIds) { wallets, debits, defaultId, infoMap, backedUpIds ->
-            // The unified default falls back to the first source overall (NWC before debits).
-            val effectiveDefault = defaultId ?: wallets.firstOrNull()?.id ?: debits.firstOrNull()?.id
+        combine(_wallets, _debitWallets, _defaultWalletId, walletInfoMap, backedUpWalletIds) { wallets, debits, _, infoMap, backedUpIds ->
+            // The settings resolve "default" the same way every payment does.
+            val settings = account?.settings
 
             val nwcRows =
                 wallets.map { wallet ->
@@ -229,7 +230,7 @@ class WalletViewModel : ViewModel() {
                         name = wallet.name,
                         alias = info?.alias,
                         balanceSats = info?.balanceSats,
-                        isDefault = wallet.id == effectiveDefault,
+                        isDefault = settings?.isDefaultPaymentSource(PaymentSource.Nwc(wallet)) == true,
                         isLoading = info?.isLoading == true,
                         error = info?.error,
                         canShowBalance = true,
@@ -242,7 +243,7 @@ class WalletViewModel : ViewModel() {
                     WalletInfo(
                         walletId = debit.id,
                         name = debit.name,
-                        isDefault = debit.id == effectiveDefault,
+                        isDefault = settings?.isDefaultPaymentSource(PaymentSource.ClinkDebit(debit)) == true,
                         canShowBalance = false,
                     )
                 }
@@ -569,12 +570,30 @@ class WalletViewModel : ViewModel() {
 
     fun setDefaultWallet(walletId: String) {
         val acc = account ?: return
-        // Only reflect the change locally if it actually persisted (the id must exist
-        // in one of the lists); otherwise the star and the stored default would diverge.
+        // Only reflect the change locally if it actually persisted (the id must be a
+        // pickable source); otherwise the marker and the stored default would diverge.
         if (acc.settings.setDefaultPaymentSource(walletId)) {
             _defaultWalletId.value = walletId
         }
     }
+
+    /**
+     * Whether the cashu wallet is the default payment source, resolved by the settings the
+     * same way every payment resolves it: it decides whether the row offers "Set as default".
+     */
+    val cashuIsDefault =
+        combine(_defaultWalletId, _wallets, _debitWallets) { _, _, _ ->
+            account?.settings?.isDefaultPaymentSource(PaymentSource.Cashu) == true
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    /**
+     * Whether "another wallet app" is the default payment source. It is for every account
+     * with no in-app source to pay through, picked or not, which is what every payment does.
+     */
+    val externalWalletIsDefault =
+        combine(_defaultWalletId, _wallets, _debitWallets) { _, _, _ ->
+            account?.settings?.defaultPaymentSource() == null
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     fun removeWallet(walletId: String) {
         val acc = account ?: return

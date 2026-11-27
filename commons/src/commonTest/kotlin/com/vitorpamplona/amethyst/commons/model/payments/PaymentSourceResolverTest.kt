@@ -40,7 +40,7 @@ class PaymentSourceResolverTest {
 
     @Test
     fun allListsNwcBeforeDebits() {
-        val sources = PaymentSourceResolver.all(listOf(nwc("a")), listOf(debit("b")))
+        val sources = PaymentSourceResolver.all(listOf(nwc("a")), listOf(debit("b")), cashuWalletConfigured = false)
         assertTrue(sources[0] is PaymentSource.Nwc)
         assertTrue(sources[1] is PaymentSource.ClinkDebit)
     }
@@ -85,5 +85,81 @@ class PaymentSourceResolverTest {
     fun debitSourceCannotShowBalance() {
         assertTrue(PaymentSource.Nwc(nwc("a")).canShowBalance)
         assertTrue(!PaymentSource.ClinkDebit(debit("b")).canShowBalance)
+    }
+
+    @Test
+    fun cashuOnlyWhenWalletConfigured() {
+        val with = PaymentSourceResolver.all(emptyList(), emptyList(), cashuWalletConfigured = true)
+        assertEquals(listOf<PaymentSource>(PaymentSource.Cashu), with)
+        val without = PaymentSourceResolver.all(emptyList(), emptyList(), cashuWalletConfigured = false)
+        assertTrue(without.isEmpty())
+    }
+
+    @Test
+    fun cashuIsTheImplicitDefaultOnlyWhenNothingElseIsConfigured() {
+        // No other source: the cashu wallet pays (better than an external wallet app).
+        val alone = PaymentSourceResolver.resolveDefault(emptyList(), emptyList(), defaultId = null, cashuWalletConfigured = true)
+        assertTrue(alone is PaymentSource.Cashu)
+
+        // An NWC wallet is configured: cashu stays out of the way.
+        val withNwc = PaymentSourceResolver.resolveDefault(listOf(nwc("a")), emptyList(), defaultId = null, cashuWalletConfigured = true)
+        assertTrue(withNwc is PaymentSource.Nwc)
+
+        // A CLINK debit is configured: same.
+        val withDebit = PaymentSourceResolver.resolveDefault(emptyList(), listOf(debit("b")), defaultId = null, cashuWalletConfigured = true)
+        assertTrue(withDebit is PaymentSource.ClinkDebit)
+    }
+
+    @Test
+    fun explicitCashuDefaultBeatsOtherSources() {
+        val resolved = PaymentSourceResolver.resolveDefault(listOf(nwc("a")), listOf(debit("b")), defaultId = PaymentSource.Cashu.ID, cashuWalletConfigured = true)
+        assertTrue(resolved is PaymentSource.Cashu)
+
+        // A "cashu" default with no wallet behind it self-heals to the first source.
+        val stale = PaymentSourceResolver.resolveDefault(listOf(nwc("a")), emptyList(), defaultId = PaymentSource.Cashu.ID, cashuWalletConfigured = false)
+        assertEquals("a", stale?.id)
+    }
+
+    @Test
+    fun cashuStaysOutOfTheImplicitDefaultWhenAsked() {
+        // A signer that prompts per event (Amber, a bunker) with only a cashu wallet: no default,
+        // so the zap falls through to an external wallet app as before the cashu rail existed.
+        assertNull(
+            PaymentSourceResolver.resolveDefault(
+                emptyList(),
+                emptyList(),
+                defaultId = null,
+                cashuWalletConfigured = true,
+                cashuAsImplicitDefault = false,
+            ),
+        )
+
+        // Other sources keep their implicit pick, and cashu still loses to them.
+        val withNwc = PaymentSourceResolver.resolveDefault(listOf(nwc("a")), emptyList(), defaultId = null, cashuWalletConfigured = true, cashuAsImplicitDefault = false)
+        assertEquals("a", withNwc?.id)
+    }
+
+    @Test
+    fun aPromptingSignerCanStillPickCashuExplicitly() {
+        val picked = PaymentSourceResolver.resolveDefault(emptyList(), emptyList(), defaultId = PaymentSource.Cashu.ID, cashuWalletConfigured = true, cashuAsImplicitDefault = false)
+        assertTrue(picked is PaymentSource.Cashu)
+
+        // A stale explicit "cashu" with no wallet behind it still self-heals (to nothing here).
+        val stale = PaymentSourceResolver.resolveDefault(emptyList(), emptyList(), defaultId = PaymentSource.Cashu.ID, cashuWalletConfigured = false, cashuAsImplicitDefault = false)
+        assertNull(stale)
+    }
+
+    @Test
+    fun anotherWalletAppPickedAsTheDefaultIsNoSourceEvenWithWalletsConfigured() {
+        // An explicit pick, not a missing one: it must not fall through to the implicit default.
+        val resolved =
+            PaymentSourceResolver.resolveDefault(
+                listOf(nwc("a")),
+                listOf(debit("b")),
+                defaultId = EXTERNAL_WALLET_APP_ID,
+                cashuWalletConfigured = true,
+            )
+
+        assertNull(resolved)
     }
 }

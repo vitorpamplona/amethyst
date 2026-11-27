@@ -341,6 +341,19 @@ open class Note(
     var zapPayments = mapOf<Note, Note?>()
         private set
 
+    /**
+     * BOLT-11 invoices this account settled by melting NIP-60 ecash, keyed by invoice so
+     * the same one never counts twice. In-memory only, exactly like [zapPayments]: the
+     * permanent record is the recipient's kind:9735 receipt, which many LNURL servers never
+     * publish and private zaps never do.
+     *
+     * `@Volatile`: written under [syncLock], read lock-free by
+     * [zappedAmountWithNWCPayments].
+     */
+    @Volatile
+    var cashuMeltZaps = mapOf<String, CashuMeltZapEntry>()
+        private set
+
     // `@Volatile`: written under [syncLock] but read lock-free from the relay
     // socket thread and from [LocalCache.copyRelaysFromTo] on IO coroutines.
     @Volatile
@@ -571,7 +584,7 @@ open class Note(
     fun clearChildLinks(): List<Note> {
         val repliesChanged = replies.isNotEmpty()
         val reactionsChanged = reactions.isNotEmpty()
-        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty() || bolt12Zaps.isNotEmpty()
+        val zapsChanged = zaps.isNotEmpty() || zapPayments.isNotEmpty() || onchainZaps.isNotEmpty() || nutzaps.isNotEmpty() || bolt12Zaps.isNotEmpty() || cashuMeltZaps.isNotEmpty()
         val boostsChanged = boosts.isNotEmpty()
         val editsChanged = edits.isNotEmpty()
         val timestampsChanged = timestamps.isNotEmpty()
@@ -607,6 +620,7 @@ open class Note(
         nutzaps = mapOf()
         bolt12Zaps = mapOf()
         zapPayments = mapOf()
+        cashuMeltZaps = mapOf()
         zapsAmount = BigDecimal(0)
         relays = listOf()
 
@@ -1012,6 +1026,23 @@ open class Note(
         }
     }
 
+    /**
+     * Registers a zap invoice this account paid by melting ecash. Amount and invoice are
+     * known at settlement, so there is no receipt or NWC response to wait for.
+     * [zappedAmountWithNWCPayments] drops the entry once a kind:9735 receipt for the same
+     * invoice arrives.
+     */
+    fun addCashuMeltZap(entry: CashuMeltZapEntry) {
+        if (cashuMeltZaps[entry.invoice] == null) {
+            syncLock.withLock {
+                if (cashuMeltZaps[entry.invoice] == null) {
+                    cashuMeltZaps = cashuMeltZaps + (entry.invoice to entry)
+                }
+            }
+            flowSet?.zaps?.invalidateData()
+        }
+    }
+
     fun addReaction(note: Note) {
         syncLock.withLock {
             val tags = note.event?.tags ?: emptyArray()
@@ -1195,6 +1226,11 @@ open class Note(
         val first = isZappedByCalculation(null, user, afterTimeInSeconds, account, zaps)
         if (first) return true
         if (account.userProfile() == user) {
+            // Cashu-melted zaps: entry only exists if this account settled the
+            // invoice, so a hit is final — no NWC response to decrypt.
+            if (cashuMeltZaps.isNotEmpty() && cashuMeltZaps.values.any { it.paidAtInSeconds > afterTimeInSeconds }) {
+                return true
+            }
             return isPaidByCalculation(zapPayments.toList(), afterTimeInSeconds, account)
         }
         return false
@@ -1419,15 +1455,24 @@ open class Note(
     }
 
     suspend fun zappedAmountWithNWCPayments(signerState: INwcSignerState): BigDecimal {
-        if (zapPayments.isEmpty()) {
+        if (zapPayments.isEmpty() && cashuMeltZaps.isEmpty()) {
             return zapsAmount
         }
 
-        val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size)
+        val invoiceSet = LinkedHashSet<String>(zaps.size + zapPayments.size + cashuMeltZaps.size)
         zaps.forEach { (it.value?.event as? ZapReceiptEvent)?.lnInvoice()?.let { invoiceSet.add(it) } }
 
+        var output = zapsAmount
+        // Known locally, with no response to decrypt. invoiceSet dedups against receipts
+        // and NWC payments of the same invoice.
+        cashuMeltZaps.values.forEach { entry ->
+            if (invoiceSet.add(entry.invoice)) {
+                output = output.add(BigDecimal(entry.amountSats))
+            }
+        }
+
         return zappedAmountCalculation(
-            zapsAmount,
+            output,
             invoiceSet,
             zapPayments.toList(),
             signerState,

@@ -1057,6 +1057,37 @@
     <string name="cashu_settings_edit_wallet_subtitle">Додайте або видаліть mints, які використовує ваш гаманець.</string>
     <string name="cashu_settings_my_recommendations">Мої рекомендації mints</string>
     <string name="cashu_settings_recommendations_subtitle">Публічно підтверджуйте довірені mints та скасовуйте рекомендації.</string>
+    <string name="zap_cashu_melt_failed">Не вдалося виконати оплату через Cashu: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Гаманець Cashu не може оплатити цей інвойс із запасом на комісію.</string>
+    <string name="cashu_melt_insufficient">Недостатньо ecash на цій мінті: в гаманці %1$s, а для оплати потрібно %2$s.</string>
+    <string name="cashu_melt_no_quote">Мінта не надала котирування для інвойса (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Мінта процитувала %1$s для інвойса на %2$s. Нічого не сплачено.</string>
+    <string name="cashu_melt_fee_too_high">Мінта вимагає %1$s комісії за оплату інвойса на %2$s, більше ніж дозволені цим гаманцем %3$s. Нічого не сплачено.</string>
+    <string name="cashu_melt_refused">Мінта не оплатила інвойс (%1$s).</string>
+    <string name="cashu_melt_aborted">Підписання відхилено, нічого не сплачено.</string>
+    <string name="cashu_melt_paid_unrecorded">Інвойс оплачено (%1$s), але записати його в гаманець не вдалося. Не оплачуйте його повторно.</string>
+    <string name="payment_paid_but_not_recorded">Оплачено, але не записано в гаманець</string>
+    <string name="cashu_recover_from_seed_hint">Використайте «Відновлення із seed» у налаштуваннях гаманця Cashu, щоб повернути %1$s, які не вдалося записати.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) надіслано, але записати його в гаманець не вдалося.</string>
+    <string name="nutzap_not_sent_denied">Nutzap не надіслано: підписання або публікацію відхилено.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s сат</item>
+        <item quantity="few">%1$s сати</item>
+        <item quantity="many">%1$s сатів</item>
+        <item quantity="other">%1$s сата</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s сат повернувся в гаманець.</item>
+        <item quantity="few">%1$s сати повернулися в гаманець.</item>
+        <item quantity="many">%1$s сатів повернулися в гаманець.</item>
+        <item quantity="other">%1$s сата повернулися в гаманець.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s сат витрачено на мінті й його не можна відновити.</item>
+        <item quantity="few">%1$s сати витрачено на мінті й їх не можна відновити.</item>
+        <item quantity="many">%1$s сатів витрачено на мінті й їх не можна відновити.</item>
+        <item quantity="other">%1$s сата витрачено на мінті й їх не можна відновити.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Ви ще не рекомендували жодного mint. Натисніть великий палець вгору поряд з mint, щоб публічно підтримати його.</string>
     <string name="cashu_settings_delete_recommendation">Видалити рекомендацію</string>
     <string name="cashu_settings_delete_confirm_title">Скасувати рекомендацію?</string>

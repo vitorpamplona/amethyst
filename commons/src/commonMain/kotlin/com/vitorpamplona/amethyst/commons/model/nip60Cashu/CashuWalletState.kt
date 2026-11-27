@@ -21,19 +21,25 @@
 package com.vitorpamplona.amethyst.commons.model.nip60Cashu
 
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
+import com.vitorpamplona.amethyst.commons.cashu.MeltPlanner
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltNotPaidException
 import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.cashu.ops.normalizeMintUrl
+import com.vitorpamplona.amethyst.commons.cashu.ops.toCashuMeltOutcome
 import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
+import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
@@ -56,11 +62,15 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.utils.BigDecimal
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.compareToValue
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.concurrent.ConcurrentSet
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quartz.utils.secp256k1.Secp256k1
+import com.vitorpamplona.quartz.utils.toLongValue
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -122,6 +132,9 @@ class CashuWalletState(
         CashuWalletOps(
             signer = signer,
             publish = ::publishEvent,
+            // Events this wallet builds are already decrypted here, so relays echoing them
+            // back never costs a signer round-trip.
+            onTokenBuilt = { id, content -> tokenContents[id] = content },
             mintTransport = mintTransport,
             // NUT-13 wiring: the factory closure reads the cached seed at
             // mint-op time. cachedSeed is populated by ensureSeed() —
@@ -175,6 +188,24 @@ class CashuWalletState(
     /** NIP-44 decryption cache for token contents, keyed by event id. */
     private val tokenContents = ConcurrentMap<HexKey, TokenContent>()
     private val redeemMutex = Mutex()
+
+    /**
+     * One [Mutex] per mint URL, guarding every spend path that selects proofs from
+     * [_tokenEntries]: zap melts ([meltInvoiceAt]), the manual melt ([meltToLightning]),
+     * [sendNutzap], [sendAsToken], [rebalance]'s melt and [migrateStaleKeysets]. Proof
+     * selection is not transactional at the mint — two concurrent spends that both
+     * snapshot the same entries pick overlapping proofs and one fails "proofs already
+     * spent" — so all of them serialize per mint. One mutex per mint keeps unrelated
+     * mints paying in parallel. Not reentrant: the locked entry points must never call
+     * each other, only the `*Unlocked` cores.
+     */
+    private val spendMutexes = ConcurrentMap<String, Mutex>()
+
+    /** Runs [block] under the mint's spend lock; see [spendMutexes]. */
+    private suspend fun <T> withSpendLock(
+        mintUrl: String,
+        block: suspend () -> T,
+    ): T = spendMutexes.getOrPut(mintUrl) { Mutex() }.withLock { block() }
 
     /**
      * Nutzap event ids whose redemption swap has already completed at
@@ -1597,10 +1628,16 @@ class CashuWalletState(
                     ?: continue
             val staleEntries = entries.filter { entry -> entry.content.proofs.any { it.id != activeId } }
             if (staleEntries.isEmpty()) continue
-            runCatchingCancellable { ops.migrateToActiveKeyset(mintUrl, staleEntries, activeId) }
-                .onFailure {
-                    Log.w("CashuWallet", "migrateToActiveKeyset($mintUrl) failed", it)
+            withSpendLock(mintUrl) {
+                // Re-check under the lock: a concurrent spend may have consumed or
+                // refreshed these entries since the unlocked snapshot above.
+                val staleNow =
+                    _tokenEntries.value.filter { entry -> entry.content.mint == mintUrl && entry.content.proofs.any { it.id != activeId } }
+                if (staleNow.isNotEmpty()) {
+                    runCatchingCancellable { ops.migrateToActiveKeyset(mintUrl, staleNow, activeId) }
+                        .onFailure { Log.w("CashuWallet", "migrateToActiveKeyset($mintUrl) failed", it) }
                 }
+            }
         }
     }
 
@@ -1637,27 +1674,30 @@ class CashuWalletState(
         // after start() finished, so a "ghost proof" from a prior
         // partial-failure persists until the user clicks send. Heal
         // first so the selection below works on a known-fresh view.
-        scrubLocallyStaleProofs(target.mintUrl)
-        // First on-network step done. The caller already showed an
-        // instant 0.05 when the chip was tapped; lift to 0.20 here so
-        // the bar visibly moves even before the (slow) swap call.
-        onProgress?.invoke(0.20f)
+        //
+        return withSpendLock(target.mintUrl) {
+            scrubLocallyStaleProofs(target.mintUrl)
+            // First on-network step done. The caller already showed an
+            // instant 0.05 when the chip was tapped; lift to 0.20 here so
+            // the bar visibly moves even before the (slow) swap call.
+            onProgress?.invoke(0.20f)
 
-        val available = _tokenEntries.value.filter { it.content.mint == target.mintUrl }
-        if (available.isEmpty()) {
-            throw IllegalStateException("No proofs available at ${target.mintUrl}")
+            val available = _tokenEntries.value.filter { it.content.mint == target.mintUrl }
+            if (available.isEmpty()) {
+                throw IllegalStateException("No proofs available at ${target.mintUrl}")
+            }
+
+            ops.sendNutzap(
+                mintUrl = target.mintUrl,
+                amountSats = amountSats,
+                recipientPubKey = recipientPubKey,
+                recipientP2pkPubkeyHex = target.recipientP2pkPubkeyHex,
+                zappedEvent = zappedEvent,
+                message = message,
+                available = available,
+                onProgress = onProgress,
+            )
         }
-
-        return ops.sendNutzap(
-            mintUrl = target.mintUrl,
-            amountSats = amountSats,
-            recipientPubKey = recipientPubKey,
-            recipientP2pkPubkeyHex = target.recipientP2pkPubkeyHex,
-            zappedEvent = zappedEvent,
-            message = message,
-            available = available,
-            onProgress = onProgress,
-        )
     }
 
     /**
@@ -1675,14 +1715,16 @@ class CashuWalletState(
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
-        scrubLocallyStaleProofs(mintUrl)
+        return withSpendLock(mintUrl) {
+            scrubLocallyStaleProofs(mintUrl)
 
-        val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
-        val balance = available.sumOf { it.content.totalAmount() }
-        if (balance < amountSats) {
-            throw IllegalStateException("Mint $mintUrl has only $balance sat")
+            val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
+            val balance = available.sumOf { it.content.totalAmount() }
+            if (balance < amountSats) {
+                throw IllegalStateException("Mint $mintUrl has only $balance sat")
+            }
+            ops.sendAsToken(mintUrl, amountSats, available, memo)
         }
-        return ops.sendAsToken(mintUrl, amountSats, available, memo)
     }
 
     /**
@@ -1698,16 +1740,131 @@ class CashuWalletState(
         check(started) { NOT_STARTED_MESSAGE }
         if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
 
-        // [rebalance] already scrubbed this mint to compute its coverage check, so
-        // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
-        if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
+        return withSpendLock(mintUrl) {
+            // [rebalance] already scrubbed this mint to compute its coverage check, so
+            // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
+            if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
+            meltToLightningUnlocked(mintUrl, quote)
+        }
+    }
 
+    /**
+     * Selection, melt and local outcome — no scrub, no lock; the body [meltToLightning]
+     * and [meltInvoiceAt] run under the mint's lock.
+     *
+     * The outcome is applied to the local indexes before the lock is released. The new
+     * keep/change events otherwise reach [_tokenEntries] only through
+     * `cache.live.newEventBundles` (~1s later), and the next queued spend at this mint would
+     * select from a snapshot that still lacks them. Applying here is idempotent: the bundle
+     * path adds with `putIfAbsent`.
+     */
+    private suspend fun meltToLightningUnlocked(
+        mintUrl: String,
+        quote: MeltQuoteBolt11ResponseDto,
+    ): MeltCompleted {
         val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
         if (available.isEmpty()) {
-            throw IllegalStateException("No proofs available at $mintUrl")
+            throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = 0L, neededSats = quote.amount + quote.feeReserve))
         }
-        return ops.meltToLightning(mintUrl, quote, available)
+        val completed = ops.meltToLightning(mintUrl, quote, available)
+        applyEvents(listOfNotNull(completed.newTokenEvent, completed.prePaidChangeEvent))
+        removeEvents(completed.deleteEvent.deleteEventIds().toSet())
+        return completed
     }
+
+    /**
+     * Quotes and melts one BOLT-11 invoice at [mintUrl] under the mint's spend lock — the
+     * zap rail's per-invoice spend. Throws [MeltNotPaidException] when nothing was spent.
+     */
+    suspend fun meltInvoiceAt(
+        mintUrl: String,
+        invoice: String,
+    ): MeltCompleted {
+        check(started) { NOT_STARTED_MESSAGE }
+        if (mintUrl.isBlank()) throw IllegalArgumentException("Pick a mint")
+
+        return withSpendLock(mintUrl) {
+            // The scrub runs inside the lock too, so the melt selects from the post-heal view.
+            scrubLocallyStaleProofs(mintUrl)
+            // The plan was optimistic: a quote that does not match the invoice, or costs
+            // more than the fee slack, is refused here, before anything is spent.
+            val quote =
+                try {
+                    ops.requestMeltQuote(mintUrl, invoice)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    throw MeltNotPaidException(CashuMeltNotice.NoQuote(describeMintError(e)), e)
+                }
+            validateMeltQuote(mintUrl, invoice, quote)
+            meltToLightningUnlocked(mintUrl, quote)
+        }
+    }
+
+    /**
+     * The automatic melt's trust boundary: it pays without the user seeing the numbers, so
+     * the quote must match the invoice and its fee must fit the plan's slack
+     * ([MeltPlanner.feeSlackFor]). A mint that inflates either could otherwise pull the
+     * whole per-mint balance into a melt. Both checks run before anything is spent, so a
+     * rejection is a [MeltNotPaidException] and the invoice can go through another rail.
+     */
+    private suspend fun validateMeltQuote(
+        mintUrl: String,
+        invoice: String,
+        quote: MeltQuoteBolt11ResponseDto,
+    ) {
+        val invoiceSats = LnInvoiceUtil.getAmountInSats(invoice)
+        val floorSats = invoiceSats.toLongValue()
+        val ceilSats =
+            if (invoiceSats.compareToValue(BigDecimal(floorSats)) == 0) floorSats else floorSats + 1
+        if (quote.amount < floorSats || quote.amount > ceilSats) {
+            throw MeltNotPaidException(CashuMeltNotice.WrongQuote(invoiceSats = floorSats, quotedSats = quote.amount))
+        }
+
+        // fee_reserve + the mint's NUT-02 input fee on the swapped-down inputs must fit the slack.
+        val inputFeeSats =
+            runCatchingCancellable { ops.activeKeysetInputFeeFor(mintUrl, quote.amount + quote.feeReserve) }
+                .onFailure { Log.w("CashuWallet") { "input-fee lookup failed for $mintUrl; skipping that half of the quote check" } }
+                .getOrDefault(0L)
+        val allowedFeeSats = MeltPlanner.feeSlackFor(ceilSats)
+        if (quote.feeReserve + inputFeeSats > allowedFeeSats) {
+            throw MeltNotPaidException(
+                CashuMeltNotice.FeeTooHigh(invoiceSats = ceilSats, feeSats = quote.feeReserve + inputFeeSats, maxFeeSats = allowedFeeSats),
+            )
+        }
+    }
+
+    /**
+     * Which mint melts each of [amountsSats], from the balances alone; null when the wallet
+     * can't fund every invoice with fee slack. Optimistic — see [MeltPlanner] — the
+     * authoritative checks run in [meltInvoiceAt] at pay time.
+     */
+    fun planMeltFunding(amountsSats: List<Long>): Map<String, List<Int>>? {
+        if (!started || amountsSats.isEmpty()) return null
+        val balances =
+            _tokenEntries.value
+                .groupBy { it.content.mint }
+                .mapValues { (_, entries) -> entries.sumOf { it.content.totalAmount() } }
+        return MeltPlanner.plan(amountsSats, balances)
+    }
+
+    /**
+     * Pays [invoice] for a payment screen: melted at whichever mint can fund it with fee
+     * slack, and reported as a [CashuMeltOutcome]. The zap rail plans its split across mints
+     * itself and calls [meltInvoiceAt] per invoice.
+     */
+    suspend fun payInvoice(invoice: String): CashuMeltOutcome =
+        try {
+            val amountSats = LnInvoiceUtil.getAmountInSats(invoice).toLongValue()
+            val mintUrl =
+                planMeltFunding(listOf(amountSats))?.keys?.first()
+                    ?: throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = null, neededSats = amountSats))
+            meltInvoiceAt(mintUrl, invoice).let { CashuMeltOutcome.Paid(paidSats = it.paidAmount, feeSats = it.fees, preimage = it.preimage) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            e.toCashuMeltOutcome()
+        }
 
     /**
      * Move [sats] of cashu from [sourceMintUrl] into [targetMintUrl] by minting

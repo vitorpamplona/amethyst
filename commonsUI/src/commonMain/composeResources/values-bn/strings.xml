@@ -1038,6 +1038,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">আপনার ওয়ালেট ব্যবহার করে এমন mints যোগ বা সরান।</string>
     <string name="cashu_settings_my_recommendations">আমার mint সুপারিশ</string>
     <string name="cashu_settings_recommendations_subtitle">আপনি বিশ্বাস করেন এমন mints-এর জন্য প্রকাশ্যে সমর্থন করুন এবং সুপারিশ প্রত্যাহার করুন।</string>
+    <string name="zap_cashu_melt_failed">Cashu পেমেন্ট ব্যর্থ হয়েছে: %1$s</string>
+    <string name="cashu_melt_cannot_fund">ফি-এর জন্য জায়গা রেখে Cashu ওয়ালেট এই ইনভয়েস দিতে পারছে না।</string>
+    <string name="cashu_melt_insufficient">এই মিন্টে পর্যাপ্ত ecash নেই: ওয়ালেটে আছে %1$s, আর পেমেন্টের জন্য লাগবে %2$s।</string>
+    <string name="cashu_melt_no_quote">মিন্ট ইনভয়েসের কোটেশন দিতে রাজি হয়নি (%1$s)।</string>
+    <string name="cashu_melt_wrong_quote">%2$s-এর ইনভয়েসের জন্য মিন্ট কোট করেছে %1$s। কিছুই পরিশোধ করা হয়নি।</string>
+    <string name="cashu_melt_fee_too_high">%2$s-এর ইনভয়েস দিতে মিন্ট %1$s ফি চাইছে, যা এই ওয়ালেটের অনুমোদিত %3$s-এর বেশি। কিছুই পরিশোধ করা হয়নি।</string>
+    <string name="cashu_melt_refused">মিন্ট ইনভয়েস পরিশোধ করেনি (%1$s)।</string>
+    <string name="cashu_melt_aborted">স্বাক্ষর প্রত্যাখ্যাত হয়েছে, তাই কিছুই পরিশোধ করা হয়নি।</string>
+    <string name="cashu_melt_paid_unrecorded">ইনভয়েস পরিশোধ করা হয়েছে (%1$s), কিন্তু ওয়ালেটে সংরক্ষণ করা যায়নি। আবার পরিশোধ করবেন না।</string>
+    <string name="payment_paid_but_not_recorded">পরিশোধ হয়েছে, কিন্তু ওয়ালেটে সংরক্ষণ হয়নি</string>
+    <string name="cashu_recover_from_seed_hint">সংরক্ষণ করা যায়নি এমন %1$s ফেরাতে Cashu ওয়ালেট সেটিংসে «সিড থেকে পুনরুদ্ধার করুন» ব্যবহার করুন।</string>
+    <string name="nutzap_sent_unrecorded">nutzap (%1$s) পাঠানো হয়েছে, কিন্তু ওয়ালেটে সংরক্ষণ করা যায়নি।</string>
+    <string name="nutzap_not_sent_denied">nutzap পাঠানো হয়নি: স্বাক্ষর বা প্রকাশ প্রত্যাখ্যাত হয়েছে।</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s সাট</item>
+        <item quantity="other">%1$s সাট</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s সাট ওয়ালেটে ফিরে এসেছে।</item>
+        <item quantity="other">%1$s সাট ওয়ালেটে ফিরে এসেছে।</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">মিন্টে খরচ হয়েছে এবং উদ্ধার করা যায়নি: %1$s।</item>
+        <item quantity="other">মিন্টে খরচ হয়েছে এবং উদ্ধার করা যায়নি: %1$s।</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">আপনি এখনো কোনো mint সুপারিশ করেননি। প্রকাশ্যে সমর্থন করতে একটি mint-এর পাশে থাম্বস-আপ আইকনে ট্যাপ করুন।</string>
     <string name="cashu_settings_delete_recommendation">সুপারিশ মুছুন</string>
     <string name="cashu_settings_delete_confirm_title">সুপারিশ প্রত্যাহার করবেন?</string>

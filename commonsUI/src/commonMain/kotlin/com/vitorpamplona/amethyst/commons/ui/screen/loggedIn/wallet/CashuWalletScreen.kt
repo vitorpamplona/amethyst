@@ -84,6 +84,8 @@ import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbol
 import com.vitorpamplona.amethyst.commons.icons.symbols.MaterialSymbols
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.navigation.Route
+import com.vitorpamplona.amethyst.commons.notices.ui.renderText
+import com.vitorpamplona.amethyst.commons.notices.ui.txt
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.account.nip60Cashu.CashuWalletHistoryEoseManager
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
@@ -1497,7 +1499,8 @@ private fun SendLnDialog(
 
                     is CashuMeltFlowState.Error -> {
                         Text(
-                            text = s.message,
+                            // A melt the wallet rolled back is explained in its own words.
+                            text = s.failure?.txt()?.renderText() ?: s.message,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                         )
