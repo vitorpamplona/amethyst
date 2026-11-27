@@ -105,7 +105,7 @@ class ClaudeCodeServiceTest {
     }
 
     private suspend fun waitFor(condition: () -> Boolean) =
-        withTimeout(5_000) {
+        withTimeout(HANG_LIMIT_MS) {
             while (!condition()) delay(10)
         }
 
@@ -654,7 +654,7 @@ class ClaudeCodeServiceTest {
             val listening = CompletableDeferred<Unit>()
             val heard =
                 async(Dispatchers.Default) {
-                    withTimeout(5_000) {
+                    withTimeout(HANG_LIMIT_MS) {
                         service.attention
                             .onSubscription { listening.complete(Unit) }
                             .first { it.kind == ChatAttention.Kind.REQUESTS_PUBLISH }
@@ -687,5 +687,12 @@ class ClaudeCodeServiceTest {
 
     private companion object {
         const val HOUR = 60 * 60_000L
+
+        /**
+         * How long a wait may take before the test calls it a hang. Sending, starting and publishing
+         * run git several times, and the Windows runner takes 5-15x longer than a laptop to do it: a
+         * test that takes 0.3 s locally took 17 s there and ran out the 5 s this used to be.
+         */
+        const val HANG_LIMIT_MS = 30_000L
     }
 }
