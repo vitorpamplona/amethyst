@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.moq.MoqObject
@@ -36,7 +38,8 @@ import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.atomic.AtomicLong
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * Moq-lite-backed [NestsListener]. Wraps a connected [MoqLiteSession]
@@ -138,7 +141,7 @@ class MoqLiteNestsListener internal constructor(
                 MoqObject(
                     trackAlias = handle.id,
                     groupId = frame.groupSequence,
-                    objectId = objectIdSeq.getAndIncrement(),
+                    objectId = objectIdSeq.fetchAndAdd(1L),
                     publisherPriority = MoqLiteSession.DEFAULT_PRIORITY,
                     payload = payload,
                 )

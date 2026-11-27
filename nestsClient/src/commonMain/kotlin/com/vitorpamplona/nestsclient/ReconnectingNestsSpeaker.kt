@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.AudioCapture
@@ -42,7 +44,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * `connectNestsSpeaker` plus a transport-loss reconnect loop with
@@ -692,10 +696,10 @@ private class ReissuingBroadcastHandle(
             if (desiredMuted) {
                 runCatchingCancellable { handle.setMuted(true) }
             }
-            liveHandle.set(handle)
+            liveHandle.store(handle)
             awaitCancellation()
         } finally {
-            if (liveHandle.get() === handle) liveHandle.set(null)
+            if (liveHandle.load() === handle) liveHandle.store(null)
             runCatching { handle.close() }
         }
     }
@@ -709,7 +713,7 @@ private class ReissuingBroadcastHandle(
         // and vice versa — but both reads are cheap and harmless if
         // the unused one is null.
         hotSwapBroadcaster?.setMuted(muted)
-        liveHandle.get()?.let { runCatchingCancellable { it.setMuted(muted) } }
+        liveHandle.load()?.let { runCatchingCancellable { it.setMuted(muted) } }
     }
 
     override suspend fun close() {
@@ -732,7 +736,7 @@ private class ReissuingBroadcastHandle(
         hotSwapCatalogPublisher = null
         hotSwapBroadcaster?.let { runCatching { it.stop() } }
         hotSwapBroadcaster = null
-        liveHandle.getAndSet(null)?.let { runCatching { it.close() } }
+        liveHandle.exchange(null)?.let { runCatching { it.close() } }
         onClose(this)
     }
 }

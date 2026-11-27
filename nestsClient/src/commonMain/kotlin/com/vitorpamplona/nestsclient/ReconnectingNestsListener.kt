@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.moq.MoqObject
@@ -45,8 +47,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import java.util.concurrent.atomic.AtomicLong
-import java.util.concurrent.atomic.AtomicReference
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.AtomicReference
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * `connectNestsListener` plus a transport-loss reconnect loop with
@@ -460,7 +463,7 @@ private class ReconnectingHandle(
                         // cycle gap starts at the floor again (rather than
                         // inheriting the last failure window's saturation).
                         subscribeRetryDelayMs = SUBSCRIBE_RETRY_BACKOFF_INITIAL_MS
-                        liveHandleRef.set(handle)
+                        liveHandleRef.store(handle)
                         Log.d("NestRx") { "wrapper: handle attached id=${handle.subscribeId}, starting collect" }
                         val endedCountBeforeThisHandle = endedCountAtPreviousAttach
                         endedCountAtPreviousAttach = handle.broadcastEndedCount
@@ -488,7 +491,7 @@ private class ReconnectingHandle(
                                     // 100 ms re-subscribe backoff and that
                                     // session's own announce.
                                     if (endedCountBeforeThisHandle >= 0L && handle.broadcastEndedCount > endedCountBeforeThisHandle) {
-                                        priorGroupWatermark.set(-1L)
+                                        priorGroupWatermark.store(-1L)
                                     }
                                     // Publisher-side session restart detection.
                                     // The watermark assumes monotonic group
@@ -507,12 +510,12 @@ private class ReconnectingHandle(
                                     // many groups below). Reset the watermark
                                     // so the entire post-restart stream isn't
                                     // dropped as stale.
-                                    val watermark = priorGroupWatermark.get()
+                                    val watermark = priorGroupWatermark.load()
                                     if (watermark > 0L && obj.groupId < watermark - 1L) {
-                                        priorGroupWatermark.set(-1L)
+                                        priorGroupWatermark.store(-1L)
                                     }
                                 }
-                                if (obj.groupId <= priorGroupWatermark.get()) {
+                                if (obj.groupId <= priorGroupWatermark.load()) {
                                     // Stale group re-served from the relay
                                     // cache after a re-subscribe — drop so
                                     // it never reaches the decoder.
@@ -524,12 +527,12 @@ private class ReconnectingHandle(
                                 frames.emit(obj)
                             }
                         } finally {
-                            if (liveHandleRef.get() === handle) liveHandleRef.set(null)
+                            if (liveHandleRef.load() === handle) liveHandleRef.store(null)
                             // Advance the watermark only now the subscription
                             // is done, so the next re-subscribe drops every
                             // group up to and including the last one we saw.
-                            if (handleHighestGroup > priorGroupWatermark.get()) {
-                                priorGroupWatermark.set(handleHighestGroup)
+                            if (handleHighestGroup > priorGroupWatermark.load()) {
+                                priorGroupWatermark.store(handleHighestGroup)
                             }
                         }
                         Log.w("NestRx") { "wrapper: handle objects flow ENDED id=${handle.subscribeId} emitted=$emitted droppedStale=$droppedStale — re-issuing after ${RESUBSCRIBE_BACKOFF_MS}ms" }
@@ -549,7 +552,7 @@ private class ReconnectingHandle(
             ok = SYNTH_OK,
             objects = frames.asSharedFlow(),
             unsubscribeAction = {
-                val live = liveHandleRef.getAndSet(null)
+                val live = liveHandleRef.exchange(null)
                 pumpJob.cancel()
                 live?.let { runCatching { it.unsubscribe() } }
             },

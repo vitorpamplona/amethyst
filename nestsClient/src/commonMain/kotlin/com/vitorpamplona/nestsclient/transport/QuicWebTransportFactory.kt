@@ -31,13 +31,13 @@ import com.vitorpamplona.quic.http3.buildClientWebTransportSettings
 import com.vitorpamplona.quic.qpack.QpackDecoder
 import com.vitorpamplona.quic.stream.QuicStream
 import com.vitorpamplona.quic.tls.CertificateValidator
-import com.vitorpamplona.quic.tls.JdkCertificateValidator
 import com.vitorpamplona.quic.transport.UdpSocket
 import com.vitorpamplona.quic.webtransport.QuicWebTransportSessionState
 import com.vitorpamplona.quic.webtransport.buildExtendedConnectHeaders
 import com.vitorpamplona.quic.webtransport.encodeHeadersFrame
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -70,11 +70,11 @@ class QuicWebTransportFactory(
     private val parentScope: CoroutineScope =
         CoroutineScope(SupervisorJob() + Dispatchers.IO),
     /**
-     * Certificate validator. Defaults to [JdkCertificateValidator], which
-     * delegates to the platform / JDK system trust store. Tests or self-signed
-     * dev environments can pass a permissive validator explicitly.
+     * Certificate validator. Defaults to the platform's trust store
+     * ([platformCertificateValidator]: the JDK's, Apple's Security framework).
+     * Tests or self-signed dev environments can pass a permissive validator.
      */
-    private val certificateValidator: CertificateValidator = JdkCertificateValidator(),
+    private val certificateValidator: CertificateValidator = platformCertificateValidator(),
     /**
      * Maximum time we'll suspend waiting for the server's HEADERS response on
      * the Extended CONNECT request stream before giving up with HandshakeFailed.
@@ -411,17 +411,6 @@ class QuicWebTransportFactory(
      * literal is only used as the UDP socket target; the caller still passes
      * the original [host] as the TLS SNI server name.
      */
-    private fun resolvePreferIpv4(host: String): String =
-        try {
-            val addrs = java.net.InetAddress.getAllByName(host)
-            (
-                addrs.firstOrNull { it is java.net.Inet4Address }
-                    ?: addrs.firstOrNull()
-            )?.hostAddress ?: host
-        } catch (_: java.net.UnknownHostException) {
-            host
-        }
-
     private fun splitAuthority(authority: String): Pair<String, Int> {
         val idx = authority.lastIndexOf(':')
         if (idx <= 0) return authority to 443

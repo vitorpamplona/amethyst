@@ -20,6 +20,8 @@
  */
 package com.vitorpamplona.nestsclient.trace
 
+import kotlin.concurrent.Volatile
+
 /**
  * Append-only event recorder for the moq-lite + Nests audio path.
  *

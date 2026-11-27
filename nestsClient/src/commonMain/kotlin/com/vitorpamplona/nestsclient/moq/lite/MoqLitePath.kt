@@ -57,7 +57,7 @@ object MoqLitePath {
         }
         // Strip the trailing `/` left behind by an input ending in `/`.
         if (out.isNotEmpty() && out[out.length - 1] == '/') {
-            out.deleteCharAt(out.length - 1)
+            out.deleteAt(out.length - 1)
         }
         return out.toString()
     }

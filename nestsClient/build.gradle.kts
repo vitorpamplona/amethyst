@@ -14,6 +14,17 @@ kotlin {
         }
     }
 
+    // iOS (plans/2026-10-09-ios-app.md, B11): the same MoQ and WebTransport code over quic-kmp's
+    // iOS build, with AudioToolbox's Opus and AVAudioEngine for the audio. quic-kmp 1.2.1 has no
+    // iOS build, so the targets exist only when one can resolve: with a local quic-kmp
+    // (-PquicKmpDir) or once the catalog names a quic release that has one (-Pamethyst.nests.ios
+    // until then). No iOS module depends on this one yet.
+    val iosTargets = providers.gradleProperty("quicKmpDir").isPresent || providers.gradleProperty("amethyst.nests.ios").isPresent
+    if (iosTargets) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
+
     android {
         namespace = "com.vitorpamplona.nestsclient"
         compileSdk =
@@ -68,6 +79,21 @@ kotlin {
             // Kwik QUIC + Flupke HTTP/3 dependencies are NOT yet declared.
             // See KwikWebTransportFactory.kt for the integration plan and
             // validated Maven coordinates / minimum versions before adding.
+        }
+
+        // Explicit, because the jvmAndroid edge above turns the default hierarchy template off.
+        if (iosTargets) {
+            val iosMain =
+                maybeCreate("iosMain").apply {
+                    dependsOn(commonMain.get())
+                    dependencies {
+                        // The nests server's token mint (KtorNestsClient), over the app's NSURLSession
+                        // clients. Apache-2.0, already in the app.
+                        implementation(libs.ktor.client.core)
+                    }
+                }
+            getByName("iosArm64Main").dependsOn(iosMain)
+            getByName("iosSimulatorArm64Main").dependsOn(iosMain)
         }
 
         jvmTest {

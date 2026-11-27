@@ -18,6 +18,8 @@
  * AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package com.vitorpamplona.nestsclient.moq.lite
 
 import com.vitorpamplona.nestsclient.moq.MoqCodecException
@@ -26,6 +28,7 @@ import com.vitorpamplona.nestsclient.trace.NestsTrace
 import com.vitorpamplona.nestsclient.trace.jsonStr
 import com.vitorpamplona.nestsclient.transport.WebTransportSession
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.concurrent.ConcurrentMap
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 import com.vitorpamplona.quic.Varint
 import kotlinx.coroutines.CancellationException
@@ -42,7 +45,9 @@ import kotlinx.coroutines.flow.consumeAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.Volatile
+import kotlin.concurrent.atomics.AtomicLong
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 /**
  * moq-lite (Lite-03) session for both listener and publisher roles.
@@ -500,7 +505,7 @@ class MoqLiteSession internal constructor(
      * [SubscribeHandle.broadcastEndedCount]. Written by the announce pump,
      * read without suspending by handle probes on other coroutines.
      */
-    private val broadcastEndedCounts = ConcurrentHashMap<String, Long>()
+    private val broadcastEndedCounts = ConcurrentMap<String, Long>()
 
     /**
      * Open the shared announce-watch bidi *synchronously* (and
@@ -1418,8 +1423,7 @@ class MoqLiteSession internal constructor(
         // Diagnostic: throttled counter for "send returned false" logs so a
         // long no-subscriber window doesn't flood logcat at 50 Hz.
         private val sendNoSubLogCount =
-            java.util.concurrent.atomic
-                .AtomicLong(0L)
+            AtomicLong(0L)
 
         @Volatile private var publisherClosed = false
 
@@ -1519,14 +1523,14 @@ class MoqLiteSession internal constructor(
         override suspend fun send(payload: ByteArray): Boolean {
             gate.withLock {
                 if (publisherClosed) {
-                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
-                        Log.w("NestTx") { "send returning false — publisher closed (count=${sendNoSubLogCount.get()})" }
+                    if (sendNoSubLogCount.fetchAndAdd(1L) % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — publisher closed (count=${sendNoSubLogCount.load()})" }
                     }
                     return false
                 }
                 if (inboundSubs.isEmpty()) {
-                    if (sendNoSubLogCount.getAndIncrement() % SEND_LOG_THROTTLE == 0L) {
-                        Log.w("NestTx") { "send returning false — no inboundSubs (count=${sendNoSubLogCount.get()}, payload=${payload.size}B)" }
+                    if (sendNoSubLogCount.fetchAndAdd(1L) % SEND_LOG_THROTTLE == 0L) {
+                        Log.w("NestTx") { "send returning false — no inboundSubs (count=${sendNoSubLogCount.load()}, payload=${payload.size}B)" }
                     }
                     return false
                 }

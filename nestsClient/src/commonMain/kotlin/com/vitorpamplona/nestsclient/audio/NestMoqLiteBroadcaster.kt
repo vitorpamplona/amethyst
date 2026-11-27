@@ -29,6 +29,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * Mirror of [NestBroadcaster] but driving a moq-lite

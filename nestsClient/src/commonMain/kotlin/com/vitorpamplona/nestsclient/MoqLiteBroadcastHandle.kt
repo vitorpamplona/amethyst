@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient
 
 import com.vitorpamplona.nestsclient.audio.NestMoqLiteBroadcaster
 import com.vitorpamplona.nestsclient.moq.lite.MoqLitePublisherHandle
+import kotlin.concurrent.Volatile
 
 /**
  * [BroadcastHandle] returned by [MoqLiteNestsSpeaker.startBroadcasting]

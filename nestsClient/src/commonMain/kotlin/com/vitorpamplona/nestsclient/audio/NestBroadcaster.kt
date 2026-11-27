@@ -26,6 +26,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlin.concurrent.Volatile
 
 /**
  * Inverse of [NestPlayer]: pulls PCM from an [AudioCapture], runs it

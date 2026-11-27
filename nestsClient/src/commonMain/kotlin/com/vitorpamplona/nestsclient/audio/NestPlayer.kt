@@ -22,6 +22,7 @@ package com.vitorpamplona.nestsclient.audio
 
 import com.vitorpamplona.nestsclient.moq.MoqObject
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -278,9 +279,9 @@ class NestPlayer(
                             decodedFrames += 1
                             onLevel(peakAmplitude(pcm))
                             if (playbackBegun) {
-                                val enqueueStart = System.currentTimeMillis()
+                                val enqueueStart = TimeUtils.nowMillis()
                                 player.enqueue(pcm)
-                                val enqueueMs = System.currentTimeMillis() - enqueueStart
+                                val enqueueMs = TimeUtils.nowMillis() - enqueueStart
                                 enqueued += 1
                                 if (enqueued % PLAY_LOG_THROTTLE == 0L || enqueueMs > 50) {
                                     Log.d("NestPlay") {
