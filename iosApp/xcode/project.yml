@@ -67,11 +67,11 @@ targets:
         # Where embedAndSignAppleFrameworkForXcode puts AmethystKit.framework.
         FRAMEWORK_SEARCH_PATHS: "$(inherited) $(SRCROOT)/../build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
         # Arti, Tor in Rust (tools/arti-build): AmethystKit is a static framework, so its calls into
-        # Arti's C ABI are resolved here, against the archive :iosApp:buildArtiIos builds (from
-        # source, during the pre-build step below; it is not committed). -liconv is the one system
-        # library the archive needs that the app does not already link.
-        "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(inherited) $(SRCROOT)/../../tools/arti-build/out/ios/aarch64-apple-ios"
-        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(inherited) $(SRCROOT)/../../tools/arti-build/out/ios/aarch64-apple-ios-sim"
+        # Arti's C ABI are resolved here, against the committed archives in iosApp/libs/arti (built
+        # by tools/arti-build/build-arti-ios.sh, like Android's jniLibs; no Rust needed to build the
+        # app). -liconv is the one system library the archive needs that the app does not already link.
+        "LIBRARY_SEARCH_PATHS[sdk=iphoneos*]": "$(inherited) $(SRCROOT)/../libs/arti/aarch64-apple-ios"
+        "LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*]": "$(inherited) $(SRCROOT)/../libs/arti/aarch64-apple-ios-sim"
         OTHER_LDFLAGS: "$(inherited) -framework AmethystKit -larti -liconv"
         # Apple-silicon simulators only: Kotlin has no iosX64 target and Arti no x86_64 slice, so a
         # generic simulator build would otherwise ask for an Intel slice that cannot exist.
@@ -79,8 +79,7 @@ targets:
         # The Gradle build below writes outside the sandbox Xcode gives build scripts.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
     preBuildScripts:
-      # Also builds Arti's static library for the SDK being built (:iosApp:buildArtiIos, which
-      # needs rustup: see iosApp/README.md). Cargo and Gradle skip it while its sources are unchanged.
+      # Also checks the committed Arti archives the link below takes (:iosApp:verifyArtiIosArchives).
       - name: Build AmethystKit (Kotlin)
         basedOnDependencyAnalysis: false
         script: |

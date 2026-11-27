@@ -15,65 +15,55 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
 }
 
-// Arti for iOS: tools/arti-build/build-arti-ios.sh builds the Rust wrapper as two static
-// archives (device, simulator) into tools/arti-build/out/ios, which git ignores: ~18 MB each,
-// rebuilt from the pinned sources like Android's .so but not committed. Needs macOS, Xcode and
-// rustup; Gradle runs it for whatever links Arti (the app, through Xcode's call of
-// embedAndSignAppleFrameworkForXcode, and the test executables), and skips it while its inputs
-// are unchanged. See tools/arti-build/README.md -> "iOS".
+// Arti for iOS, the Android model: tools/arti-build/build-arti-ios.sh builds the Rust wrapper
+// as two static archives (device, simulator), strips their debug info and writes them to
+// libs/arti/<triple>/libarti.a, which are COMMITTED, as Android's jniLibs .so are. Building the
+// app or the tests only reads them: no Rust toolchain needed. Whoever changes tools/arti-build
+// reruns the script (and verify-reproducible-ios.sh) and commits the archives with the change.
+// See tools/arti-build/README.md -> "iOS".
 //
 // The cinterop needs the Apple SDK, so the Arti bindings (the cinterop and src/iosArtiMain) are
 // set up on a Mac only, and compiling :iosApp elsewhere keeps working without them
 // (src/iosNoArtiMain stands in, with Tor unavailable).
 val withArti = HostManager.hostIsMac
 val artiBuildDir = rootProject.layout.projectDirectory.dir("tools/arti-build")
-val artiIosOut = artiBuildDir.dir("out/ios")
+val artiLibs = layout.projectDirectory.dir("libs/arti")
 val artiDeviceTarget = "aarch64-apple-ios"
 val artiSimulatorTarget = "aarch64-apple-ios-sim"
 
-// Xcode names the SDK it builds for in PLATFORM_NAME; then only that slice is built (each one
-// is a ~70 s cold Rust build). Anywhere else (a terminal, the test tasks) both are.
-val artiTargets: Provider<List<String>> =
-    providers
-        .environmentVariable("PLATFORM_NAME")
-        .map {
-            when (it) {
-                "iphonesimulator" -> listOf(artiSimulatorTarget)
-                "iphoneos" -> listOf(artiDeviceTarget)
-                else -> listOf(artiDeviceTarget, artiSimulatorTarget)
+// Like Android's verifyNativeAbis: a missing or wrong archive links into nothing useful, so fail
+// the build that would link it, with the fix, rather than at Xcode's undefined-symbol errors.
+val verifyArtiIosArchives =
+    tasks.register("verifyArtiIosArchives") {
+        group = "verification"
+        description = "Checks the committed Arti archives in iosApp/libs/arti (arm64, every C export)."
+        val archives = listOf(artiDeviceTarget, artiSimulatorTarget).map { artiLibs.file("$it/libarti.a").asFile }
+        val header = artiBuildDir.file("include/arti_ffi.h").asFile
+        inputs.files(archives + header)
+        doLast {
+            val declared = Regex("""\b(arti_[a-z_]+)\(""").findAll(header.readText()).map { it.groupValues[1] }.toSet()
+            // MH_MAGIC_64 then CPU_TYPE_ARM64, little-endian: the first object member's header.
+            val arm64MachO = "\u00cf\u00fa\u00ed\u00fe\u000c\u0000\u0000\u0001"
+            archives.forEach { archive ->
+                val fix = "Rebuild it: tools/arti-build/build-arti-ios.sh (README.md -> \"iOS\")."
+                if (!archive.isFile) throw GradleException("Missing $archive. $fix")
+                // ISO-8859-1 maps each byte to one char, so the archive can be searched as text.
+                val bytes = archive.readText(Charsets.ISO_8859_1)
+                if (!bytes.startsWith("!<arch>\n")) throw GradleException("$archive is not a static archive. $fix")
+                if (!bytes.contains(arm64MachO)) throw GradleException("$archive holds no arm64 Mach-O object. $fix")
+                // The symbol table (__.SYMDEF) names every exported function, NUL-terminated.
+                val missing = declared.filterNot { bytes.contains("_$it\u0000") }
+                if (missing.isNotEmpty()) throw GradleException("$archive does not export $missing. $fix")
             }
-        }.orElse(listOf(artiDeviceTarget, artiSimulatorTarget))
-val buildArtiIos =
-    tasks.register<Exec>("buildArtiIos") {
-        group = "build"
-        description = "Builds Arti's iOS static libraries (tools/arti-build/build-arti-ios.sh)."
-        workingDir(artiBuildDir)
-        val targets = artiTargets.get()
-        commandLine(listOf("./build-arti-ios.sh") + targets.map { "--target=$it" })
-        inputs.property("targets", targets)
-        inputs.dir(artiBuildDir.dir("src"))
-        inputs.dir(artiBuildDir.dir("include"))
-        inputs.files(
-            artiBuildDir.files(
-                "Cargo.toml",
-                "Cargo.lock",
-                "ARTI_VERSION",
-                "IOS_XCODE_VERSION",
-                "rust-toolchain.toml",
-                "repro-env.sh",
-                "build-arti-ios.sh",
-            ),
-        )
-        targets.forEach { outputs.file(artiIosOut.file("$it/libarti.a")) }
+        }
     }
 
 // The app: AmethystKit is a static framework, so Kotlin/Native leaves its `_arti_*` references
-// for Xcode's link of the app, which takes the archive from tools/arti-build/out/ios/<triple>
-// (LIBRARY_SEARCH_PATHS and -larti -liconv in xcode/project.yml). Xcode's pre-build step runs
-// embedAndSignAppleFrameworkForXcode, so building the app builds Arti first.
+// for Xcode's link of the app, which takes the archive from libs/arti/<triple>
+// (LIBRARY_SEARCH_PATHS and -larti -liconv in xcode/project.yml).
 if (withArti) {
     tasks.matching { it.name == "embedAndSignAppleFrameworkForXcode" }.configureEach {
-        dependsOn(buildArtiIos)
+        dependsOn(verifyArtiIosArchives)
     }
 }
 
@@ -96,13 +86,13 @@ kotlin {
             includeDirs(artiBuildDir.dir("include"))
             packageName = "com.vitorpamplona.amethyst.ios.tor.cinterop"
         }
-        // The test executables link the archive build-arti-ios.sh writes themselves; the app's
-        // link is Xcode's (see embedAndSignAppleFrameworkForXcode above).
+        // The test executables link the committed archive themselves; the app's link is Xcode's
+        // (see embedAndSignAppleFrameworkForXcode above).
         val rustTarget = if (target.name == "iosArm64") artiDeviceTarget else artiSimulatorTarget
         target.binaries.withType<TestExecutable>().configureEach {
             // -liconv: the one system library in build-arti-ios.sh's native-static-libs
             // (-liconv -lSystem -lc -lm) that a Kotlin/Native link does not already pass.
-            linkerOpts("-L${artiIosOut.dir(rustTarget).asFile.absolutePath}", "-larti", "-liconv")
+            linkerOpts("-L${artiLibs.dir(rustTarget).asFile.absolutePath}", "-larti", "-liconv")
             // The B12a ATS experiment: embed an Info.plist into the test executable (a bare binary
             // has none, and without one ATS lets plain http:// through).
             providers.gradleProperty("amethyst.ios.testInfoPlist").orNull?.let { plist ->
@@ -110,8 +100,8 @@ kotlin {
             }
             // The archive as an input too, or a rebuilt libarti.a leaves the executable stale.
             linkTaskProvider.configure {
-                dependsOn(buildArtiIos)
-                inputs.file(artiIosOut.file("$rustTarget/libarti.a"))
+                dependsOn(verifyArtiIosArchives)
+                inputs.file(artiLibs.file("$rustTarget/libarti.a"))
             }
         }
     }

@@ -6,19 +6,19 @@
 # (build-arti.sh), so both platforms run one engine. The Android .so does not change: the C ABI
 # is behind the `ffi` feature, which only this script turns on (README.md -> "iOS").
 #
-# Output, not committed (tools/arti-build/.gitignore):
-#   out/ios/aarch64-apple-ios/libarti.a        device
-#   out/ios/aarch64-apple-ios-sim/libarti.a    Apple-silicon simulator
-#   out/ios/Arti.xcframework                   both slices + the header, for an Xcode target
-#   out/ios/include/arti_ffi.h                 copy of include/arti_ffi.h
-#   out/ios/BUILD_INFO                         toolchain, Xcode and sha256 of each archive
+# Output, COMMITTED, like Android's jniLibs (README.md -> "iOS"):
+#   iosApp/libs/arti/aarch64-apple-ios/libarti.a        device
+#   iosApp/libs/arti/aarch64-apple-ios-sim/libarti.a    Apple-silicon simulator
+#   iosApp/libs/arti/BUILD_INFO                         toolchain, Xcode, sha256 of each archive
+# Debug info is stripped (strip -S), which takes each archive from ~18.9 MB to ~12.7 MB.
+#
+# The app and test builds only read these files; nothing runs Rust there. Run this script when
+# you change src/, Cargo.*, ARTI_VERSION or a pin, then verify-reproducible-ios.sh, and commit the
+# archives with the change, as you would the Android .so.
 #
 # Reproducible: the same bytes from any checkout, CARGO_HOME, Xcode install path or calling
 # environment, given the pins (Rust in rust-toolchain.toml, Xcode in IOS_XCODE_VERSION,
-# Cargo.lock, ARTI_VERSION). IOS_ARCHIVES.sha256 records them; verify-reproducible-ios.sh checks.
-#
-# :iosApp's buildArtiIos task runs this script, and its test executables link the archives
-# (iosApp/build.gradle.kts). Run it by hand only to rebuild outside Gradle.
+# Cargo.lock, ARTI_VERSION); verify-reproducible-ios.sh checks.
 #
 # Prerequisites: macOS with Xcode, rustup (rust-toolchain.toml pins 1.98.1; the two iOS targets
 # are added here when missing), git.
@@ -32,10 +32,10 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARTI_VERSION=$(tr -d '[:space:]' < "$SCRIPT_DIR/ARTI_VERSION")
-# The pinned Xcode. Its clang compiles ring, zstd-sys and libsqlite3-sys and its SDK is linked
-# against, so it is an input of the archive the way the NDK is for Android: IOS_ARCHIVES.sha256
-# holds the hashes this Xcode produces. Another Xcode only warns here, so a developer's build
-# still works; verify-reproducible-ios.sh refuses it.
+# The pinned Xcode. Its clang compiles ring, zstd-sys and libsqlite3-sys, its SDK is linked
+# against and its strip post-processes the archives, so it is an input the way the NDK is for
+# Android. Another Xcode only warns here (the result will not match the committed archives);
+# verify-reproducible-ios.sh refuses it.
 XCODE_PIN=$(tr -d '[:space:]' < "$SCRIPT_DIR/IOS_XCODE_VERSION")
 # Keep in step with deploymentTarget in iosApp/xcode/project.yml.
 export IPHONEOS_DEPLOYMENT_TARGET=16.0
@@ -44,7 +44,11 @@ export IPHONEOS_DEPLOYMENT_TARGET=16.0
 ARTI_BUILD_ROOT="${ARTI_REPRO_DIR:-/tmp/amethyst-arti-build}"
 ARTI_SOURCE_DIR="$ARTI_BUILD_ROOT/.arti-source"
 WRAPPER_DIR="$ARTI_SOURCE_DIR/arti-ios-wrapper"
-OUT_DIR="$SCRIPT_DIR/out/ios"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# verify-reproducible-ios.sh points its second build elsewhere; everyone else writes the
+# committed location.
+OUT_DIR="${ARTI_IOS_OUT_DIR:-$PROJECT_ROOT/iosApp/libs/arti}"
+LOG_DIR="$SCRIPT_DIR/out/ios-logs"
 HEADER="$SCRIPT_DIR/include/arti_ffi.h"
 
 TARGETS=("aarch64-apple-ios" "aarch64-apple-ios-sim")
@@ -86,7 +90,7 @@ command -v cargo >/dev/null 2>&1 && cargo --version >/dev/null 2>&1 || die "carg
 
 XCODE_FOUND=$(xcodebuild -version 2>/dev/null | awk '/^Xcode/{v=$2} /^Build version/{b=$3} END{print v"("b")"}')
 if [ "$XCODE_FOUND" != "$XCODE_PIN" ]; then
-    say "Xcode $XCODE_FOUND, IOS_XCODE_VERSION pins $XCODE_PIN: the archives will not match IOS_ARCHIVES.sha256"
+    say "Xcode $XCODE_FOUND, IOS_XCODE_VERSION pins $XCODE_PIN: the archives will not match the committed ones"
 fi
 
 # rustup resolves the toolchain from rust-toolchain.toml in the current directory.
@@ -208,8 +212,7 @@ export CFLAGS_aarch64_apple_ios_sim="$IOS_CFLAGS"
 # task instead of the app.
 export CARGO_PROFILE_RELEASE_PANIC=unwind
 
-mkdir -p "$OUT_DIR/include"
-cp "$HEADER" "$OUT_DIR/include/arti_ffi.h"
+mkdir -p "$OUT_DIR" "$LOG_DIR"
 
 # The functions the header declares; each archive must export every one.
 DECLARED=$(sed -n 's/.*[ *]\(arti_[a-z_]*\)(.*/\1/p' "$HEADER" | sort -u)
@@ -222,16 +225,21 @@ for target in "${TARGETS[@]}"; do
     esac
     say "Building $target"
     # --print native-static-libs: the system libraries the archive needs at the final link. The
-    # test executables in iosApp/build.gradle.kts pass the same list.
+    # test executables in iosApp/build.gradle.kts and iosApp/xcode/project.yml pass the same list.
     cargo rustc --release --locked --features ffi \
         --manifest-path "$WRAPPER_DIR/Cargo.toml" \
         --target "$target" --lib --crate-type staticlib \
-        -- --print native-static-libs 2> >(tee "$OUT_DIR/$target.cargo.log" >&2)
+        -- --print native-static-libs 2> >(tee "$LOG_DIR/$target.cargo.log" >&2)
 
     built="$WRAPPER_DIR/target/$target/release/libarti_android.a"
     [ -f "$built" ] || die "$built not produced"
     mkdir -p "$OUT_DIR/$target"
-    cp "$built" "$OUT_DIR/$target/libarti.a"
+    # Strip debug info: a third of the archive (Rust's prebuilt std and ring's -gfull objects
+    # carry DWARF), which nothing needs, since the app's own link strips it anyway. Linked into a
+    # stripped binary the result is the same size. ZERO_AR_DATE makes strip's rewritten symbol
+    # table (__.SYMDEF) say uid/gid 0 and mtime 0 like the other members; without it the member
+    # carries the builder's uid and the time, so two builds differed (measured).
+    ZERO_AR_DATE=1 xcrun strip -S "$built" -o "$OUT_DIR/$target/libarti.a"
 
     # Xcode's nm exits 1 on the compiler_builtins members: they carry bitcode from Rust's newer
     # LLVM ("Unknown attribute kind"). The linker ignores that bitcode; read the rest anyway.
@@ -241,16 +249,6 @@ for target in "${TARGETS[@]}"; do
     echo "✓ $target: $(echo "$DECLARED" | wc -l | tr -d ' ') C exports present, $(du -h "$OUT_DIR/$target/libarti.a" | cut -f1)"
 done
 
-# Xcode consumes an xcframework; it needs both slices.
-if [ -f "$OUT_DIR/aarch64-apple-ios/libarti.a" ] && [ -f "$OUT_DIR/aarch64-apple-ios-sim/libarti.a" ]; then
-    rm -rf "$OUT_DIR/Arti.xcframework"
-    xcodebuild -create-xcframework \
-        -library "$OUT_DIR/aarch64-apple-ios/libarti.a" -headers "$OUT_DIR/include" \
-        -library "$OUT_DIR/aarch64-apple-ios-sim/libarti.a" -headers "$OUT_DIR/include" \
-        -output "$OUT_DIR/Arti.xcframework" >/dev/null
-    echo "✓ $OUT_DIR/Arti.xcframework"
-fi
-
 {
     echo "arti: $ARTI_VERSION"
     echo "rustc: $RUSTC_VERSION"
@@ -259,21 +257,24 @@ fi
     echo "iphonesimulator_sdk: $(xcrun --sdk iphonesimulator --show-sdk-version) ($(xcrun --sdk iphonesimulator --show-sdk-build-version))"
     echo "iphoneos_deployment_target: $IPHONEOS_DEPLOYMENT_TARGET"
     echo "panic: unwind"
+    echo "strip: -S"
     for target in aarch64-apple-ios aarch64-apple-ios-sim; do
-        [ -f "$OUT_DIR/$target/libarti.a" ] && echo "$target: $(shasum -a 256 "$OUT_DIR/$target/libarti.a" | cut -d' ' -f1)"
+        if [ -f "$OUT_DIR/$target/libarti.a" ]; then
+            echo "$target: $(shasum -a 256 "$OUT_DIR/$target/libarti.a" | cut -d' ' -f1)"
+        fi
     done
-    sed -n 's/.*native-static-libs: /native-static-libs: /p' "$OUT_DIR"/*.cargo.log 2>/dev/null | sort -u
+    echo "native-static-libs: -liconv -lSystem -lc -lm"
 } > "$OUT_DIR/BUILD_INFO"
 cat "$OUT_DIR/BUILD_INFO"
 
-# Informational: whether these are the bytes recorded for this tag. A mismatch is expected
-# while src/ or Cargo.* has uncommitted changes, or with another Xcode than the pinned one.
+# The libraries a linker needs besides the archive, checked rather than recorded from the log, so
+# BUILD_INFO does not depend on which slices this run rebuilt. A change here means
+# iosApp/build.gradle.kts and iosApp/xcode/project.yml need the new list too.
 for target in "${TARGETS[@]}"; do
-    actual=$(shasum -a 256 "$OUT_DIR/$target/libarti.a" | cut -d' ' -f1)
-    expected=$({ grep -v '^#' "$SCRIPT_DIR/IOS_ARCHIVES.sha256" 2>/dev/null || true; } | awk -v p="$target/libarti.a" '$2 == p {print $1}')
-    if [ "$actual" = "$expected" ]; then
-        echo "✓ $target: matches IOS_ARCHIVES.sha256"
-    else
-        echo "⚠ $target: differs from IOS_ARCHIVES.sha256 (${expected:-none recorded})"
-    fi
+    found=$(sed -n 's/.*native-static-libs: //p' "$LOG_DIR/$target.cargo.log" | head -1)
+    [ "$found" = "-liconv -lSystem -lc -lm" ] || die "$target needs native libs '$found', not '-liconv -lSystem -lc -lm': update the list in this script, iosApp/build.gradle.kts and iosApp/xcode/project.yml"
 done
+
+echo
+echo "Archives written to $OUT_DIR. Commit them (and BUILD_INFO) with the change that produced them;"
+echo "./verify-reproducible-ios.sh checks they reproduce."
