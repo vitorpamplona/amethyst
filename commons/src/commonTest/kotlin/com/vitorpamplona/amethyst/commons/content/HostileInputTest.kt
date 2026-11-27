@@ -25,20 +25,32 @@ import com.vitorpamplona.amethyst.commons.content.djot.DjotToDocument
 import com.vitorpamplona.amethyst.commons.content.markdown.MarkdownToDocument
 import kotlin.test.Test
 import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.seconds
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.TimeSource
 
 /**
  * Text comes from strangers: whatever a note holds must parse without overflowing the stack and in
  * about linear time, and the document must stay shallow enough for the renderer to walk.
+ *
+ * "About linear" is checked against the same parser on ordinary text, on the same binary: a hostile
+ * input may cost at most [SLOWER_THAN_ORDINARY] times what ordinary text of its length costs. A fixed
+ * wall-clock budget measured the platform instead of the shape: a Kotlin/Native debug test binary
+ * parses Markdown 10 to 25 times slower than the JVM, ordinary text included, so a 4 MB input that
+ * takes 0.3 s on the JVM takes 5 s there, while a blow-up (quadratic in the input) still costs
+ * thousands of times more than ordinary text on both.
  */
 class HostileInputTest {
-    private val formats: List<Pair<String, (String) -> Document>> =
-        listOf(
-            "markdown" to { text -> MarkdownToDocument().parse(text) },
-            "djot" to { text -> DjotToDocument().parse(text) },
-            "asciidoc" to { text -> AsciiDocToDocument().parse(text) },
-        )
+    private class Format(
+        val name: String,
+        val parse: (String) -> Document,
+    ) {
+        /** What one character of ordinary text costs this parser, measured once per format. */
+        val perChar: Duration by lazy {
+            parse(ORDINARY)
+            (0 until 3).minOf { timed { parse(ORDINARY) } } / ORDINARY.length
+        }
+    }
 
     /** How deep [document] nests, blocks and inlines together, walked with a stack. */
     private fun depth(document: Document): Int {
@@ -67,13 +79,13 @@ class HostileInputTest {
         input: String,
         mustKeep: String,
     ) {
-        formats.forEach { (format, parse) ->
-            val start = TimeSource.Monotonic.markNow()
-            val document = parse(input)
-            val took = start.elapsedNow()
-            assertTrue(took < 3.seconds, "$format, $name: took $took")
-            assertTrue(depth(document) <= Document.MAX_DEPTH * 3, "$format, $name: nests ${depth(document)} deep")
-            assertTrue(PlainText.of(document).contains(mustKeep), "$format, $name: lost '$mustKeep'")
+        FORMATS.forEach { format ->
+            val budget = maxOf(FLOOR, format.perChar * input.length * SLOWER_THAN_ORDINARY)
+            lateinit var document: Document
+            val took = timed { document = format.parse(input) }
+            assertTrue(took < budget, "${format.name}, $name: took $took, budget $budget (${format.perChar} a character on ordinary text)")
+            assertTrue(depth(document) <= Document.MAX_DEPTH * 3, "${format.name}, $name: nests ${depth(document)} deep")
+            assertTrue(PlainText.of(document).contains(mustKeep), "${format.name}, $name: lost '$mustKeep'")
         }
     }
 
@@ -94,4 +106,37 @@ class HostileInputTest {
 
     @Test
     fun longBlankRunsInLists() = check("blank runs", "* a\n" + "\n".repeat(40000) + "* b", "b")
+
+    private companion object {
+        /** How many times ordinary text's cost a hostile input may take; the worst measured, on the JVM and on iOS, is about 4. */
+        const val SLOWER_THAN_ORDINARY = 10
+
+        /** Below this, the timer measures noise (a cold JIT, a GC pause), not the input's shape. */
+        val FLOOR = 500.milliseconds
+
+        val FORMATS =
+            listOf(
+                Format("markdown") { text -> MarkdownToDocument().parse(text) },
+                Format("djot") { text -> DjotToDocument().parse(text) },
+                Format("asciidoc") { text -> AsciiDocToDocument().parse(text) },
+            )
+
+        /** About 20 KB of what notes usually hold: headings, prose with marks and links, lists, quotes. */
+        val ORDINARY =
+            buildString {
+                repeat(64) { i ->
+                    append("# Section $i\n\n")
+                    append("Some ordinary *words* in a [link](https://example.com/$i), with `code` and _more_ words after them.\n")
+                    append("A second line of the same paragraph, a little longer, so that the text dominates the marks.\n\n")
+                    append("- first item\n- second item with **strong** text\n- third item\n\n")
+                    append("> a quoted line\n> and another one\n\n")
+                }
+            }
+
+        fun timed(block: () -> Unit): Duration {
+            val start = TimeSource.Monotonic.markNow()
+            block()
+            return start.elapsedNow()
+        }
+    }
 }
