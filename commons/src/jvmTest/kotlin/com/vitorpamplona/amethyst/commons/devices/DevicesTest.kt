@@ -27,6 +27,7 @@ import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import java.io.IOException
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -110,19 +111,19 @@ class DevicesTest {
 
     @Test
     fun everyPlatformIsAskedAtOnce() =
-        runBlocking {
+        runTest {
             android.lookMs = 400
             ios.lookMs = 400
             android.devices = listOf(device("emulator-5554", DevicePlatform.ANDROID))
             ios.devices = listOf(device("AAAA-1", DevicePlatform.IOS))
             val devices = Devices(listOf(android, ios), scope)
 
-            val started = System.currentTimeMillis()
+            // Virtual time: the looks' delays pass on the test's clock, so a slow machine can't fail this.
+            val started = testScheduler.currentTime
             devices.refresh()
-            val took = System.currentTimeMillis() - started
 
-            // One after the other would be 800 ms or more.
-            assertTrue(took < 700, "refresh took $took ms")
+            // At once, the two 400 ms looks take 400 ms; one after the other would take 800.
+            assertEquals(400, testScheduler.currentTime - started)
             assertEquals(
                 listOf("emulator-5554", "AAAA-1"),
                 devices.state.value.devices
@@ -175,7 +176,7 @@ class DevicesTest {
 
     @Test
     fun aPlatformThatHangsDoesNotHoldUpTheOther() =
-        runBlocking {
+        runTest {
             android.devices = listOf(device("emulator-5554", DevicePlatform.ANDROID))
             ios.devices = listOf(device("AAAA-1", DevicePlatform.IOS))
             val devices = Devices(listOf(android, ios), scope, refreshTimeoutMs = 300)
@@ -183,11 +184,11 @@ class DevicesTest {
 
             ios.hang = true
             android.devices = emptyList()
-            val started = System.currentTimeMillis()
+            // Virtual time, as above: the hanging platform is cut off at its 300 ms, not waited on.
+            val started = testScheduler.currentTime
             devices.refresh()
-            val took = System.currentTimeMillis() - started
 
-            assertTrue(took < 1_000, "refresh took $took ms")
+            assertEquals(300, testScheduler.currentTime - started)
             assertEquals(
                 listOf("AAAA-1"),
                 devices.state.value.devices
