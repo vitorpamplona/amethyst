@@ -166,6 +166,23 @@ class BuildGateTest {
         }
 
     @Test
+    fun theRunEndsOnlyOnceItHasLookedAtTheWorkAgain() =
+        runBlocking<Unit> {
+            // Checks that commit as they run: the pass is for the work before.
+            File(repo, ".git-hooks/pre-push").writeText(
+                "#!/bin/bash\ngit -c user.email=t@t -c user.name=T commit --quiet --allow-empty -m during\nexit 0\n",
+            )
+            git("commit", "--quiet", "-am", "committing checks")
+            val gate = BuildGate(repo, scope)
+
+            // The end is seen already outdated, never as a pass: the gate looked at the work (git
+            // status and diff) before it said the run ended, so no git of its own is still reading
+            // the checkout when the caller goes on to edit it. On Windows that git's mapping of a
+            // file made the edit fail ("a file with a user-mapped section open").
+            assertSame(GateState.Outdated, gate.runToEnd())
+        }
+
+    @Test
     fun aFailureHoldsPublishingBack() =
         runBlocking<Unit> {
             exitCode.writeText("1")
