@@ -65,6 +65,22 @@ interface CashuKeysetCounterStore {
         if (current >= legacyValue) return
         reserve(keysetId, (legacyValue - current).toInt())
     }
+
+    /**
+     * Whether this install has already aligned its counter for [keysetId] with the mint, or
+     * found that the mint gives it no way to. False until [markSettled].
+     *
+     * The NUT-13 seed belongs to the wallet; the counter belongs to the install. A reinstall or
+     * a second device starts the counter at 0 and derives the very outputs the mint signed for
+     * the first, which it refuses. The wallet settles that once per keyset
+     * (`CashuWalletOps.settleCounter`) and remembers it here, so later starts don't ask the mint
+     * again. Per keyset, because one the mint rotates in starts a fresh counter that no install
+     * has aligned yet.
+     */
+    suspend fun isSettled(keysetId: String): Boolean
+
+    /** Records that [isSettled] answers true for [keysetId] from now on. Persists before returning. */
+    suspend fun markSettled(keysetId: String)
 }
 
 /**
@@ -83,4 +99,9 @@ object UnavailableCashuKeysetCounterStore : CashuKeysetCounterStore {
         keysetId: String,
         count: Int,
     ): Long = fail()
+
+    /** Nothing is ever reserved here, so no slot can be reused: there is nothing to settle. */
+    override suspend fun isSettled(keysetId: String): Boolean = true
+
+    override suspend fun markSettled(keysetId: String) = Unit
 }

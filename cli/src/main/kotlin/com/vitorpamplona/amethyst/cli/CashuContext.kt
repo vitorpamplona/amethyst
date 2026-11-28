@@ -23,7 +23,9 @@ package com.vitorpamplona.amethyst.cli
 import com.vitorpamplona.amethyst.cli.stores.FileCashuKeysetCounterStore
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.CounterSettlement
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuInboundNutzapBackfillFilters
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuOwnEventBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
@@ -39,6 +41,7 @@ import com.vitorpamplona.quartz.nip60Cashu.wallet.CashuWalletEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.info.NutzapInfoEvent
 import com.vitorpamplona.quartz.nip61Nutzaps.nutzap.NutzapEvent
 import com.vitorpamplona.quartz.nip87Ecash.recommendation.MintRecommendationEvent
+import com.vitorpamplona.quartz.utils.Log
 import com.vitorpamplona.quartz.utils.runCatchingCancellable
 
 /**
@@ -94,6 +97,8 @@ class CashuContext(
             },
             peekCashuCounter = { keysetId -> counters.peek(keysetId) },
             reserveCashuCounters = { keysetId, count -> counters.reserve(keysetId, count) },
+            isCashuCounterSettled = { keysetId -> counters.isSettled(keysetId) },
+            markCashuCounterSettled = { keysetId -> counters.markSettled(keysetId) },
         )
 
     /**
@@ -142,6 +147,32 @@ class CashuContext(
             }
 
         return own.size + nutzaps.size
+    }
+
+    /**
+     * The app's startup settlement (Android's `CashuWalletState.settleCounters`), for a data
+     * dir that is used on more than one machine or was set up again: once per keyset, a NUT-09
+     * scan moves this install's NUT-13 counter past every slot the mint signed for the wallet's
+     * seed, so its first spend isn't refused for re-deriving them. The settled keysets are in
+     * `cashu.json`, so a later run pays one `/v1/keys` per mint and no scan. Best-effort per
+     * mint; returns what became of each, by mint.
+     */
+    suspend fun settleCounters(): Map<String, CounterSettlement> {
+        val snap = snapshot()
+        val mints = (snap.mints + snap.balancesByMint.keys).distinct()
+        if (mints.isEmpty()) return emptyMap()
+        val existingSecrets =
+            snap.tokenEntries
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+        val ops = ops()
+        val outcome = LinkedHashMap<String, CounterSettlement>()
+        for (mint in mints) {
+            runCatchingCancellable { ops.settleCounter(mint, existingSecrets) }
+                .onSuccess { settlement -> settlement?.let { outcome[mint] = it } }
+                .onFailure { Log.w("CashuContext") { "Could not settle the NUT-13 counter at $mint: ${describeMintError(it)}" } }
+        }
+        return outcome
     }
 
     /**
@@ -200,6 +231,10 @@ class CashuContext(
                 .tokenEntries
                 .flatMap { it.content.proofs }
                 .mapTo(HashSet()) { it.secret }
-        return ops().restoreFromMintAdvancingCounter(mintUrl = mintUrl, seed = seed, startCounter = 0L, existingSecrets = existingSecrets)
+        val outcome =
+            ops().restoreFromMintAdvancingCounter(mintUrl = mintUrl, seed = seed, startCounter = 0L, existingSecrets = existingSecrets)
+        // The scan walked the active keyset from 0, which is what settling it does.
+        counters.markSettled(outcome.keysetId)
+        return outcome
     }
 }

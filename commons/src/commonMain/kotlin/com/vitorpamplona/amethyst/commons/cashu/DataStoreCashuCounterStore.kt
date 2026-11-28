@@ -22,6 +22,7 @@ package com.vitorpamplona.amethyst.commons.cashu
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -58,6 +59,10 @@ class DataStoreCashuCounterStore(
         const val COUNTER_PREFIX = "counter_"
 
         fun counterKey(keysetId: String) = longPreferencesKey(COUNTER_PREFIX + keysetId)
+
+        const val SETTLED_PREFIX = "settled_"
+
+        fun settledKey(keysetId: String) = booleanPreferencesKey(SETTLED_PREFIX + keysetId)
     }
 
     private suspend fun read(): Preferences =
@@ -97,5 +102,11 @@ class DataStoreCashuCounterStore(
             val key = counterKey(keysetId)
             if ((prefs[key] ?: 0L) < legacyValue) prefs[key] = legacyValue
         }
+    }
+
+    override suspend fun isSettled(keysetId: String): Boolean = read()[settledKey(keysetId)] ?: false
+
+    override suspend fun markSettled(keysetId: String) {
+        store.edit { prefs -> prefs[settledKey(keysetId)] = true }
     }
 }
