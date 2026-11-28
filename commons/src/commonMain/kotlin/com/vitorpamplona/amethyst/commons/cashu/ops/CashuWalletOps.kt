@@ -24,6 +24,7 @@ import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -140,6 +141,13 @@ class CashuWalletOps(
      */
     private val isCashuCounterSettled: suspend (keysetId: String) -> Boolean = { false },
     private val markCashuCounterSettled: suspend (keysetId: String) -> Unit = {},
+    /**
+     * Receives the plaintext of every kind:7375 this wallet builds, keyed by the event's id,
+     * which is fixed before signing. Relays echo the event straight back and the wallet would
+     * otherwise ask the signer to decrypt its own content: one more prompt per event on Amber
+     * or a bunker, arriving while the spend's own prompts are still open.
+     */
+    private val onTokenBuilt: (HexKey, TokenContent) -> Unit = { _, _ -> },
 ) {
     private val opsCache = ConcurrentMap<String, CashuMintOperations>()
 
@@ -362,7 +370,7 @@ class CashuWalletOps(
                 }
             }
 
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -596,7 +604,7 @@ class CashuWalletOps(
                 val keepEvent =
                     if (swap.keep.isNotEmpty()) {
                         val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                        val tokenTemplate = CashuTokenEvent.build(content, signer)
+                        val tokenTemplate = buildToken(content)
                         val signed = signer.sign(tokenTemplate)
                         publish(signed)
                         signed
@@ -611,17 +619,16 @@ class CashuWalletOps(
         val meltResult = withFreshOutputs(mintUrl) { it.meltProofs(quote, inputs) }
 
         // Publish the change proofs (mint may have returned fewer than we
-        // requested if it consumed some fees).
+        // requested if it consumed some fees). The change event carries only the
+        // mint's NUT-08 refund of the unused fee reserve — not the pre-swap keep
+        // side, which is already published and unspent. Its `del` must name the
+        // spent sources only: hiding the keep event drops unspent proofs from the
+        // wallet view.
         val finalChangeEvent =
             if (meltResult.changeProofs.isNotEmpty()) {
-                val delIds =
-                    if (prePaidChangeEvent != null) {
-                        listOf(prePaidChangeEvent.id)
-                    } else {
-                        selected.map { it.event.id }
-                    }
+                val delIds = selected.map { it.event.id }
                 val content = TokenContent(mint = mintUrl, proofs = meltResult.changeProofs, del = delIds)
-                val tokenTemplate = CashuTokenEvent.build(content, signer)
+                val tokenTemplate = buildToken(content)
                 val signed = signer.sign(tokenTemplate)
                 publish(signed)
                 signed
@@ -629,11 +636,12 @@ class CashuWalletOps(
                 null
             }
 
-        // NIP-09 delete the source token events. Per spec, also need k=7375 tag,
-        // which DeletionRequestEvent.build adds automatically from the source event kind.
+        // NIP-09 delete the spent source token events only: the keep and change
+        // events hold unspent proofs. Per spec, also need k=7375 tag, which
+        // DeletionRequestEvent.build adds automatically from the source event kind.
         val deleteEvent =
             run {
-                val toDelete = selected.map { it.event } + listOfNotNull(prePaidChangeEvent.takeIf { finalChangeEvent != null })
+                val toDelete = selected.map { it.event }
                 val delTemplate = DeletionRequestEvent.build(toDelete)
                 signer.sign(delTemplate).also { publish(it) }
             }
@@ -647,6 +655,7 @@ class CashuWalletOps(
                         selected.forEach {
                             add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED))
                         }
+                        prePaidChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
                         finalChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
                     },
                 signer = signer,
@@ -665,6 +674,7 @@ class CashuWalletOps(
             historyEvent = historyEvent,
             deleteEvent = deleteEvent,
             newTokenEvent = finalChangeEvent,
+            prePaidChangeEvent = prePaidChangeEvent,
         )
     }
 
@@ -693,7 +703,7 @@ class CashuWalletOps(
         val newKeepEvent =
             if (swap.keep.isNotEmpty()) {
                 val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                val template = CashuTokenEvent.build(content, signer)
+                val template = buildToken(content)
                 val signed = signer.sign(template)
                 publish(signed)
                 signed
@@ -771,7 +781,7 @@ class CashuWalletOps(
 
         // All output goes to "keep" since targetSplit was null.
         val content = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(content, signer)
+        val tokenTemplate = buildToken(content)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -867,7 +877,7 @@ class CashuWalletOps(
         val keepEvent =
             if (swap.keep.isNotEmpty()) {
                 val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                val template = CashuTokenEvent.build(content, signer)
+                val template = buildToken(content)
                 val signed = signer.sign(template)
                 publish(signed)
                 signed
@@ -1222,7 +1232,7 @@ class CashuWalletOps(
         val total = swap.keep.sumOf { it.amount }
 
         val tokenContent = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -1369,7 +1379,7 @@ class CashuWalletOps(
                 proofs = swap.keep,
                 del = entries.map { it.event.id },
             )
-        val template = CashuTokenEvent.build(tokenContent, signer)
+        val template = buildToken(tokenContent)
         val signed = signer.sign(template)
         publish(signed)
 
@@ -1563,7 +1573,7 @@ class CashuWalletOps(
                 mint = recoverable.mintUrl,
                 proofs = proofs,
             )
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -1694,6 +1704,15 @@ class CashuWalletOps(
         Log.i("CashuWalletOps") { "Settled the NUT-13 counter for $keysetId at $mintUrl: $counterBefore -> ${peekCashuCounter(keysetId)}, ${published.proofsRecovered} proof(s) recovered" }
         return CounterSettlement.Settled(keysetId, peekCashuCounter(keysetId) - counterBefore, published.proofsRecovered, published.amountRecoveredSats)
     }
+
+    /**
+     * Builds a kind:7375 from [content] and hands the plaintext to [onTokenBuilt]. An event's
+     * id is fixed by its template and the signer's pubkey, so it is known before signing.
+     */
+    private suspend fun buildToken(content: TokenContent) =
+        CashuTokenEvent.build(content, signer).also { template ->
+            onTokenBuilt(EventHasher.hashId(signer.pubKey, template.createdAt, template.kind, template.tags, template.content), content)
+        }
 
     companion object {
         /**
@@ -1937,6 +1956,8 @@ data class MeltCompleted(
     val historyEvent: CashuSpendingHistoryEvent,
     val deleteEvent: DeletionRequestEvent,
     val newTokenEvent: CashuTokenEvent?,
+    /** The pre-swap keep event, when a swap-down ran before the melt. */
+    val prePaidChangeEvent: CashuTokenEvent? = null,
 )
 
 data class SendTokenCompleted(

@@ -123,6 +123,9 @@ class CashuWalletState(
         CashuWalletOps(
             signer = signer,
             publish = ::publishEvent,
+            // Events this wallet builds are already decrypted here, so relays echoing them
+            // back never costs a signer round-trip.
+            onTokenBuilt = { id, content -> tokenContents[id] = content },
             mintTransport = mintTransport,
             // NUT-13 wiring: the factory closure reads the cached seed at
             // mint-op time. cachedSeed is populated by ensureSeed() —
