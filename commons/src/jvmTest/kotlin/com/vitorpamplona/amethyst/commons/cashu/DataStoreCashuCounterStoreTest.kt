@@ -36,6 +36,7 @@ import kotlinx.coroutines.job
 import kotlinx.coroutines.test.runTest
 import okio.Path.Companion.toOkioPath
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -82,6 +83,39 @@ class DataStoreCashuCounterStoreTest {
     fun anUnseenKeysetStartsAtZero() =
         runTest {
             assertEquals(0L, DataStoreCashuCounterStore(raw()).peek("keyset1"))
+        }
+
+    @Test
+    fun aKeysetIsUnsettledUntilMarked() =
+        runTest {
+            val store = DataStoreCashuCounterStore(raw())
+
+            assertFalse(store.isSettled("keyset1"))
+            store.markSettled("keyset1")
+
+            assertTrue(store.isSettled("keyset1"))
+            assertFalse(store.isSettled("keyset2"))
+        }
+
+    /**
+     * The flag is what spares a later start the NUT-09 scan, so it has to be in the file, not in
+     * the instance: the next launch opens a new store over the same file.
+     */
+    @Test
+    fun aSettledKeysetSurvivesReopeningTheFile() =
+        runTest {
+            val file = File(folder.root, "cashu_${seq++}.preferences_pb")
+            val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+            val firstLaunch = DataStoreCashuCounterStore(raw(file = file, scope = scope))
+            firstLaunch.reserve("keyset1", 26)
+            firstLaunch.markSettled("keyset1")
+            scope.release()
+
+            val nextLaunch = DataStoreCashuCounterStore(raw(file = file))
+
+            assertTrue(nextLaunch.isSettled("keyset1"))
+            assertFalse(nextLaunch.isSettled("keyset2"))
+            assertEquals(26L, nextLaunch.peek("keyset1"))
         }
 
     @Test

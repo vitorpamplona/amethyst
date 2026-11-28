@@ -1571,6 +1571,12 @@ class AccountSettings(
         return cashuCounters.peek(keysetId)
     }
 
+    /** Whether this install already aligned its counter for [keysetId] with the mint. See [CashuKeysetCounterStore.isSettled]. */
+    suspend fun isCashuCounterSettled(keysetId: String): Boolean = cashuCounters.isSettled(keysetId)
+
+    /** Records that this install aligned its counter for [keysetId]. See [CashuKeysetCounterStore.markSettled]. */
+    suspend fun markCashuCounterSettled(keysetId: String) = cashuCounters.markSettled(keysetId)
+
     private suspend fun migrateLegacyCashuCounter(keysetId: String) {
         val legacy = cashuKeysetCounters[keysetId] ?: return
         cashuCounters.seedIfMissing(keysetId, legacy)

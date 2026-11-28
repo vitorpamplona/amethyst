@@ -195,6 +195,21 @@ sealed interface NutzapNotice : UserNotice {
     data class MintFailed(
         val detail: String,
     ) : NutzapNotice
+
+    /**
+     * The mint took the ecash for a nutzap, but its Nostr events could not be signed or
+     * published — typically a signer prompt the user denied. [sent] when the nutzap itself
+     * went out and only the wallet's recording failed. [returnedSats] are back in the wallet,
+     * [unrecoverableSats] are spent at the mint and lost, and [recoverableFromSeedSats] come
+     * back only with "Recover from seed".
+     */
+    data class SendAborted(
+        val sent: Boolean,
+        val amountSats: Long,
+        val returnedSats: Long,
+        val unrecoverableSats: Long,
+        val recoverableFromSeedSats: Long,
+    ) : NutzapNotice
 }
 
 /** Redeeming a Cashu token to the account's own lightning address. */

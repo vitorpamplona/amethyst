@@ -22,7 +22,9 @@ package com.vitorpamplona.amethyst.commons.model.nip60Cashu
 
 import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
+import com.vitorpamplona.amethyst.commons.cashu.ops.CounterSettlement
 import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltNotPaidException
 import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
@@ -33,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -122,6 +125,9 @@ class CashuWalletState(
         CashuWalletOps(
             signer = signer,
             publish = ::publishEvent,
+            // Events this wallet builds are already decrypted here, so relays echoing them
+            // back never costs a signer round-trip.
+            onTokenBuilt = { id, content -> tokenContents[id] = content },
             mintTransport = mintTransport,
             // NUT-13 wiring: the factory closure reads the cached seed at
             // mint-op time. cachedSeed is populated by ensureSeed() —
@@ -151,6 +157,8 @@ class CashuWalletState(
             seedForRestore = { ensureSeed() },
             peekCashuCounter = { keysetId -> settings.peekCashuCounter(keysetId) },
             reserveCashuCounters = { keysetId, count -> settings.reserveCashuCounters(keysetId, count) },
+            isCashuCounterSettled = { keysetId -> settings.isCashuCounterSettled(keysetId) },
+            markCashuCounterSettled = { keysetId -> settings.markCashuCounterSettled(keysetId) },
         )
 
     // ============================================================
@@ -554,8 +562,48 @@ class CashuWalletState(
                     Log.d("CashuWallet") { "No wallet + outbox relays within ${BACKFILL_READY_WAIT_MS}ms; skipping proof backfill" }
                 } else {
                     resyncProofsFromRelays()
+                    // Only once the whole proof set is in: a scan before it would publish
+                    // proofs that are still to come off the relays, and count them twice.
+                    if (proofBackfillDone) settleCounters()
                 }
             }
+    }
+
+    /**
+     * Aligns this install's NUT-13 counters with its mints, once per keyset per install
+     * ([CashuWalletOps.settleCounter]), so the first swap, melt or mint after a reinstall
+     * or on a second device isn't refused for re-deriving outputs the mint signed already.
+     *
+     * Runs after the proof backfill, which is what tells which mints this wallet holds
+     * tokens at and which proofs it already holds, so a scan recovers nothing twice, and
+     * again from [com.vitorpamplona.amethyst.commons.wallet.CashuWalletViewModel.refresh]:
+     * the scan needs the seed, which needs the kind:17375 decrypted, and an external signer
+     * can only do that with an activity in front, which a cold start may not have yet.
+     * Best-effort per mint: one unreachable mint leaves its keyset unsettled, to be tried
+     * at the next start, and costs the others nothing. A keyset settled by an earlier
+     * start costs one `/v1/keys` and no scan.
+     */
+    suspend fun settleCounters() {
+        // displayMints is derived off the main thread and may lag the backfill by a dispatch;
+        // the configured list is set where the wallet event lands.
+        val mints = (_mints.value + displayMints.value).distinct()
+        if (mints.isEmpty()) return
+        val existingSecrets =
+            _tokenEntries.value
+                .flatMap { it.content.proofs }
+                .mapTo(HashSet()) { it.secret }
+        for (mint in mints) {
+            runCatchingCancellable { ops.settleCounter(mint, existingSecrets) }
+                .onSuccess { settlement ->
+                    when (settlement) {
+                        is CounterSettlement.Settled -> Log.i("CashuWallet") { "Counter at $mint settled: ${settlement.slotsSkipped} slot(s) skipped, ${settlement.proofsRecovered} proof(s) recovered" }
+                        // Nothing to scan with: the kind:17375 could not be decrypted. The
+                        // refresh retries it with an activity in front.
+                        null -> Log.i("CashuWallet") { "Counter at $mint not settled yet: no wallet seed" }
+                        else -> Unit
+                    }
+                }.onFailure { Log.w("CashuWallet") { "Could not settle the NUT-13 counter at $mint: ${describeMintError(it)}" } }
+        }
     }
 
     // ============================================================
@@ -1258,6 +1306,9 @@ class CashuWalletState(
         val current = settings.peekCashuCounter(outcome.keysetId)
         val delta = (outcome.nextCounterAfterScan - current).coerceAtLeast(0L)
         if (delta > 0) settings.reserveCashuCounters(outcome.keysetId, delta.toInt())
+        // The scan walked the active keyset from 0, which is what settling it
+        // does: a later start must not ask the mint for it again.
+        settings.markCashuCounterSettled(outcome.keysetId)
         return outcome
     }
 
@@ -1702,11 +1753,18 @@ class CashuWalletState(
         // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
         if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
 
+        // The outcome is applied to the local indexes before the caller sees it: the new
+        // keep/change events otherwise reach [_tokenEntries] only through
+        // `cache.live.newEventBundles` (~1s later). Applying here is idempotent, the bundle
+        // path adds with `putIfAbsent`.
         val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
         if (available.isEmpty()) {
-            throw IllegalStateException("No proofs available at $mintUrl")
+            throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = 0L, neededSats = quote.amount + quote.feeReserve))
         }
-        return ops.meltToLightning(mintUrl, quote, available)
+        val completed = ops.meltToLightning(mintUrl, quote, available)
+        applyEvents(listOfNotNull(completed.newTokenEvent, completed.prePaidChangeEvent))
+        removeEvents(completed.deleteEvent.deleteEventIds().toSet())
+        return completed
     }
 
     /**

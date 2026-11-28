@@ -45,6 +45,8 @@ class FileCashuKeysetCounterStore(
     @Serializable
     private data class Persisted(
         val keyset_counters: MutableMap<String, Long> = mutableMapOf(),
+        /** Keysets whose counter this install aligned with its mint; see [isSettled]. */
+        val settled_keysets: MutableSet<String> = mutableSetOf(),
     )
 
     private fun load(): Persisted =
@@ -67,4 +69,14 @@ class FileCashuKeysetCounterStore(
             SecureFileIO.writeTextAtomic(file, CliJson.files.encodeToString(state))
             first
         }
+
+    override suspend fun isSettled(keysetId: String): Boolean = synchronized(lock) { keysetId in load().settled_keysets }
+
+    override suspend fun markSettled(keysetId: String) {
+        synchronized(lock) {
+            val state = load()
+            if (!state.settled_keysets.add(keysetId)) return
+            SecureFileIO.writeTextAtomic(file, CliJson.files.encodeToString(state))
+        }
+    }
 }

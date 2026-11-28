@@ -198,6 +198,10 @@ class AccountSessionManagerTest {
                         keysetId: String,
                         count: Int,
                     ) = 0L
+
+                    override suspend fun isSettled(keysetId: String) = false
+
+                    override suspend fun markSettled(keysetId: String) = Unit
                 }
             val saved = mutableListOf<AccountSettings>()
             val savingStore =

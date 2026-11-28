@@ -1033,6 +1033,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Προσθήκη ή αφαίρεση των mint που χρησιμοποιεί το πορτοφόλι σας.</string>
     <string name="cashu_settings_my_recommendations">Οι συστάσεις mint μου</string>
     <string name="cashu_settings_recommendations_subtitle">Εγγυηθείτε δημόσια για mint που εμπιστεύεστε και αποσύρετε συστάσεις.</string>
+    <string name="zap_cashu_melt_failed">Η πληρωμή Cashu απέτυχε: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Το πορτοφόλι Cashu δεν μπορεί να καλύψει αυτό το τιμόλογιο με περιθώριο για τα τέλη του.</string>
+    <string name="cashu_melt_insufficient">Ανεπαρκές ecash σε αυτό το mint: το πορτοφόλι έχει %1$s και η πληρωμή χρειάζεται %2$s.</string>
+    <string name="cashu_melt_no_quote">Το mint δεν δέχθηκε να δώσει προσφορά για το τιμόλογιο (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Το mint πρόσφερε %1$s για τιμόλογιο ύψους %2$s. Δεν πληρώθηκε τίποτα.</string>
+    <string name="cashu_melt_fee_too_high">Το mint ζητά %1$s τέλη για την πληρωμή τιμολογίου ύψους %2$s, περισσότερα από τα %3$s που επιτρέπει αυτό το πορτοφόλι. Δεν πληρώθηκε τίποτα.</string>
+    <string name="cashu_melt_refused">Το mint δεν πλήρωσε το τιμόλογιο (%1$s).</string>
+    <string name="cashu_melt_aborted">Η υπογραφή απορρίφθηκε, οπότε δεν πληρώθηκε τίποτα.</string>
+    <string name="cashu_melt_paid_unrecorded">Το τιμόλογιο πληρώθηκε (%1$s), αλλά η καταγραφή του στο πορτοφόλι απέτυχε. Μην το πληρώσετε ξανά.</string>
+    <string name="payment_paid_but_not_recorded">Πληρώθηκε, αλλά δεν καταγράφηκε στο πορτοφόλι</string>
+    <string name="cashu_recover_from_seed_hint">Χρησιμοποιήστε «Ανάκτηση από seed» στις ρυθμίσεις του πορτοφολιού Cashu για να ανακτήσετε τα %1$s που δεν καταγράφηκαν.</string>
+    <string name="nutzap_sent_unrecorded">Το nutzap (%1$s) στάλθηκε, αλλά η καταγραφή του στο πορτοφόλι απέτυχε.</string>
+    <string name="nutzap_not_sent_denied">Το nutzap δεν στάλθηκε: η υπογραφή ή η δημοσίευση απορρίφθηκε.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat επέστρεψε στο πορτοφόλι.</item>
+        <item quantity="other">%1$s sats επέστρεψαν στο πορτοφόλι.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat ξοδεύτηκε στο mint και δεν μπορεί να ανακτηθεί.</item>
+        <item quantity="other">%1$s sats ξοδεύτηκαν στο mint και δεν μπορούν να ανακτηθούν.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Δεν έχετε συστήσει κανένα mint ακόμα. Πατήστε το "μου αρέσει" δίπλα σε ένα mint για να το εγγυηθείτε δημόσια.</string>
     <string name="cashu_settings_delete_recommendation">Διαγραφή σύστασης</string>
     <string name="cashu_settings_delete_confirm_title">Απόσυρση σύστασης;</string>

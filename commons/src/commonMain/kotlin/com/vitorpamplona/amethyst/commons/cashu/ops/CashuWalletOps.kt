@@ -20,10 +20,14 @@
  */
 package com.vitorpamplona.amethyst.commons.cashu.ops
 
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
+import com.vitorpamplona.amethyst.commons.notices.NutzapNotice
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
 import com.vitorpamplona.quartz.nip01Core.core.hexToByteArray
 import com.vitorpamplona.quartz.nip01Core.core.toHexKey
+import com.vitorpamplona.quartz.nip01Core.crypto.EventHasher
 import com.vitorpamplona.quartz.nip01Core.hints.EventHintBundle
 import com.vitorpamplona.quartz.nip01Core.relay.normalizer.NormalizedRelayUrl
 import com.vitorpamplona.quartz.nip01Core.signers.NostrSigner
@@ -112,8 +116,9 @@ class CashuWalletOps(
     /**
      * Returns the wallet's NUT-13 seed bytes, or null if the wallet
      * isn't ready (kind:17375 not decrypted yet). Used by the
-     * "outputs already signed" recovery path in [completeMintFromLightning]
-     * to re-derive the blinded outputs the mint has already signed.
+     * "quote already issued" recovery path in [completeMintFromLightning]
+     * to re-derive the blinded outputs the mint has already signed, and
+     * by every NUT-09 scan that moves a counter past signed slots.
      * Default returns null — recovery is then skipped and the original
      * mint error propagates.
      */
@@ -131,6 +136,21 @@ class CashuWalletOps(
      * no-op for tests / random-only callers.
      */
     private val reserveCashuCounters: suspend (keysetId: String, count: Int) -> Long = { _, _ -> 0L },
+    /**
+     * Receives the plaintext of every kind:7375 this wallet builds, keyed by the event's id,
+     * which is fixed before signing. Relays echo the event straight back and the wallet would
+     * otherwise ask the signer to decrypt its own content: one more prompt per event on Amber
+     * or a bunker, arriving while the spend's own prompts are still open.
+     */
+    private val onTokenBuilt: (HexKey, TokenContent) -> Unit = { _, _ -> },
+    /**
+     * Whether this install already aligned its NUT-13 counter for a keyset
+     * with the mint, and the call that records it did: see [settleCounter].
+     * The defaults answer "never", so a host that wires them only pays for
+     * a settlement it asks for.
+     */
+    private val isCashuCounterSettled: suspend (keysetId: String) -> Boolean = { false },
+    private val markCashuCounterSettled: suspend (keysetId: String) -> Unit = {},
 ) {
     private val opsCache = ConcurrentMap<String, CashuMintOperations>()
 
@@ -299,17 +319,24 @@ class CashuWalletOps(
      * Mint phase 2: after the user paid the invoice, exchange the quote for
      * proofs, publish them as kind:7375, log kind:7376, and delete kind:7374.
      *
-     * When the mint reports "outputs already signed" / "quote already
-     * issued", it means a prior attempt's `/v1/mint/bolt11` succeeded at
-     * the mint but we failed to publish the resulting kind:7375 locally
-     * (signer dialog dismissed, transient network error, app killed).
-     * The mint considers the quote consumed and won't re-issue; new
-     * blinded outputs would be rejected too because the quote-budget is
-     * spent. NUT-09 restore is the documented recovery path: re-derive
-     * the deterministic blinded outputs from the seed, ask the mint
-     * which it has signed, unblind those into proofs. The end state
-     * matches what we'd have published if the first attempt hadn't
-     * crashed.
+     * When the mint reports "quote already issued", it means a prior
+     * attempt's `/v1/mint/bolt11` succeeded at the mint but we failed to
+     * publish the resulting kind:7375 locally (signer dialog dismissed,
+     * transient network error, app killed). The mint considers the quote
+     * consumed and won't re-issue; new blinded outputs are rejected too
+     * because the quote-budget is spent. NUT-09 restore is the documented
+     * recovery path: re-derive the deterministic blinded outputs from the
+     * seed, ask the mint which it has signed, unblind those into proofs.
+     * The end state matches what we'd have published if the first attempt
+     * hadn't crashed.
+     *
+     * A mint that refuses the outputs of the request instead ([withFreshOutputs])
+     * signed them for another install: the request is repeated once on slots
+     * nobody used, and this quote is issued normally. A refusal that survives
+     * that is the caller's to report; it is never read as "issued" here, since
+     * an output signed before says nothing about a quote whose outputs were
+     * derived after the counter moved. Both mints check the quote before they
+     * look at the outputs, so an issued quote never comes back as one of those.
      */
     suspend fun completeMintFromLightning(
         mintUrl: String,
@@ -326,14 +353,15 @@ class CashuWalletOps(
         val decryptedQuote = quoteEvent.decrypt(signer)
         val tokenContent =
             try {
-                ops(mintUrl)
-                    .mintProofs(
+                withFreshOutputs(mintUrl) {
+                    it.mintProofs(
                         quote = decryptedQuote.quoteId,
                         amountSats = amountSats,
                         signingPrivkey = decryptedQuote.p2pkPriv,
-                    ).toTokenContent(mintUrl)
+                    )
+                }.toTokenContent(mintUrl)
             } catch (e: MintHttpException) {
-                if (isOutputsAlreadySignedError(e)) {
+                if (isQuoteAlreadyIssuedError(e)) {
                     // Mint already issued for this quote on a prior crashed
                     // attempt. Recover via NUT-09 instead of bailing.
                     recoverPreviouslyIssuedProofs(mintUrl, amountSats)
@@ -345,7 +373,7 @@ class CashuWalletOps(
                 }
             }
 
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -379,8 +407,8 @@ class CashuWalletOps(
     }
 
     /**
-     * NUT-09 fallback for the "outputs already signed" / "quote already
-     * issued" mint response — re-derives the deterministic blinded
+     * NUT-09 fallback for the "quote already issued" mint response —
+     * re-derives the deterministic blinded
      * outputs from the seed and asks the mint which it has signed.
      *
      * Scope is intentionally narrow: the prior `/v1/mint/bolt11` call
@@ -431,21 +459,103 @@ class CashuWalletOps(
         if (unspent.isEmpty()) return null
         // Bump the persisted counter past the highest slot we just confirmed
         // in use so the next mint/swap doesn't reuse one of these secrets.
-        val current = peekCashuCounter(keysetId)
-        val delta = (restoreResult.nextCounterAfterScan - current).coerceAtLeast(0L)
-        if (delta > 0) reserveCashuCounters(keysetId, delta.toInt())
+        advanceCounterTo(keysetId, restoreResult.nextCounterAfterScan)
         Log.i("CashuWallet") {
             "Recovered ${unspent.size} proof(s) (${unspent.sumOf { it.amount }} sat) via NUT-09 after mint reported quote already issued for $mintUrl"
         }
         return TokenContent(mint = mintUrl, proofs = unspent)
     }
 
-    private fun isOutputsAlreadySignedError(e: MintHttpException): Boolean {
-        if (e.code == 10002) return true
+    /**
+     * Whether the mint answered that this quote was issued already: NUT-00
+     * 20002, nutshell's and cdk's code for it, and 10002, "the lightning invoice
+     * is paid", which some mints answer instead. Without a code, the text.
+     *
+     * Deliberately not "outputs already signed": that is the mint refusing
+     * the outputs of the request ([withFreshOutputs] handles it), which after
+     * the retry means another install signed those slots. Recovering the
+     * quote's proofs then would hand back that install's proofs and delete a
+     * quote the user paid for.
+     */
+    private fun isQuoteAlreadyIssuedError(e: MintHttpException): Boolean {
+        if (e.code == 20002 || e.code == 10002) return true
         val detail = e.detail?.lowercase().orEmpty()
-        return "already signed" in detail ||
-            "already issued" in detail ||
-            "already minted" in detail
+        return "already issued" in detail || "already minted" in detail
+    }
+
+    /**
+     * Moves the persisted counter of [keysetId] up to [nextCounter], never down.
+     * Reserves the difference, so the move is one durable write.
+     */
+    private suspend fun advanceCounterTo(
+        keysetId: String,
+        nextCounter: Long,
+    ) {
+        val delta = (nextCounter - peekCashuCounter(keysetId)).coerceAtLeast(0L)
+        if (delta > 0) reserveCashuCounters(keysetId, delta.toInt())
+    }
+
+    /**
+     * [request] against the mint, made once more with other outputs when the
+     * mint refuses the first ones for being outputs it signed before.
+     *
+     * NUT-13 derives every secret from the wallet's seed and a counter that is
+     * stored per install. A reinstall, or a second device, starts that counter
+     * at 0 and blinds the very outputs the mint signed for the first: swaps,
+     * melts with change, mints and nutzap redeems all create outputs, so every
+     * one of them is refused (`Duplicate outputs`, `Blinded Message is already
+     * signed`). The mint refuses the request whole, signing nothing and
+     * spending no input, so the inputs are still ours to spend: the counter is
+     * moved past every slot the mint has signed (NUT-09, [skipSignedSlots])
+     * and the request is repeated on slots nobody used.
+     *
+     * Once. A refusal that survives it is the caller's to report.
+     */
+    private suspend fun <T> withFreshOutputs(
+        mintUrl: String,
+        request: suspend (CashuMintOperations) -> T,
+    ): T {
+        val mintOps = ops(mintUrl)
+        val refusal =
+            try {
+                return request(mintOps)
+            } catch (e: MintHttpException) {
+                if (!e.refusesSignedOutputs()) throw e
+                e
+            }
+        Log.w("CashuWalletOps") { "Mint $mintUrl refused outputs it signed before (${refusal.message}); moving the NUT-13 counter past them and retrying once" }
+        if (!skipSignedSlots(mintUrl, mintOps)) throw refusal
+        return request(mintOps)
+    }
+
+    /**
+     * NUT-09 scan of the mint's active keyset from [REUSED_OUTPUT_SCAN_BACK] slots
+     * below the persisted counter, which moves that counter past the highest
+     * slot the scan found signed. The refused request has already advanced the
+     * counter past its own slots, so they are inside the window, and the scan
+     * runs on until the mint answers three empty batches, however far ahead
+     * the other install got.
+     *
+     * False when there is nothing to scan with (no seed, the mint has no
+     * `/v1/restore`, or it failed): the counter stays where it is, and the
+     * caller reports the refusal it already has. The signatures the mint
+     * returns belong to the install that minted them and are dropped.
+     */
+    private suspend fun skipSignedSlots(
+        mintUrl: String,
+        mintOps: CashuMintOperations,
+    ): Boolean {
+        val seed = seedForRestore() ?: return false
+        val keysetId = mintOps.activeKeyset().id
+        val startCounter = (peekCashuCounter(keysetId) - REUSED_OUTPUT_SCAN_BACK).coerceAtLeast(0L)
+        val scanned =
+            runCatchingCancellable { mintOps.restore(seed = seed, keysetId = keysetId, startCounter = startCounter) }
+                .onFailure { Log.w("CashuWalletOps") { "NUT-09 scan of keyset $keysetId at $mintUrl failed: ${describeMintError(it)}" } }
+                .getOrNull() ?: return false
+        val counterBefore = peekCashuCounter(keysetId)
+        advanceCounterTo(keysetId, scanned.nextCounterAfterScan)
+        Log.i("CashuWalletOps") { "NUT-13 counter for $keysetId at $mintUrl moved from $counterBefore past slot ${scanned.nextCounterAfterScan - 1}" }
+        return true
     }
 
     /**
@@ -471,7 +581,7 @@ class CashuWalletOps(
         available: List<TokenEntry>,
     ): MeltCompleted {
         seedWarmer()
-        if (available.isEmpty()) throw IllegalStateException("No proofs available to spend")
+        if (available.isEmpty()) throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = 0L, neededSats = quote.amount + quote.feeReserve))
 
         val ops = ops(mintUrl)
         val required = quote.amount + quote.feeReserve
@@ -486,86 +596,286 @@ class CashuWalletOps(
         val (selected, _) = selectProofsCovering(available, target)
         val spendingProofs = selected.flatMap { it.content.proofs }
         val total = spendingProofs.sumOf { it.amount }
+        if (total < target) {
+            // Nothing has reached the mint yet — no swap, no melt — so the wallet
+            // is untouched and the caller may retry the payment elsewhere.
+            throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = total, neededSats = target))
+        }
 
         // If the selected proofs overshoot, swap them down to (target) first.
-        val (inputs, prePaidChangeEvent, prePaidChangeAmount) =
-            if (total > target) {
-                val swap = ops.swap(spendingProofs, targetSplit = target)
-                // The keep-side from the pre-swap is the "extra change" we
-                // didn't burn into the melt — publish it now so a crashed
-                // melt doesn't lose those proofs.
-                val keepEvent =
+        var inputs = spendingProofs
+        var prePaidChangeEvent: CashuTokenEvent? = null
+        var prePaidChangeAmount = 0L
+        var spentViaPreSwap = false
+        if (total > target) {
+            val swap = withFreshOutputs(mintUrl) { it.swap(spendingProofs, targetSplit = target) }
+            inputs = swap.send
+            spentViaPreSwap = true
+            // The keep-side from the pre-swap is the "extra change" we
+            // didn't burn into the melt — publish it now so a crashed
+            // melt doesn't lose those proofs.
+            //
+            // The swap already consumed the source proofs: a denied sign or a failed
+            // publish here would strand both swap sides in this stack frame. Nothing has
+            // melted yet, so the salvage re-publishes keep and send alike as fresh change.
+            try {
+                prePaidChangeEvent =
                     if (swap.keep.isNotEmpty()) {
                         val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                        val tokenTemplate = CashuTokenEvent.build(content, signer)
-                        val signed = signer.sign(tokenTemplate)
-                        publish(signed)
-                        signed
+                        val tokenTemplate = buildToken(content)
+                        signer.sign(tokenTemplate).also { publish(it) }
                     } else {
                         null
                     }
-                Triple(swap.send, keepEvent, swap.keep.sumOf { it.amount })
-            } else {
-                Triple(spendingProofs, null, 0L)
+                prePaidChangeAmount = swap.keep.sumOf { it.amount }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                val salvage =
+                    salvageAbortedSpend(
+                        mintUrl = mintUrl,
+                        selected = selected,
+                        pendingChange = swap.keep + swap.send,
+                        alreadyPublishedChangeEvents = emptyList(),
+                        alreadyPublishedChangeSats = 0L,
+                        deleteAlreadyPublished = false,
+                        historyAmount = null,
+                    )
+                throw MeltAbortedException(abortedNotice(salvage), e)
+            }
+        }
+
+        // A refusal strands the send-side proofs when the pre-swap ran (its `del` already
+        // hid the sources), so the failure goes through [meltRefusalOutcome].
+        val meltResult =
+            try {
+                withFreshOutputs(mintUrl) { it.meltProofs(quote, inputs) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                throw meltRefusalOutcome(
+                    mintUrl = mintUrl,
+                    ops = ops,
+                    selected = selected,
+                    inputs = inputs,
+                    spentViaPreSwap = spentViaPreSwap,
+                    prePaidChangeEvent = prePaidChangeEvent,
+                    prePaidChangeAmount = prePaidChangeAmount,
+                    cause = e,
+                )
             }
 
-        val meltResult = ops.meltProofs(quote, inputs)
+        // The invoice is paid from here on: every remaining step runs inside this try, and
+        // the catch salvages whatever a denied sign or a failed publish would strand.
+        var finalChangeEvent: CashuTokenEvent? = null
+        var deleteEvent: DeletionRequestEvent? = null
+        try {
+            // The change event carries only the mint's NUT-08 refund of the unused fee
+            // reserve, less whatever fee it consumed — not the pre-swap keep side, which is
+            // already published and unspent. Its `del` must name the spent sources only:
+            // hiding the keep event drops unspent proofs from the wallet view.
+            finalChangeEvent =
+                if (meltResult.changeProofs.isNotEmpty()) {
+                    val delIds = selected.map { it.event.id }
+                    val content = TokenContent(mint = mintUrl, proofs = meltResult.changeProofs, del = delIds)
+                    val tokenTemplate = buildToken(content)
+                    signer.sign(tokenTemplate).also { publish(it) }
+                } else {
+                    null
+                }
 
-        // Publish the change proofs (mint may have returned fewer than we
-        // requested if it consumed some fees).
-        val finalChangeEvent =
-            if (meltResult.changeProofs.isNotEmpty()) {
-                val delIds =
-                    if (prePaidChangeEvent != null) {
-                        listOf(prePaidChangeEvent.id)
-                    } else {
-                        selected.map { it.event.id }
-                    }
-                val content = TokenContent(mint = mintUrl, proofs = meltResult.changeProofs, del = delIds)
-                val tokenTemplate = CashuTokenEvent.build(content, signer)
-                val signed = signer.sign(tokenTemplate)
-                publish(signed)
-                signed
-            } else {
-                null
-            }
+            // NIP-09 delete the spent source token events only: the keep and change
+            // events hold unspent proofs. Per spec, also need k=7375 tag, which
+            // DeletionRequestEvent.build adds automatically from the source event kind.
+            deleteEvent =
+                DeletionRequestEvent
+                    .build(selected.map { it.event })
+                    .let { delTemplate -> signer.sign(delTemplate).also { publish(it) } }
 
-        // NIP-09 delete the source token events. Per spec, also need k=7375 tag,
-        // which DeletionRequestEvent.build adds automatically from the source event kind.
-        val deleteEvent =
-            run {
-                val toDelete = selected.map { it.event } + listOfNotNull(prePaidChangeEvent.takeIf { finalChangeEvent != null })
-                val delTemplate = DeletionRequestEvent.build(toDelete)
-                signer.sign(delTemplate).also { publish(it) }
-            }
+            val historyTemplate =
+                CashuSpendingHistoryEvent.build(
+                    direction = SpendingDirection.OUT,
+                    amount = quote.amount,
+                    tokenReferences =
+                        buildList {
+                            selected.forEach {
+                                add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED))
+                            }
+                            prePaidChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
+                            finalChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
+                        },
+                    signer = signer,
+                )
+            val historyEvent = signer.sign(historyTemplate)
+            publish(historyEvent)
 
-        val historyTemplate =
-            CashuSpendingHistoryEvent.build(
-                direction = SpendingDirection.OUT,
-                amount = quote.amount,
-                tokenReferences =
-                    buildList {
-                        selected.forEach {
-                            add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED))
-                        }
-                        finalChangeEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
-                    },
-                signer = signer,
+            return MeltCompleted(
+                preimage = meltResult.preimage,
+                paidAmount = quote.amount,
+                // Fee = proofs we spent − change we got back (both the pre-paid
+                // swap keep and the melt's own change) − the invoice amount. The
+                // pre-paid keep was split off before the melt and never burned,
+                // so it must not be counted as a fee.
+                fees = total - prePaidChangeAmount - meltResult.changeProofs.sumOf { it.amount } - quote.amount,
+                historyEvent = historyEvent,
+                deleteEvent = checkNotNull(deleteEvent),
+                newTokenEvent = finalChangeEvent,
+                prePaidChangeEvent = prePaidChangeEvent,
             )
-        val historyEvent = signer.sign(historyTemplate)
-        publish(historyEvent)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val refund = meltResult.changeProofs
+            val salvage =
+                salvageAbortedSpend(
+                    mintUrl = mintUrl,
+                    selected = selected,
+                    pendingChange = if (finalChangeEvent == null) refund else emptyList(),
+                    alreadyPublishedChangeEvents = listOfNotNull(prePaidChangeEvent, finalChangeEvent),
+                    alreadyPublishedChangeSats = prePaidChangeAmount + if (finalChangeEvent != null) refund.sumOf { it.amount } else 0L,
+                    deleteAlreadyPublished = deleteEvent != null,
+                    historyAmount = quote.amount,
+                )
+            val refundSats = refund.sumOf { it.amount }
+            throw MeltRecordAbortedException(
+                CashuMeltNotice.PaidUnrecorded(
+                    paidSats = quote.amount,
+                    recoverableFromSeedSats = if (refundSats > 0L && !salvage.changeRecovered) refundSats else 0L,
+                ),
+                cause = e,
+            )
+        }
+    }
 
-        return MeltCompleted(
-            preimage = meltResult.preimage,
-            paidAmount = quote.amount,
-            // Fee = proofs we spent − change we got back (both the pre-paid
-            // swap keep and the melt's own change) − the invoice amount. The
-            // pre-paid keep was split off before the melt and never burned,
-            // so it must not be counted as a fee.
-            fees = total - prePaidChangeAmount - meltResult.changeProofs.sumOf { it.amount } - quote.amount,
-            historyEvent = historyEvent,
-            deleteEvent = deleteEvent,
-            newTokenEvent = finalChangeEvent,
+    /**
+     * What a [CashuMintOperations.meltProofs] failure means for the wallet, as the exception
+     * to rethrow:
+     *  - No pre-swap ran: nothing was spent, so a [MeltNotPaidException] — the caller may
+     *    retry the payment through another rail.
+     *  - The pre-swap ran and NUT-07 confirms every input unspent: the send-side proofs are
+     *    re-published through [salvageAbortedSpend] (the keep event's `del` already hid the
+     *    sources), then a [MeltNotPaidException] — intact and retryable as well.
+     *  - The pre-swap ran and NUT-07 is inconclusive (an input spent or pending, or the
+     *    check itself failed): the invoice may still settle server-side, so [cause] is
+     *    returned untouched and the caller must NOT retry elsewhere.
+     */
+    private suspend fun meltRefusalOutcome(
+        mintUrl: String,
+        ops: CashuMintOperations,
+        selected: List<TokenEntry>,
+        inputs: List<CashuProof>,
+        spentViaPreSwap: Boolean,
+        prePaidChangeEvent: CashuTokenEvent?,
+        prePaidChangeAmount: Long,
+        cause: Exception,
+    ): Exception {
+        if (!spentViaPreSwap) {
+            return MeltNotPaidException(CashuMeltNotice.Refused(describeMintError(cause)), cause)
+        }
+
+        val states =
+            runCatchingCancellable { ops.checkStates(inputs) }
+                .onFailure {
+                    Log.w("CashuWalletOps", "NUT-07 check after a refused melt failed; treating the melt as inconclusive", it)
+                }.getOrNull()
+                ?: return cause
+        val unspent = inputs.filter { states[it.secret] == ProofState.UNSPENT }
+        if (unspent.size != inputs.size) {
+            Log.w("CashuWalletOps") {
+                "Refused melt left ${inputs.size - unspent.size} of ${inputs.size} input(s) spent or pending at the mint; " +
+                    "not re-publishing them — run Recover from seed if the invoice never settled"
+            }
+            return cause
+        }
+
+        salvageAbortedSpend(
+            mintUrl = mintUrl,
+            selected = selected,
+            pendingChange = unspent,
+            alreadyPublishedChangeEvents = listOfNotNull(prePaidChangeEvent),
+            alreadyPublishedChangeSats = prePaidChangeAmount,
+            deleteAlreadyPublished = false,
+            historyAmount = null,
+        )
+        Log.i("CashuWalletOps") {
+            "Melt refused after the pre-swap; re-published ${unspent.sumOf { it.amount }} sats of send-side proofs into the wallet"
+        }
+        return MeltNotPaidException(CashuMeltNotice.Refunded(unspent.sumOf { it.amount }, describeMintError(cause)), cause)
+    }
+
+    /**
+     * [CashuMeltNotice.Aborted] for a spend aborted by a denied sign: what the salvage put back
+     * is back, and what it could not publish is [CashuMeltNotice.Aborted.recoverableFromSeedSats].
+     */
+    private fun abortedNotice(salvaged: SalvageOutcome): CashuMeltNotice.Aborted =
+        CashuMeltNotice.Aborted(
+            returnedSats = salvaged.recoveredSats,
+            recoverableFromSeedSats = if (salvaged.changeRecovered) 0L else salvaged.pendingSats,
+        )
+
+    /**
+     * Best-effort rollback after the mint consumed the source proofs and a later sign or
+     * publish failed (typically a denied Amber prompt). Each step is tried on its own: a
+     * signer that denied the flow may deny these too, and then the change survives only via
+     * NUT-09 "Recover from seed", which the thrown exception points at.
+     *  1. [pendingChange] — change not yet published — as a fresh kind:7375 `del`-tagging
+     *     [selected], so every reader drops the spent sources;
+     *  2. the NIP-09 delete of [selected], unless [deleteAlreadyPublished];
+     *  3. an OUT history row of [historyAmount], or by default the sats that left the wallet.
+     */
+    private suspend fun salvageAbortedSpend(
+        mintUrl: String,
+        selected: List<TokenEntry>,
+        pendingChange: List<CashuProof>,
+        alreadyPublishedChangeEvents: List<CashuTokenEvent>,
+        alreadyPublishedChangeSats: Long,
+        deleteAlreadyPublished: Boolean,
+        historyAmount: Long?,
+    ): SalvageOutcome {
+        var publishedChanges = alreadyPublishedChangeEvents
+        var recoveredSats = alreadyPublishedChangeSats
+        var changeRecovered = pendingChange.isEmpty()
+        if (pendingChange.isNotEmpty()) {
+            runCatchingCancellable {
+                val content = TokenContent(mint = mintUrl, proofs = pendingChange, del = selected.map { it.event.id })
+                val signed = signer.sign(buildToken(content))
+                publish(signed)
+                publishedChanges = publishedChanges + signed
+                recoveredSats += pendingChange.sumOf { it.amount }
+                changeRecovered = true
+            }.onFailure {
+                Log.w("CashuWalletOps", "salvageAbortedSpend: could not roll back ${pendingChange.sumOf { it.amount }} sats of change", it)
+            }
+        }
+        if (!deleteAlreadyPublished) {
+            runCatchingCancellable {
+                val signed = signer.sign(DeletionRequestEvent.build(selected.map { it.event }))
+                publish(signed)
+            }.onFailure {
+                Log.w("CashuWalletOps", "salvageAbortedSpend: could not NIP-09-delete ${selected.size} spent source events", it)
+            }
+        }
+        runCatchingCancellable {
+            val amount = historyAmount ?: (selected.sumOf { it.content.totalAmount() } - recoveredSats)
+            val template =
+                CashuSpendingHistoryEvent.build(
+                    direction = SpendingDirection.OUT,
+                    amount = amount,
+                    tokenReferences =
+                        buildList {
+                            selected.forEach { add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED)) }
+                            publishedChanges.forEach { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
+                        },
+                    signer = signer,
+                )
+            publish(signer.sign(template))
+        }.onFailure {
+            Log.w("CashuWalletOps", "salvageAbortedSpend: could not record the aborted spend in history", it)
+        }
+        return SalvageOutcome(
+            changeRecovered = changeRecovered,
+            recoveredSats = recoveredSats,
+            pendingSats = pendingChange.sumOf { it.amount },
         )
     }
 
@@ -581,18 +891,20 @@ class CashuWalletOps(
         memo: String? = null,
     ): SendTokenCompleted {
         if (amountSats <= 0) throw IllegalArgumentException("Amount must be positive")
+        // First op of a session can be this one: the seed has to be warm
+        // before the swap blinds, or the token is minted with random secrets.
+        seedWarmer()
         val (selected, totalSelected) = selectProofsCovering(available, amountSats)
         if (totalSelected < amountSats) throw IllegalStateException("Insufficient balance for $mintUrl")
 
-        val ops = ops(mintUrl)
-        val swap = ops.swap(selected.flatMap { it.content.proofs }, targetSplit = amountSats)
+        val swap = withFreshOutputs(mintUrl) { it.swap(selected.flatMap { it.content.proofs }, targetSplit = amountSats) }
 
         val tokenString = V4Encoder.encode(mintUrl, swap.send, memo = memo)
 
         val newKeepEvent =
             if (swap.keep.isNotEmpty()) {
                 val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                val template = CashuTokenEvent.build(content, signer)
+                val template = buildToken(content)
                 val signed = signer.sign(template)
                 publish(signed)
                 signed
@@ -658,17 +970,19 @@ class CashuWalletOps(
         identityPrivkeyHex: String? = null,
     ): RedeemCompleted {
         if (proofs.isEmpty()) throw IllegalArgumentException("Token has no proofs")
+        // The swap blinds our own outputs: they come from the seed, so warm it first.
+        seedWarmer()
         // Index our candidate signing keys by their x-only pubkey so a locked
         // proof can be matched to the key that unlocks it. Empty when we hold
         // no keys (e.g. CLI callers) — a locked token then throws a clear
         // P2PKUnredeemableException instead of an unsigned swap.
         val signingKeys = p2pkKeyIndex(walletP2pkPrivkeyHex, identityPrivkeyHex)
-        val swap = ops(mintUrl).redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] }
+        val swap = withFreshOutputs(mintUrl) { it.redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] } }
         val total = swap.keep.sumOf { it.amount }
 
         // All output goes to "keep" since targetSplit was null.
         val content = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(content, signer)
+        val tokenTemplate = buildToken(content)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -722,11 +1036,13 @@ class CashuWalletOps(
         if (totalSelected < amountSats) throw IllegalStateException("Insufficient balance for $mintUrl")
 
         val swap =
-            ops(mintUrl).swapToLocked(
-                proofs = selected.flatMap { it.content.proofs },
-                recipientP2pkPubkeyHex = recipientP2pkPubkeyHex,
-                targetSplit = amountSats,
-            )
+            withFreshOutputs(mintUrl) {
+                it.swapToLocked(
+                    proofs = selected.flatMap { it.content.proofs },
+                    recipientP2pkPubkeyHex = recipientP2pkPubkeyHex,
+                    targetSplit = amountSats,
+                )
+            }
         // Mint round-trip done — biggest chunk of the wall clock. Surface
         // visible motion here so the user knows the click registered even
         // before the recipient sees the kind:9321.
@@ -753,55 +1069,84 @@ class CashuWalletOps(
                     recipientPubKey = recipientPubKey,
                 )
             }
-        val nutzapEvent = signer.sign(nutzapTemplate)
-        publish(nutzapEvent)
-        // kind:9321 is out — recipient's auto-redeem can fire from here.
-        onProgress?.invoke(0.80f)
+        // The mint already consumed the source proofs: a denied sign or a failed publish
+        // from here on must not strand the change, so the catch rolls it back first.
+        var nutzapOut = false
+        var keepEvent: CashuTokenEvent? = null
+        var deleteEvent: DeletionRequestEvent? = null
+        try {
+            val nutzapEvent = signer.sign(nutzapTemplate)
+            publish(nutzapEvent)
+            nutzapOut = true
+            // kind:9321 is out — recipient's auto-redeem can fire from here.
+            onProgress?.invoke(0.80f)
 
-        // Roll over change locally if any.
-        val keepEvent =
-            if (swap.keep.isNotEmpty()) {
-                val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
-                val template = CashuTokenEvent.build(content, signer)
-                val signed = signer.sign(template)
-                publish(signed)
-                signed
-            } else {
-                null
-            }
-
-        // NIP-09 delete the source token events.
-        val deleteEvent =
-            run {
-                val template = DeletionRequestEvent.build(selected.map { it.event })
-                signer.sign(template).also {
-                    publish(it)
+            // Roll over change locally if any.
+            keepEvent =
+                if (swap.keep.isNotEmpty()) {
+                    val content = TokenContent(mint = mintUrl, proofs = swap.keep, del = selected.map { it.event.id })
+                    val template = buildToken(content)
+                    signer.sign(template).also { publish(it) }
+                } else {
+                    null
                 }
-            }
-        onProgress?.invoke(0.95f)
 
-        val historyTemplate =
-            CashuSpendingHistoryEvent.build(
-                direction = SpendingDirection.OUT,
+            // NIP-09 delete the source token events.
+            deleteEvent =
+                DeletionRequestEvent
+                    .build(selected.map { it.event })
+                    .let { template -> signer.sign(template).also { publish(it) } }
+            onProgress?.invoke(0.95f)
+
+            val historyTemplate =
+                CashuSpendingHistoryEvent.build(
+                    direction = SpendingDirection.OUT,
+                    amount = amountSats,
+                    tokenReferences =
+                        buildList {
+                            selected.forEach { add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED)) }
+                            keepEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
+                        },
+                    signer = signer,
+                )
+            val historyEvent = signer.sign(historyTemplate)
+            publish(historyEvent)
+            onProgress?.invoke(1.0f)
+
+            return NutzapSent(
+                nutzapEvent = nutzapEvent,
+                keepEvent = keepEvent,
+                deleteEvent = checkNotNull(deleteEvent),
+                historyEvent = historyEvent,
                 amount = amountSats,
-                tokenReferences =
-                    buildList {
-                        selected.forEach { add(TokenReference(it.event.id, null, TokenReference.MARKER_DESTROYED)) }
-                        keepEvent?.let { add(TokenReference(it.id, null, TokenReference.MARKER_CREATED)) }
-                    },
-                signer = signer,
             )
-        val historyEvent = signer.sign(historyTemplate)
-        publish(historyEvent)
-        onProgress?.invoke(1.0f)
-
-        return NutzapSent(
-            nutzapEvent = nutzapEvent,
-            keepEvent = keepEvent,
-            deleteEvent = deleteEvent,
-            historyEvent = historyEvent,
-            amount = amountSats,
-        )
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            val salvaged =
+                salvageAbortedSpend(
+                    mintUrl = mintUrl,
+                    selected = selected,
+                    pendingChange = if (keepEvent == null) swap.keep else emptyList(),
+                    alreadyPublishedChangeEvents = listOfNotNull(keepEvent),
+                    alreadyPublishedChangeSats = if (keepEvent != null) swap.keep.sumOf { it.amount } else 0L,
+                    deleteAlreadyPublished = deleteEvent != null,
+                    historyAmount = if (nutzapOut) amountSats else null,
+                )
+            throw NutzapSendAbortedException(
+                // Once the swap went through, the proofs minted to the recipient's lock are
+                // spent at the mint whether or not the nutzap reached them.
+                notice =
+                    NutzapNotice.SendAborted(
+                        sent = nutzapOut,
+                        amountSats = amountSats,
+                        returnedSats = salvaged.recoveredSats,
+                        unrecoverableSats = if (nutzapOut) 0L else totalSelected - salvaged.pendingSats,
+                        recoverableFromSeedSats = if (salvaged.changeRecovered) 0L else salvaged.pendingSats,
+                    ),
+                cause = e,
+            )
+        }
     }
 
     private fun CashuProof.toNutzapJson() =
@@ -1106,7 +1451,7 @@ class CashuWalletOps(
         }
 
         // Each proof is signed with the key its lock names: the wallet key, or the identity key.
-        return ops(mintUrl).redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] }
+        return withFreshOutputs(mintUrl) { it.redeemToken(proofs) { lockXOnly -> signingKeys[lockXOnly] } }
     }
 
     private suspend fun publishRedeemed(
@@ -1117,7 +1462,7 @@ class CashuWalletOps(
         val total = swap.keep.sumOf { it.amount }
 
         val tokenContent = TokenContent(mint = mintUrl, proofs = swap.keep)
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -1188,6 +1533,12 @@ class CashuWalletOps(
      */
     suspend fun fetchActiveKeysetId(mintUrl: String): String = ops(mintUrl).activeKeyset().id
 
+    /** NUT-02 input fee (rounded up, in sats) the mint charges on a swap of [amountSats]. */
+    suspend fun activeKeysetInputFeeFor(
+        mintUrl: String,
+        amountSats: Long,
+    ): Long = ops(mintUrl).activeKeysetInputFeeFor(amountSats)
+
     /**
      * NUT-07 batched proof-state query. Returns a map keyed by each
      * proof's secret to the mint-side state. Used by the wallet's
@@ -1253,7 +1604,7 @@ class CashuWalletOps(
         if (allProofs.all { it.id == activeKeysetId }) {
             return MigrationResult(amountMigrated = 0L, proofsMigrated = 0)
         }
-        val swap = ops(mintUrl).swap(allProofs, targetSplit = null)
+        val swap = withFreshOutputs(mintUrl) { it.swap(allProofs, targetSplit = null) }
         val migratedTotal = swap.keep.sumOf { it.amount }
 
         // Publish the consolidated proofs as one kind:7375 and delete
@@ -1264,7 +1615,7 @@ class CashuWalletOps(
                 proofs = swap.keep,
                 del = entries.map { it.event.id },
             )
-        val template = CashuTokenEvent.build(tokenContent, signer)
+        val template = buildToken(tokenContent)
         val signed = signer.sign(template)
         publish(signed)
 
@@ -1458,7 +1809,7 @@ class CashuWalletOps(
                 mint = recoverable.mintUrl,
                 proofs = proofs,
             )
-        val tokenTemplate = CashuTokenEvent.build(tokenContent, signer)
+        val tokenTemplate = buildToken(tokenContent)
         val tokenEvent = signer.sign(tokenTemplate)
         publish(tokenEvent)
 
@@ -1521,9 +1872,73 @@ class CashuWalletOps(
         existingSecrets: Set<String> = emptySet(),
     ): RestoreOutcome {
         val outcome = restoreFromMint(mintUrl, seed, startCounter, existingSecrets)
-        val delta = (outcome.nextCounterAfterScan - peekCashuCounter(outcome.keysetId)).coerceAtLeast(0L)
-        if (delta > 0) reserveCashuCounters(outcome.keysetId, delta.toInt())
+        advanceCounterTo(outcome.keysetId, outcome.nextCounterAfterScan)
         return outcome
+    }
+
+    /**
+     * Aligns this install's NUT-13 counter for the active keyset of [mintUrl] with the mint,
+     * once per install.
+     *
+     * The seed is the wallet's and the counter is the install's: a reinstall, or a second
+     * device, starts the counter at 0 and derives the outputs the mint signed for the first,
+     * so its first swap, melt or mint is refused. Instead of waiting for that, a NUT-09 scan
+     * of the keyset from counter 0 moves the counter past every slot the mint has signed for
+     * this seed, and the unspent proofs it finds that this wallet doesn't hold yet are
+     * published, like any other restore. [isCashuCounterSettled] then spares every later start
+     * the scan.
+     *
+     * Only the active keyset is scanned: it is the only one that ever receives new outputs.
+     *
+     * Not scanned at all when the counter is already past [SETTLE_SCAN_MAX_COUNTER]: the scan
+     * walks every slot below it, and a counter that far is this install's own work. An install
+     * that started from 0 is refused at its first spend, long before it gets there. The keyset
+     * is marked settled all the same, and [withFreshOutputs] is what protects it.
+     *
+     * Returns null while the wallet has no seed; the keyset stays unsettled. A mint without
+     * NUT-09, or one rate-limiting the scan, is marked settled all the same, since asking again
+     * would learn nothing and [withFreshOutputs] is what reports the refusal there. Any other
+     * failure is thrown, and the keyset stays unsettled for the next start.
+     */
+    suspend fun settleCounter(
+        mintUrl: String,
+        existingSecrets: Set<String> = emptySet(),
+    ): CounterSettlement? {
+        val mintOps = ops(mintUrl)
+        val keysetId = mintOps.activeKeyset().id
+        if (isCashuCounterSettled(keysetId)) return CounterSettlement.AlreadySettled(keysetId)
+        if (peekCashuCounter(keysetId) > SETTLE_SCAN_MAX_COUNTER) {
+            markCashuCounterSettled(keysetId)
+            Log.i("CashuWalletOps") { "NUT-13 counter for $keysetId at $mintUrl is past $SETTLE_SCAN_MAX_COUNTER already: this install's own, left as it is" }
+            return CounterSettlement.Trusted(keysetId)
+        }
+        val seed = seedForRestore() ?: return null
+        val scanned =
+            try {
+                mintOps.restore(seed = seed, keysetId = keysetId, startCounter = 0L)
+            } catch (e: MintHttpException) {
+                if (!e.isRestoreUnavailable()) throw e
+                markCashuCounterSettled(keysetId)
+                Log.i("CashuWalletOps") { "NUT-09 scan of $mintUrl unavailable (${describeMintError(e)}): the NUT-13 counter for $keysetId stays this install's own" }
+                return CounterSettlement.Unsupported(keysetId)
+            }
+        val counterBefore = peekCashuCounter(keysetId)
+        val unspent =
+            if (scanned.proofs.isEmpty()) {
+                emptyMap()
+            } else {
+                mintOps.checkStates(scanned.proofs.map { it.proof })
+            }
+        val recovered =
+            scanned.proofs
+                .filter {
+                    unspent[it.proof.secret] == ProofState.UNSPENT && it.proof.secret !in existingSecrets
+                }.map { it.proof }
+        val published = publishRecoveredProofs(RecoverableProofs(mintUrl, keysetId, recovered, scanned.nextCounterAfterScan))
+        advanceCounterTo(keysetId, scanned.nextCounterAfterScan)
+        markCashuCounterSettled(keysetId)
+        Log.i("CashuWalletOps") { "Settled the NUT-13 counter for $keysetId at $mintUrl: $counterBefore -> ${peekCashuCounter(keysetId)}, ${published.proofsRecovered} proof(s) recovered" }
+        return CounterSettlement.Settled(keysetId, peekCashuCounter(keysetId) - counterBefore, published.proofsRecovered, published.amountRecoveredSats)
     }
 
     companion object {
@@ -1536,6 +1951,22 @@ class CashuWalletOps(
          * cheap (one /v1/restore batch).
          */
         private const val DEFAULT_RESTORE_SCAN_BACK: Long = 32L
+
+        /**
+         * How far below the persisted counter [skipSignedSlots] starts its NUT-09 scan. A
+         * refused request's own slots end right below the counter, and the scan runs on from
+         * there until the mint answers three empty batches, so this only has to reach back
+         * past the slots of one request: a swap or melt blinds a handful of outputs.
+         */
+        private const val REUSED_OUTPUT_SCAN_BACK: Long = 32L
+
+        /**
+         * Up to where [settleCounter] scans a keyset from 0. The walk is one `/v1/restore` per
+         * batch of counters (as few as 15 on a keyset with every denomination), so a counter in
+         * the thousands would mean a thousand-odd requests at the first start after an upgrade;
+         * past this many slots the counter is the install's own, and the scan is skipped.
+         */
+        private const val SETTLE_SCAN_MAX_COUNTER: Long = 512L
 
         /**
          * How many of a mint's keysets [scanRecoverableProofs] walks at once.
@@ -1552,6 +1983,15 @@ class CashuWalletOps(
          */
         const val MAX_PROOFS_PER_SWAP: Int = 100
     }
+
+    /**
+     * Builds a kind:7375 from [content] and hands the plaintext to [onTokenBuilt]. An event's
+     * id is fixed by its template and the signer's pubkey, so it is known before signing.
+     */
+    private suspend fun buildToken(content: TokenContent) =
+        CashuTokenEvent.build(content, signer).also { template ->
+            onTokenBuilt(EventHasher.hashId(signer.pubKey, template.createdAt, template.kind, template.tags, template.content), content)
+        }
 }
 
 /** Result of a keyset migration. See [CashuWalletOps.migrateToActiveKeyset]. */
@@ -1583,6 +2023,38 @@ data class RestoreOutcome(
     val nextCounterAfterScan: Long,
     val tokenEvent: CashuTokenEvent?,
 )
+
+/** What [CashuWalletOps.settleCounter] did with the counter of one keyset, [keysetId]. */
+sealed class CounterSettlement {
+    abstract val keysetId: String
+
+    /** Aligned by an earlier start. The mint was not asked. */
+    class AlreadySettled(
+        override val keysetId: String,
+    ) : CounterSettlement()
+
+    /** The mint gives no NUT-09 restore, so nothing was aligned. Marked all the same. */
+    class Unsupported(
+        override val keysetId: String,
+    ) : CounterSettlement()
+
+    /** The counter was too far along to be a fresh install's, so it was not scanned. Marked. */
+    class Trusted(
+        override val keysetId: String,
+    ) : CounterSettlement()
+
+    /**
+     * Aligned now: the counter skipped [slotsSkipped] slots the mint had signed, and of the
+     * proofs on them, [proofsRecovered] unspent ones this wallet did not hold, worth
+     * [amountRecoveredSats], were published.
+     */
+    class Settled(
+        override val keysetId: String,
+        val slotsSkipped: Long,
+        val proofsRecovered: Int,
+        val amountRecoveredSats: Long,
+    ) : CounterSettlement()
+}
 
 /** Drop the leading parity byte if present so two pubkeys can be compared. */
 private fun String.lastHex64(): String = if (length == 66) substring(2) else this
@@ -1720,6 +2192,8 @@ data class MeltCompleted(
     val historyEvent: CashuSpendingHistoryEvent,
     val deleteEvent: DeletionRequestEvent,
     val newTokenEvent: CashuTokenEvent?,
+    /** The pre-swap keep event, when a swap-down ran before the melt. */
+    val prePaidChangeEvent: CashuTokenEvent? = null,
 )
 
 data class SendTokenCompleted(
@@ -1751,12 +2225,43 @@ fun normalizeMintUrl(url: String): String {
  * about the request or the mint, not one nutzap. So are two 400 codes: 3xxxx, NUT-21/22
  * authentication, and 11002, "transaction not balanced", our fee disagreeing with the mint's,
  * which no split of the batch fixes. Answering those with more requests only adds load.
+ *
+ * Nor is it a refusal of the outputs ([refusesSignedOutputs]): that is about this install's
+ * counter, which [CashuWalletOps.swapNutzaps] has already retried, and says nothing about any
+ * nutzap in the batch.
  */
 private fun MintHttpException.refusesTheInputs(): Boolean {
+    if (refusesSignedOutputs()) return false
     if (httpStatus != 400 && httpStatus != 422) return false
     val c = code ?: return true
     return c !in 30000..39999 && c != 11002
 }
+
+/**
+ * Whether this mint error refuses the request's *outputs* for being ones it signed before.
+ *
+ * NUT-13 derives a blinded message from (seed, keyset, counter), and the counter is stored per
+ * install, so a reinstall or a second device presents the first install's outputs again. Every
+ * endpoint that signs answers the same way, and signs nothing: cdk-mintd up to 0.18
+ * 11008 `Duplicate outputs`, since 11003 `Blinded Message is already signed`; Nutshell 11003
+ * `outputs already signed`. NUT-00 lists both codes as "outputs already signed". 11004 is the
+ * same blinded message while another request for it is still being processed, which is another
+ * install spending at the same moment: not retryable as is either. The codes come first; the
+ * text is for a mint that answers without one.
+ */
+private fun MintHttpException.refusesSignedOutputs(): Boolean {
+    if (code == 11003 || code == 11004 || code == 11008) return true
+    val text = detail?.lowercase() ?: message.orEmpty().lowercase()
+    return "already signed" in text || "duplicate output" in text
+}
+
+/**
+ * Whether the mint gives [CashuWalletOps.settleCounter] no NUT-09 restore to scan with: the
+ * route is missing (404, 405, 501), the mint declined it as not allowed (Nutshell's 10000 for a
+ * nut that is switched off), or it is rate-limiting (429), which the next start would only
+ * repeat.
+ */
+private fun MintHttpException.isRestoreUnavailable(): Boolean = httpStatus == 404 || httpStatus == 405 || httpStatus == 501 || httpStatus == 429 || code == 10000
 
 /** A nutzap that passed [CashuWalletOps.prepareNutzap]: its mint and its parsed, P2PK-locked proofs. */
 class PreparedNutzap(
@@ -1825,3 +2330,125 @@ data class NutzapSent(
     val historyEvent: CashuSpendingHistoryEvent,
     val amount: Long,
 )
+
+/** What [CashuWalletOps.salvageAbortedSpend] managed to persist after an aborted spend. */
+private class SalvageOutcome(
+    /** True when every change proof is visible to the wallet again (published, or none were pending). */
+    val changeRecovered: Boolean,
+    /** Sats held by change events the wallet can see once the salvage finished. */
+    val recoveredSats: Long,
+    /** Sats of change that could NOT be published — recoverable only via NUT-09 seed restore. */
+    val pendingSats: Long,
+)
+
+/** A nutzap whose mint swap succeeded but whose Nostr events could not be signed or published. */
+class NutzapSendAbortedException(
+    /** What was saved and what was not: the UI words this, the message is for the log. */
+    val notice: NutzapNotice.SendAborted,
+    cause: Throwable,
+) : Exception(notice.logMessage(), cause)
+
+/** The English log text of an aborted nutzap send; the screen words the notice instead. */
+private fun NutzapNotice.SendAborted.logMessage(): String =
+    if (sent) {
+        "The nutzap of $amountSats sats was sent, but recording it in the wallet failed" +
+            (if (returnedSats > 0L) "; the change ($returnedSats sats) was rolled back" else "") +
+            salvageLog(recoverableFromSeedSats)
+    } else {
+        "The nutzap of $amountSats sats was not sent (signing or publishing was denied). " +
+            "Of the ${returnedSats + unrecoverableSats + recoverableFromSeedSats} sats the mint took: " +
+            listOfNotNull(
+                returnedSats.takeIf { it > 0L }?.let { "$it sats were rolled back into the wallet" },
+                unrecoverableSats.takeIf { it > 0L }?.let { "$it sats locked to the recipient were spent at the mint and could not be recovered" },
+            ).joinToString("; ") +
+            salvageLog(recoverableFromSeedSats)
+    }
+
+/** A melt whose invoice was paid but whose change and records could not be signed or published. */
+class MeltRecordAbortedException(
+    /** The payment DID happen; only the wallet's bookkeeping failed. */
+    val failure: CashuMeltNotice.PaidUnrecorded,
+    cause: Throwable?,
+) : Exception(failure.describe(), cause)
+
+/**
+ * A melt that never paid its invoice. The mint either refused the melt or the failure
+ * happened before anything was spent, and every proof the wallet could still see has been
+ * re-published, so the balance is intact. Callers may safely retry the payment through
+ * another rail — throwing this type is the ops layer's promise that retrying cannot pay
+ * the same invoice twice. [failure] says which, for the UI.
+ */
+class MeltNotPaidException(
+    val failure: CashuMeltNotice,
+    cause: Throwable? = null,
+) : Exception(failure.describe(), cause)
+
+/**
+ * A melt that was aborted between the pre-swap (which consumed the source proofs at the
+ * mint) and the melt itself — typically the user denied the pre-swap keep-event sign on a
+ * NIP-46 signer. [CashuWalletOps.salvageAbortedSpend] rolled the swap's outputs back into
+ * the wallet first. The invoice was not paid, but the failure was the user's own denial,
+ * so callers should not silently retry elsewhere.
+ */
+class MeltAbortedException(
+    val failure: CashuMeltNotice.Aborted,
+    cause: Throwable?,
+) : Exception(failure.describe(), cause)
+
+/** The [CashuMeltNotice] a melt exception carries, or null for any other exception. */
+val Throwable.cashuMeltNotice: CashuMeltNotice?
+    get() =
+        when (this) {
+            is MeltNotPaidException -> failure
+            is MeltAbortedException -> failure
+            is MeltRecordAbortedException -> failure
+            else -> null
+        }
+
+/** The [CashuMeltNotice] an exception thrown around a melt stands for; anything else is [CashuMeltNotice.Failed]. */
+fun Throwable.toCashuMeltNotice(): CashuMeltNotice = cashuMeltNotice ?: CashuMeltNotice.Failed(describeMintError(this))
+
+/**
+ * How a melt that failed with this exception ended for a payment screen: an invoice the
+ * mint settled before the wallet's recording failed is [CashuMeltOutcome.PaidUnrecorded]
+ * — paying again would pay the recipient twice — and anything else is
+ * [CashuMeltOutcome.NotPaid]. A cancellation is not a failure; callers rethrow it first.
+ */
+fun Throwable.toCashuMeltOutcome(): CashuMeltOutcome =
+    when (this) {
+        is MeltRecordAbortedException -> CashuMeltOutcome.PaidUnrecorded(failure)
+        else -> CashuMeltOutcome.NotPaid(toCashuMeltNotice())
+    }
+
+private fun salvageLog(recoverableFromSeedSats: Long): String =
+    if (recoverableFromSeedSats > 0L) {
+        "; run Recover from seed in the Cashu wallet settings to reclaim the $recoverableFromSeedSats sats."
+    } else {
+        "."
+    }
+
+/** English text of a melt failure, for logs and for callers that have no screen; `UserNoticeText` words the notice instead. */
+fun CashuMeltNotice.describe(): String =
+    when (this) {
+        is CashuMeltNotice.CannotFund ->
+            if (heldSats == null) {
+                "The cashu wallet can't cover this invoice with fee head-room"
+            } else {
+                "Insufficient unspent proofs: the wallet holds $heldSats sat, the payment needs $neededSats sat"
+            }
+        is CashuMeltNotice.NoQuote -> "The mint would not quote the invoice ($detail)"
+        is CashuMeltNotice.WrongQuote -> "The mint quoted $quotedSats sats for an $invoiceSats-sat invoice; refusing to melt"
+        is CashuMeltNotice.FeeTooHigh -> "The mint wants $feeSats sats of fees for an $invoiceSats-sat invoice; allowing at most $maxFeeSats"
+        is CashuMeltNotice.Refused -> "The mint did not pay the invoice ($detail)"
+        is CashuMeltNotice.Refunded -> "The mint did not pay the invoice and $returnedSats sats were returned to the wallet ($detail)"
+        is CashuMeltNotice.Aborted ->
+            if (recoverableFromSeedSats == 0L) {
+                "The Lightning invoice was NOT paid: signing or publishing was denied, and the swap's " +
+                    "$returnedSats sats were rolled back into the wallet."
+            } else {
+                "The Lightning invoice was NOT paid: signing or publishing was denied and the wallet's recovery " +
+                    "events were denied too" + salvageLog(recoverableFromSeedSats)
+            }
+        is CashuMeltNotice.PaidUnrecorded -> "The Lightning invoice was paid ($paidSats sats), but recording it in the wallet failed" + salvageLog(recoverableFromSeedSats)
+        is CashuMeltNotice.Failed -> detail
+    }
