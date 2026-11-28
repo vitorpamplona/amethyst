@@ -27,6 +27,7 @@ import com.vitorpamplona.amethyst.commons.model.Bolt12ZapFailure
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.notices.ActionFailed
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ClinkDebitFailed
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
@@ -61,6 +62,18 @@ import com.vitorpamplona.amethyst.commons.resources.bolt12_zap_paid_no_receipt
 import com.vitorpamplona.amethyst.commons.resources.callback_url_not_found_in_the_user_s_lightning_address_server_configuration_with_user
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_failed_redemption_explainer_error_msg
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_aborted
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_cannot_fund
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_fee_too_high
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_insufficient
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_no_quote
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_paid_unrecorded
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_refused
+import com.vitorpamplona.amethyst.commons.resources.cashu_melt_wrong_quote
+import com.vitorpamplona.amethyst.commons.resources.cashu_recover_from_seed_hint
+import com.vitorpamplona.amethyst.commons.resources.cashu_sats
+import com.vitorpamplona.amethyst.commons.resources.cashu_sats_lost
+import com.vitorpamplona.amethyst.commons.resources.cashu_sats_returned
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption
 import com.vitorpamplona.amethyst.commons.resources.cashu_successful_redemption_explainer
 import com.vitorpamplona.amethyst.commons.resources.cashu_unsafe_mint_url
@@ -124,6 +137,9 @@ import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_event
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_no_recipient
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_private_note
 import com.vitorpamplona.amethyst.commons.resources.nutzap_failed_title
+import com.vitorpamplona.amethyst.commons.resources.nutzap_not_sent_denied
+import com.vitorpamplona.amethyst.commons.resources.nutzap_sent_unrecorded
+import com.vitorpamplona.amethyst.commons.resources.payment_paid_but_not_recorded
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_error_title
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_not_supported
 import com.vitorpamplona.amethyst.commons.resources.podcast_value_keysend_requires_nwc
@@ -171,6 +187,7 @@ import com.vitorpamplona.amethyst.commons.resources.video_compression_not_smalle
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_no_response_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_pay_invoice_error_error
 import com.vitorpamplona.amethyst.commons.resources.wallet_connect_unreadable_response_error
+import com.vitorpamplona.amethyst.commons.resources.zap_cashu_melt_failed
 import com.vitorpamplona.amethyst.commons.service.HttpStatusMessages
 import com.vitorpamplona.amethyst.commons.service.pow.powKindLabelRes
 import com.vitorpamplona.amethyst.commons.ui.components.InformationDialog
@@ -198,6 +215,11 @@ sealed interface NoticeTxt {
         val res: PluralStringResource,
         val count: Int,
         val args: List<NoticeTxt> = emptyList(),
+    ) : NoticeTxt
+
+    /** Sentences joined with a space. */
+    class Sentences(
+        val parts: List<NoticeTxt>,
     ) : NoticeTxt
 }
 
@@ -352,6 +374,7 @@ fun UserNotice.text(): NoticeText =
         NutzapNotice.NoRecipient -> text(Res.string.nutzap_failed_title, Res.string.nutzap_failed_no_recipient)
         NutzapNotice.NoEvent -> text(Res.string.nutzap_failed_title, Res.string.nutzap_failed_no_event)
         is NutzapNotice.MintFailed -> NoticeText(Res.string.nutzap_failed_title, raw(detail))
+        is NutzapNotice.SendAborted -> NoticeText(if (sent) PAID_BUT_NOT_RECORDED else Res.string.nutzap_failed_title, txt())
 
         is CashuRedeemNotice.Redeemed ->
             NoticeText(
@@ -372,6 +395,7 @@ fun UserNotice.text(): NoticeText =
 
         is ClinkDebitFailed ->
             NoticeText(Res.string.error_dialog_pay_invoice_error, detail?.let { raw(it) } ?: str(Res.string.clink_debit_no_response))
+        is CashuMeltNotice -> NoticeText(failureTitle(Res.string.error_dialog_pay_invoice_error), txt())
         NoWalletFound -> text(Res.string.error_dialog_zap_error, Res.string.no_wallet_found)
 
         is ZapNotice.MissingLnAddress ->
@@ -399,6 +423,7 @@ fun UserNotice.text(): NoticeText =
         is ZapNotice.Bolt12PaymentFailed -> NoticeText(Res.string.bolt12_zap_error, str(Res.string.bolt12_payment_failed, raw(detail)))
         ZapNotice.Bolt12PaymentTimedOut -> NoticeText(Res.string.bolt12_zap_error, str(Res.string.bolt12_payment_failed, NwcFailure.TimedOut.txt()))
         is ZapNotice.FallbackFailed -> NoticeText(Res.string.error_dialog_zap_error, raw(message))
+        is ZapNotice.CashuMeltFailed -> NoticeText(failure.failureTitle(Res.string.error_dialog_zap_error), failure.txt())
 
         V4VNotice.NoRecipients -> text(Res.string.podcast_value_error_title, Res.string.podcast_value_no_recipients)
         V4VNotice.KeysendNotSupported -> text(Res.string.podcast_value_error_title, Res.string.podcast_value_keysend_not_supported)
@@ -473,6 +498,7 @@ suspend fun NoticeTxt.loadText(): String =
         is NoticeTxt.Raw -> text
         is NoticeTxt.Str -> if (args.isEmpty()) loadStringRes(res) else loadStringRes(res, *args.map { it.loadText() }.toTypedArray())
         is NoticeTxt.Plural -> loadPluralStringRes(res, count, *args.map { it.loadText() }.toTypedArray())
+        is NoticeTxt.Sentences -> parts.map { it.loadText() }.joinToString(" ")
     }
 
 @Composable
@@ -481,7 +507,80 @@ fun NoticeTxt.renderText(): String =
         is NoticeTxt.Raw -> text
         is NoticeTxt.Str -> if (args.isEmpty()) stringRes(res) else stringRes(res, *args.map { it.renderText() }.toTypedArray())
         is NoticeTxt.Plural -> pluralStringRes(res, count, *args.map { it.renderText() }.toTypedArray())
+        is NoticeTxt.Sentences -> parts.map { it.renderText() }.joinToString(" ")
     }
+
+/**
+ * Title for a payment that went through but could not be recorded. Never a "failed" title:
+ * over a body that says the invoice was paid, it invites paying a second time.
+ */
+private val PAID_BUT_NOT_RECORDED: StringResource = Res.string.payment_paid_but_not_recorded
+
+/** [failedTitle], unless the melt did pay the invoice — then [PAID_BUT_NOT_RECORDED]. */
+private fun CashuMeltNotice.failureTitle(failedTitle: StringResource): StringResource = if (this is CashuMeltNotice.PaidUnrecorded) PAID_BUT_NOT_RECORDED else failedTitle
+
+/** An amount of sats. A plural, so the noun agrees with its number in every language. */
+private fun sats(amount: Long): NoticeTxt = amount.txt(Res.plurals.cashu_sats)
+
+private fun Long.txt(plural: PluralStringResource): NoticeTxt = NoticeTxt.Plural(plural, coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(), listOf(raw(toString())))
+
+private fun returnedSats(amount: Long): NoticeTxt? = amount.takeIf { it > 0L }?.txt(Res.plurals.cashu_sats_returned)
+
+private fun lostSats(amount: Long): NoticeTxt? = amount.takeIf { it > 0L }?.txt(Res.plurals.cashu_sats_lost)
+
+private fun recoverFromSeedHint(amount: Long): NoticeTxt? = amount.takeIf { it > 0L }?.let { str(Res.string.cashu_recover_from_seed_hint, sats(it)) }
+
+/**
+ * A melt that did not go through, or did and could not be recorded. Only [CashuMeltNotice.PaidUnrecorded]
+ * took sats out of the wallet; every other case says so and what came back.
+ */
+fun CashuMeltNotice.txt(): NoticeTxt =
+    NoticeTxt.Sentences(
+        listOfNotNull(
+            when (this) {
+                is CashuMeltNotice.CannotFund -> {
+                    val held = heldSats
+                    if (held == null) {
+                        str(Res.string.cashu_melt_cannot_fund)
+                    } else {
+                        str(Res.string.cashu_melt_insufficient, sats(held), sats(neededSats))
+                    }
+                }
+                is CashuMeltNotice.NoQuote -> str(Res.string.cashu_melt_no_quote, raw(detail))
+                is CashuMeltNotice.WrongQuote -> str(Res.string.cashu_melt_wrong_quote, sats(quotedSats), sats(invoiceSats))
+                is CashuMeltNotice.FeeTooHigh -> str(Res.string.cashu_melt_fee_too_high, sats(feeSats), sats(invoiceSats), sats(maxFeeSats))
+                is CashuMeltNotice.Refused -> str(Res.string.cashu_melt_refused, raw(detail))
+                is CashuMeltNotice.Refunded -> str(Res.string.cashu_melt_refused, raw(detail))
+                is CashuMeltNotice.Aborted -> str(Res.string.cashu_melt_aborted)
+                is CashuMeltNotice.PaidUnrecorded -> str(Res.string.cashu_melt_paid_unrecorded, sats(paidSats))
+                is CashuMeltNotice.Failed -> str(Res.string.zap_cashu_melt_failed, raw(detail))
+            },
+            when (this) {
+                is CashuMeltNotice.Refunded -> returnedSats(returnedSats)
+                is CashuMeltNotice.Aborted -> returnedSats(returnedSats)
+                else -> null
+            },
+            when (this) {
+                is CashuMeltNotice.Aborted -> recoverFromSeedHint(recoverableFromSeedSats)
+                is CashuMeltNotice.PaidUnrecorded -> recoverFromSeedHint(recoverableFromSeedSats)
+                else -> null
+            },
+        ),
+    )
+
+/** The same message for a screen that shows it under a title of its own. */
+suspend fun CashuMeltNotice.loadText(): String = txt().loadText()
+
+/** A nutzap the mint paid for but Nostr never carried, or carried without the wallet recording it. */
+private fun NutzapNotice.SendAborted.txt(): NoticeTxt =
+    NoticeTxt.Sentences(
+        listOfNotNull(
+            if (sent) str(Res.string.nutzap_sent_unrecorded, sats(amountSats)) else str(Res.string.nutzap_not_sent_denied),
+            returnedSats(returnedSats),
+            lostSats(unrecoverableSats),
+            recoverFromSeedHint(recoverableFromSeedSats),
+        ),
+    )
 
 /** Resolves notices for headless code that hands plain text to its callers. */
 object ResUserNoticeResolver : UserNoticeResolver {

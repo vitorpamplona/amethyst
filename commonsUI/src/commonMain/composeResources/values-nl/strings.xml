@@ -2147,6 +2147,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Voeg mints toe of verwijder ze uit je wallet.</string>
     <string name="cashu_settings_my_recommendations">Mijn mint-aanbevelingen</string>
     <string name="cashu_settings_recommendations_subtitle">Publiekelijk instaan voor mints die je vertrouwt, en aanbevelingen intrekken.</string>
+    <string name="zap_cashu_melt_failed">Cashu-betaaling mislukt: %1$s</string>
+    <string name="cashu_melt_cannot_fund">De Cashu-wallet kan deze factuur niet dekken met marge voor de kosten.</string>
+    <string name="cashu_melt_insufficient">Niet genoeg ecash bij deze mint: de wallet heeft %1$s en de betaling heeft %2$s nodig.</string>
+    <string name="cashu_melt_no_quote">De mint wilde de factuur niet prijzen (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">De mint prijkte %1$s voor een factuur van %2$s. Er is niets betaald.</string>
+    <string name="cashu_melt_fee_too_high">De mint vraagt %1$s aan kosten om een factuur van %2$s te betalen, meer dan de %3$s die deze wallet toestaat. Er is niets betaald.</string>
+    <string name="cashu_melt_refused">De mint heeft de factuur niet betaald (%1$s).</string>
+    <string name="cashu_melt_aborted">Het ondertekenen is geweigerd, dus er is niets betaald.</string>
+    <string name="cashu_melt_paid_unrecorded">De factuur is betaald (%1$s), maar het vastleggen in de wallet is mislukt. Betaal hem niet opnieuw.</string>
+    <string name="payment_paid_but_not_recorded">Betaald, maar niet vastgelegd in de wallet</string>
+    <string name="cashu_recover_from_seed_hint">Gebruik „Herstellen vanuit seed” in de Cashu-wallet-instellingen om de %1$s terug te halen die niet konden worden vastgelegd.</string>
+    <string name="nutzap_sent_unrecorded">De nutzap (%1$s) is verzonden, maar het vastleggen in de wallet is mislukt.</string>
+    <string name="nutzap_not_sent_denied">De nutzap is niet verzonden: ondertekenen of publiceren is geweigerd.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat zit weer in de wallet.</item>
+        <item quantity="other">%1$s sats zitten weer in de wallet.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat is bij de mint uitgegeven en kon niet worden hersteld.</item>
+        <item quantity="other">%1$s sats zijn bij de mint uitgegeven en konden niet worden hersteld.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Je hebt nog geen mints aanbevolen. Tik op het duimpje omhoog naast een mint om er publiekelijk voor in te staan.</string>
     <string name="cashu_settings_delete_recommendation">Aanbeveling verwijderen</string>
     <string name="cashu_settings_delete_confirm_title">Aanbeveling intrekken?</string>

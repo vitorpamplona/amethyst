@@ -2284,6 +2284,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Add or remove the mints your wallet uses.</string>
     <string name="cashu_settings_my_recommendations">My mint recommendations</string>
     <string name="cashu_settings_recommendations_subtitle">Publicly vouch for mints you trust, and retract recommendations.</string>
+    <string name="zap_cashu_melt_failed">Cashu payment failed: %1$s</string>
+    <string name="cashu_melt_cannot_fund">The cashu wallet can't cover this invoice with room for its fees.</string>
+    <string name="cashu_melt_insufficient">Not enough ecash at this mint: the wallet holds %1$s and the payment needs %2$s.</string>
+    <string name="cashu_melt_no_quote">The mint would not quote the invoice (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">The mint quoted %1$s for an invoice of %2$s. Nothing was paid.</string>
+    <string name="cashu_melt_fee_too_high">The mint asks %1$s in fees to pay an invoice of %2$s, more than the %3$s this wallet allows. Nothing was paid.</string>
+    <string name="cashu_melt_refused">The mint did not pay the invoice (%1$s).</string>
+    <string name="cashu_melt_aborted">Signing was denied, so nothing was paid.</string>
+    <string name="cashu_melt_paid_unrecorded">The invoice was paid (%1$s), but recording it in the wallet failed. Do not pay it again.</string>
+    <string name="payment_paid_but_not_recorded">Paid, but not recorded in the wallet</string>
+    <string name="cashu_recover_from_seed_hint">Use "Recover from seed" in the Cashu wallet settings to reclaim the %1$s that could not be recorded.</string>
+    <string name="nutzap_sent_unrecorded">The nutzap (%1$s) was sent, but recording it in the wallet failed.</string>
+    <string name="nutzap_not_sent_denied">The nutzap was not sent: signing or publishing was denied.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat is back in the wallet.</item>
+        <item quantity="other">%1$s sats are back in the wallet.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat was spent at the mint and could not be recovered.</item>
+        <item quantity="other">%1$s sats were spent at the mint and could not be recovered.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">You haven't recommended any mints yet. Tap the thumbs-up next to a mint to publicly vouch for it.</string>
     <string name="cashu_settings_delete_recommendation">Delete recommendation</string>
     <string name="cashu_settings_delete_confirm_title">Retract recommendation?</string>

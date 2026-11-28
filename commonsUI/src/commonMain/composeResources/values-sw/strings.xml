@@ -1035,6 +1035,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Ongeza au ondoa mints zinazotumika na mkoba wako.</string>
     <string name="cashu_settings_my_recommendations">Mapendekezo yangu ya mint</string>
     <string name="cashu_settings_recommendations_subtitle">Sifu hadharani mints unayoziamini, na ujiondoe kwenye mapendekezo.</string>
+    <string name="zap_cashu_melt_failed">Malipo ya Cashu yamefeli: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Mkoba wa Cashu hauwezi kulipa ankawa hii pamoja na nafasi kwa ada zake.</string>
+    <string name="cashu_melt_insufficient">Hakuna ecash ya kutosha kwenye mint hii: mkoba una %1$s na malipo yanahitaji %2$s.</string>
+    <string name="cashu_melt_no_quote">Mint hakukubali kutoa nukuu ya ankawa (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Mint ilinukuu %1$s kwa ankawa ya %2$s. Hakuna kilicholipwa.</string>
+    <string name="cashu_melt_fee_too_high">Mint inahitaji ada ya %1$s kulipa ankawa ya %2$s, zaidi ya %3$s ambazo mkoba huu unaruhusu. Hakuna kilicholipwa.</string>
+    <string name="cashu_melt_refused">Mint hakulipa ankawa (%1$s).</string>
+    <string name="cashu_melt_aborted">Usaini haukubaliwa, kwa hivyo hakuna kilicholipwa.</string>
+    <string name="cashu_melt_paid_unrecorded">Ankawa imelipwa (%1$s), lakini kuiandika kwenye mkoba hakufanikiwa. Usilipe tena.</string>
+    <string name="payment_paid_but_not_recorded">Imelipwa, lakini haikuandikwa kwenye mkoba</string>
+    <string name="cashu_recover_from_seed_hint">Tumia “Rejesha kutoka kwa mbegu” kwenye mipangilio ya mkoba wa Cashu kupata rudishi %1$s ambazo zikuweza kuandikwa.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) imetumwa, lakini kuiandika kwenye mkoba hakufanikiwa.</string>
+    <string name="nutzap_not_sent_denied">Nutzap haijatumwa: usaini au kuchapisha hakukubaliwa.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat imerudi kwenye mkoba.</item>
+        <item quantity="other">%1$s sats zimerudi kwenye mkoba.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat imetumika kwenye mint na haikuweza kurejeshwa.</item>
+        <item quantity="other">%1$s sats zilitumika kwenye mint na hazikuweza kurejeshwa.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Bado hujaipendekeza mint yoyote. Gonga kidole gumba juu karibu na mint kuisifu hadharani.</string>
     <string name="cashu_settings_delete_recommendation">Futa pendekezo</string>
     <string name="cashu_settings_delete_confirm_title">Je, ujiondoe kwenye pendekezo?</string>

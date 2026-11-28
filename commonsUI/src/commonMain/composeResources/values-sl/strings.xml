@@ -2199,6 +2199,37 @@
     <string name="cashu_settings_edit_wallet_subtitle">Kovnice, Nutzap ključ</string>
     <string name="cashu_settings_my_recommendations">Priporočene kovnice</string>
     <string name="cashu_settings_recommendations_subtitle">Javno podpri kovnice, ki jim zaupaš, in prekliči priporočila.</string>
+    <string name="zap_cashu_melt_failed">Plačilo Cashu ni uspelo: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Denarnica Cashu ne more pokriti tega računa z rezervo za provizijo.</string>
+    <string name="cashu_melt_insufficient">Na tej kovnici ni dovolj ecasha: denarnica ima %1$s, plačilo pa zahteva %2$s.</string>
+    <string name="cashu_melt_no_quote">Kovnica računa ni hotela oceniti (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Kovnica je za račun na %2$s ocenila %1$s. Ničesar ni bilo plačano.</string>
+    <string name="cashu_melt_fee_too_high">Kovnica za plačilo računa na %2$s zahteva %1$s provizij, več kot %3$s, ki jih dovoljuje ta denarnica. Ničesar ni bilo plačano.</string>
+    <string name="cashu_melt_refused">Kovnica računa ni plačala (%1$s).</string>
+    <string name="cashu_melt_aborted">Podpis je bil zavrnjen, zato ničesar ni bilo plačano.</string>
+    <string name="cashu_melt_paid_unrecorded">Račun je bil plačan (%1$s), vendar beleženje v denarnico ni uspelo. Ne plačajte ga znova.</string>
+    <string name="payment_paid_but_not_recorded">Plačano, vendar ni zabeleženo v denarnici</string>
+    <string name="cashu_recover_from_seed_hint">Z »Obnovi s seed geslom« v nastavitvah Cashu denarnice vrnite %1$s, ki jih ni bilo mogoče zabeležiti.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) je bil poslan, vendar beleženje v denarnico ni uspelo.</string>
+    <string name="nutzap_not_sent_denied">Nutzap ni bil poslan: podpis ali objava je bila zavrnjena.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="two">%1$s sata</item>
+        <item quantity="few">%1$s sati</item>
+        <item quantity="other">%1$s satov</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat je spet v denarnici.</item>
+        <item quantity="two">%1$s sata sta spet v denarnici.</item>
+        <item quantity="few">%1$s sati so spet v denarnici.</item>
+        <item quantity="other">%1$s satov je spet v denarnici.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat je bil porabljen pri kovnici in ga ni bilo mogoče obnoviti.</item>
+        <item quantity="two">%1$s sata sta bila porabljena pri kovnici in ju ni bilo mogoče obnoviti.</item>
+        <item quantity="few">%1$s sati so bili porabljeni pri kovnici in jih ni bilo mogoče obnoviti.</item>
+        <item quantity="other">%1$s satov je bilo porabljenih pri kovnici in jih ni bilo mogoče obnoviti.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Nimaš še priporočenih kovnic. Tapni palec navzgor ob kovnici in jo javno priporoči.</string>
     <string name="cashu_settings_delete_recommendation">Izbriši priporočeno</string>
     <string name="cashu_settings_delete_confirm_title">Umakni priporočilo?</string>

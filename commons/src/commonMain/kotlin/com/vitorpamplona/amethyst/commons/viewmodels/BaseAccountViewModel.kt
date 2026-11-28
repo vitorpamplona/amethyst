@@ -28,6 +28,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.actions.ConcordPinOutcome
 import com.vitorpamplona.amethyst.commons.audio.VisualizerStyle
+import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSendAbortedException
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.chats.rooms.markRoomNoteAsRead
 import com.vitorpamplona.amethyst.commons.chats.rooms.rowHasUnread
@@ -73,6 +74,7 @@ import com.vitorpamplona.amethyst.commons.model.rooms.roomFor
 import com.vitorpamplona.amethyst.commons.model.unwrapToNote
 import com.vitorpamplona.amethyst.commons.model.zapraiserStatus
 import com.vitorpamplona.amethyst.commons.notices.Bolt12OfferNotice
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
 import com.vitorpamplona.amethyst.commons.notices.CashuRedeemNotice
 import com.vitorpamplona.amethyst.commons.notices.ConcordNotice
 import com.vitorpamplona.amethyst.commons.notices.EmojiListNotice
@@ -1440,7 +1442,11 @@ open class BaseAccountViewModel(
         } catch (e: Exception) {
             // A cancelled send (the screen left, the scope closed) is not a mint failure.
             if (e is CancellationException) throw e
-            onError.report(noticeResolver, NutzapNotice.MintFailed(describeMintError(e)), baseNote.author)
+            onError.report(
+                noticeResolver,
+                (e as? NutzapSendAbortedException)?.notice ?: NutzapNotice.MintFailed(describeMintError(e)),
+                baseNote.author,
+            )
         }
     }
 
@@ -1468,7 +1474,11 @@ open class BaseAccountViewModel(
             onSuccess()
         } catch (e: Exception) {
             if (e is CancellationException) throw e
-            onError.report(noticeResolver, NutzapNotice.MintFailed(describeMintError(e)), getUserIfExists(recipientPubKey))
+            onError.report(
+                noticeResolver,
+                (e as? NutzapSendAbortedException)?.notice ?: NutzapNotice.MintFailed(describeMintError(e)),
+                getUserIfExists(recipientPubKey),
+            )
         }
     }
 
@@ -3123,6 +3133,19 @@ open class BaseAccountViewModel(
     ) = launchSigner {
         val response = ClinkDebitPayer.payInvoice(account, host.moneyOpRelays, pointer, bolt11)
         withContext(Dispatchers.Main) { onResult(response) }
+    }
+
+    /**
+     * Pays a single BOLT-11 by melting NIP-60 ecash — the cashu-rail counterpart of
+     * [payInvoiceViaClinkDebit] / [sendZapPaymentRequestFor]. Synchronous settlement:
+     * [onResult] receives a [CashuMeltOutcome] on the main dispatcher.
+     */
+    fun payInvoiceViaCashuMelt(
+        bolt11: String,
+        onResult: (CashuMeltOutcome) -> Unit,
+    ) = launchSigner {
+        val outcome = account.cashuWalletState.payInvoice(bolt11)
+        withContext(Dispatchers.Main) { onResult(outcome) }
     }
 
     fun getInteractiveStoryReadingState(dATag: String): AddressableNote = LocalCache.getOrCreateAddressableNote(InteractiveStoryReadingStateEvent.createAddress(account.signer.pubKey, dATag))

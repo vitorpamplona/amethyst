@@ -1038,6 +1038,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Hamyoningiz foydalanadigan mintlarni qo'shing yoki olib tashlang.</string>
     <string name="cashu_settings_my_recommendations">Mening mint tavsiyalarim</string>
     <string name="cashu_settings_recommendations_subtitle">Ishongan mintlaringizni ommaviy ravishda tasdiqlang va tavsiyalarni qaytarib oling.</string>
+    <string name="zap_cashu_melt_failed">Cashu to'lovi amalga oshmadi: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashu hamyoni komissiya uchun zaxira qoldirib, bu hisob-varag‘ni to‘lay olmaydi.</string>
+    <string name="cashu_melt_insufficient">Bu mintda ecash yetarli emas: hamyonda %1$s bor, to‘lov uchun %2$s kerak.</string>
+    <string name="cashu_melt_no_quote">Mint hisob-varag‘ga narx berishni rad etdi (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Mint %2$s miqdoridagi hisob-varag‘ uchun %1$s narx berdi. Hech narsa to‘lanmadi.</string>
+    <string name="cashu_melt_fee_too_high">Mint %2$s miqdoridagi hisob-varag‘ni to‘lash uchun %1$s komissiya so‘rayapti; bu hamyon ruxsat bergan %3$s miqdoridan ko‘p. Hech narsa to‘lanmadi.</string>
+    <string name="cashu_melt_refused">Mint hisob-varag‘ni to‘lamadi (%1$s).</string>
+    <string name="cashu_melt_aborted">Imzo rad etildi, shuning uchun hech narsa to‘lanmadi.</string>
+    <string name="cashu_melt_paid_unrecorded">Hisob-varag‘ to‘landi (%1$s), lekin uni hamyonga yozib bo‘lmadi. Qayta to‘lamang.</string>
+    <string name="payment_paid_but_not_recorded">To‘landi, lekin hamyonga yozilmadi</string>
+    <string name="cashu_recover_from_seed_hint">Yozib bo‘lmagan %1$s ni qaytarish uchun Cashu hamyon sozlamalarida “Urug'dan tiklash” dan foydalaning.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) yuborildi, lekin uni hamyonga yozib bo‘lmadi.</string>
+    <string name="nutzap_not_sent_denied">Nutzap yuborilmadi: imzo yoki nashr etish rad etildi.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sat</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat hamyonga qaytdi.</item>
+        <item quantity="other">%1$s sat hamyonga qaytdi.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">Mintda sarflandi va qaytarib bo‘lmadi: %1$s.</item>
+        <item quantity="other">Mintda sarflandi va qaytarib bo‘lmadi: %1$s.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Siz hali hech qanday mint tavsiya qilmagansiz. Uni ommaviy ravishda tasdiqlash uchun mint yonidagi bosh barmoq belgisini bosing.</string>
     <string name="cashu_settings_delete_recommendation">Tavsiyani o'chirish</string>
     <string name="cashu_settings_delete_confirm_title">Tavsiyani qaytarib olishni istaysizmi?</string>

@@ -29,6 +29,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
+import com.vitorpamplona.amethyst.commons.notices.ui.loadText
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.cancel
 import com.vitorpamplona.amethyst.commons.resources.clink_confirm_pay_amount_via_source
@@ -38,6 +40,7 @@ import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.no_wallet_found
 import com.vitorpamplona.amethyst.commons.resources.pay
 import com.vitorpamplona.amethyst.commons.resources.sats
+import com.vitorpamplona.amethyst.commons.resources.send_payment_source_cashu_wallet
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcFailureDetail
 import com.vitorpamplona.amethyst.commons.service.nwc.nwcTimeoutMessage
 import com.vitorpamplona.amethyst.commons.ui.stringRes
@@ -78,13 +81,22 @@ fun InvoicePaymentDispatcher(
     val source = remember(bolt11) { accountViewModel.account.settings.defaultPaymentSource() }
 
     if (source == null) {
-        // No in-app wallet configured -> hand off to an external wallet app (it confirms).
+        // No in-app source (none configured, or another wallet app picked) -> hand off to a
+        // wallet app, which confirms.
         LaunchedEffect(bolt11) {
             walletLauncher.payInvoice(bolt11, noWalletFoundStr, onSuccess, onError)
             onClear()
         }
         return
     }
+
+    // The cashu source's label is localized; NWC/CLINK names are user-set strings.
+    val sourceName =
+        if (source is PaymentSource.Cashu) {
+            stringRes(Res.string.send_payment_source_cashu_wallet)
+        } else {
+            source.name
+        }
 
     val amountSats =
         remember(bolt11) {
@@ -97,7 +109,7 @@ fun InvoicePaymentDispatcher(
 
     ConfirmPaymentDialog(
         amountSats = amountSats,
-        sourceName = source.name,
+        sourceName = sourceName,
         onConfirm = {
             when (source) {
                 is PaymentSource.Nwc ->
@@ -122,6 +134,16 @@ fun InvoicePaymentDispatcher(
                                 response?.failureDetail()
                                     ?: clinkDebitNoResponseStr,
                             )
+                        }
+                    }
+
+                is PaymentSource.Cashu ->
+                    // Synchronous melt; one that paid but could not be recorded is a
+                    // success too, so the dialog never invites a double payment.
+                    accountViewModel.payInvoiceViaCashuMelt(bolt11) { outcome ->
+                        when (outcome) {
+                            is CashuMeltOutcome.Paid, is CashuMeltOutcome.PaidUnrecorded -> onSuccess()
+                            is CashuMeltOutcome.NotPaid -> scope.launch { onError(outcome.failure.loadText()) }
                         }
                     }
             }

@@ -99,6 +99,8 @@ import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupForm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupState
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.toConnectionString
+import com.vitorpamplona.amethyst.commons.model.payments.EXTERNAL_WALLET_APP_ID
+import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.resources.Res
 import com.vitorpamplona.amethyst.commons.resources.back
 import com.vitorpamplona.amethyst.commons.resources.cancel
@@ -109,6 +111,7 @@ import com.vitorpamplona.amethyst.commons.resources.clink_budget_set
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_no_response
 import com.vitorpamplona.amethyst.commons.resources.clink_debit_pay_only
 import com.vitorpamplona.amethyst.commons.resources.close
+import com.vitorpamplona.amethyst.commons.resources.send_payment_source_external
 import com.vitorpamplona.amethyst.commons.resources.wallet
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_connection
 import com.vitorpamplona.amethyst.commons.resources.wallet_add_other_types
@@ -166,6 +169,7 @@ import com.vitorpamplona.amethyst.commons.ui.note.formatDateTime
 import com.vitorpamplona.amethyst.commons.ui.platform.AppBottomBar
 import com.vitorpamplona.amethyst.commons.ui.pluralStringRes
 import com.vitorpamplona.amethyst.commons.ui.stringRes
+import com.vitorpamplona.amethyst.commons.ui.theme.CardSurfaces
 import com.vitorpamplona.amethyst.commons.util.formatGrouped
 import com.vitorpamplona.amethyst.commons.viewmodels.AccountViewModel
 import com.vitorpamplona.amethyst.commons.wallet.CashuWalletViewModel
@@ -556,13 +560,24 @@ private fun MultiWalletHomeContent(
 
         if (hasCashuWallet) {
             item {
+                val cashuIsDefault by walletViewModel.cashuIsDefault.collectAsState()
                 CashuWalletRow(
                     balanceSats = cashuBalanceSats,
                     mintCount = cashuMintCount,
                     hideBalance = hideBalance,
+                    isDefault = cashuIsDefault,
+                    onSetDefault = { walletViewModel.setDefaultWallet(PaymentSource.Cashu.ID) },
                     onClick = { nav.nav(Route.CashuWallet) },
                 )
             }
+        }
+
+        item {
+            val externalWalletIsDefault by walletViewModel.externalWalletIsDefault.collectAsState()
+            ExternalWalletRow(
+                isDefault = externalWalletIsDefault,
+                onSetDefault = { walletViewModel.setDefaultWallet(EXTERNAL_WALLET_APP_ID) },
+            )
         }
 
         if (!backupCardDismissed && nwcWallets.isNotEmpty() && !backupEnabled) {
@@ -753,6 +768,31 @@ private fun DefaultWalletIndicator(modifier: Modifier = Modifier) {
     }
 }
 
+/**
+ * The default-payment-source selector every wallet row carries: the marker when the
+ * row already is the default, the button to make it the default otherwise. Both fill
+ * the same 40dp slot, so picking a default does not move the rows around it.
+ */
+@Composable
+private fun DefaultSourceControl(
+    isDefault: Boolean,
+    onSetDefault: () -> Unit,
+) {
+    if (isDefault) {
+        DefaultWalletIndicator(modifier = Modifier.fillMaxWidth().height(40.dp))
+    } else {
+        OutlinedButton(
+            onClick = onSetDefault,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(stringRes(Res.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
 @Composable
 private fun WalletCard(
     walletInfo: WalletInfo,
@@ -814,11 +854,13 @@ private fun WalletCard(
                 .fillMaxWidth()
                 .clickable(enabled = walletInfo.canShowBalance, onClick = onSelect),
         shape = RoundedCornerShape(16.dp),
+        // Not the default: the app's hairline. surfaceVariant is three levels off the page in
+        // the light theme, so without an edge the card is not seen as one.
         border =
             if (walletInfo.isDefault) {
                 BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
             } else {
-                null
+                CardSurfaces.border
             },
         colors =
             CardDefaults.cardColors(
@@ -1341,19 +1383,7 @@ private fun WalletSettingsSheet(
             HorizontalDivider()
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (walletInfo.isDefault) {
-                DefaultWalletIndicator(modifier = Modifier.fillMaxWidth().height(40.dp))
-            } else {
-                OutlinedButton(
-                    onClick = onSetDefault,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Icon(MaterialSymbols.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(stringRes(Res.string.wallet_set_default), style = MaterialTheme.typography.bodySmall)
-                }
-            }
+            DefaultSourceControl(isDefault = walletInfo.isDefault, onSetDefault = onSetDefault)
             Spacer(modifier = Modifier.height(8.dp))
 
             TextButton(
@@ -1581,6 +1611,8 @@ private fun CashuWalletRow(
     balanceSats: Long,
     mintCount: Int,
     hideBalance: Boolean,
+    isDefault: Boolean,
+    onSetDefault: () -> Unit,
     onClick: () -> Unit,
 ) {
     val formattedBalance =
@@ -1592,59 +1624,122 @@ private fun CashuWalletRow(
                 .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         // Same rail-card treatment as the on-chain card: a 2dp brand stroke over
-        // a faint tint of the brand color.
-        border = BorderStroke(2.dp, PaymentBrandIcons.CashuAccent),
+        // a faint tint of the brand color. The default payment source carries the
+        // primary border + tint instead, matching the NWC/CLINK default rows.
+        border =
+            if (isDefault) {
+                BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+            } else {
+                BorderStroke(2.dp, PaymentBrandIcons.CashuAccent)
+            },
         colors =
             CardDefaults.cardColors(
-                containerColor = PaymentBrandIcons.CashuAccent.copy(alpha = 0.12f),
+                containerColor =
+                    if (isDefault) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    } else {
+                        PaymentBrandIcons.CashuAccent.copy(alpha = 0.12f)
+                    },
             ),
     ) {
-        Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BrandMark(PaymentBrandIcons.Cashu)
-            Spacer(modifier = Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                BrandMark(PaymentBrandIcons.Cashu)
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringRes(Res.string.cashu_wallet_title),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text =
+                            pluralStringRes(
+                                Res.plurals.cashu_wallet_subtitle_mints,
+                                mintCount,
+                                mintCount,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    if (hideBalance) {
+                        Text(
+                            text = BALANCE_DOTS,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    } else {
+                        Text(
+                            text = formattedBalance,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    Text(
+                        text = stringRes(Res.string.wallet_sats),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            DefaultSourceControl(isDefault = isDefault, onSetDefault = onSetDefault)
+        }
+    }
+}
+
+/**
+ * "Another wallet app", the one way to pay that is no PaymentSource: picking it stores
+ * [EXTERNAL_WALLET_APP_ID], which resolves to no source, so every payment path hands the
+ * invoice to a wallet app, as for an account with no wallet at all (which is why it already
+ * reads as the default for one). Icon and label are those of Send Payment's "Pay from" entry.
+ */
+@Composable
+private fun ExternalWalletRow(
+    isDefault: Boolean,
+    onSetDefault: () -> Unit,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        border = if (isDefault) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else CardSurfaces.border,
+        colors =
+            CardDefaults.cardColors(
+                containerColor =
+                    if (isDefault) {
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+            ),
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    symbol = MaterialSymbols.AutoMirrored.OpenInNew,
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    text = stringRes(Res.string.cashu_wallet_title),
+                    text = stringRes(Res.string.send_payment_source_external),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
-                Text(
-                    text =
-                        pluralStringRes(
-                            Res.plurals.cashu_wallet_subtitle_mints,
-                            mintCount,
-                            mintCount,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
-            Column(horizontalAlignment = Alignment.End) {
-                if (hideBalance) {
-                    Text(
-                        text = BALANCE_DOTS,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                } else {
-                    Text(
-                        text = formattedBalance,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-                Text(
-                    text = stringRes(Res.string.wallet_sats),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            DefaultSourceControl(isDefault = isDefault, onSetDefault = onSetDefault)
         }
     }
 }

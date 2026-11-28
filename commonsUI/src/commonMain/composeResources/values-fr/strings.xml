@@ -1132,6 +1132,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Ajouter ou supprimer les mints utilisés par votre portefeuille.</string>
     <string name="cashu_settings_my_recommendations">Mes recommandations de mints</string>
     <string name="cashu_settings_recommendations_subtitle">Approuvez publiquement les mints en lesquels vous avez confiance, et retirez vos recommandations.</string>
+    <string name="zap_cashu_melt_failed">Échec du paiement Cashu : %1$s</string>
+    <string name="cashu_melt_cannot_fund">Le portefeuille Cashu ne peut pas couvrir cette facture avec la marge pour ses frais.</string>
+    <string name="cashu_melt_insufficient">Pas assez d'ecash sur cette mint : le portefeuille détient %1$s et le paiement demande %2$s.</string>
+    <string name="cashu_melt_no_quote">La mint n'a pas voulu estimer la facture (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">La mint a estimé %1$s pour une facture de %2$s. Rien n'a été payé.</string>
+    <string name="cashu_melt_fee_too_high">La mint demande %1$s de frais pour payer une facture de %2$s, plus que les %3$s que ce portefeuille autorise. Rien n'a été payé.</string>
+    <string name="cashu_melt_refused">La mint n'a pas payé la facture (%1$s).</string>
+    <string name="cashu_melt_aborted">La signature a été refusée, rien n'a donc été payé.</string>
+    <string name="cashu_melt_paid_unrecorded">La facture a été payée (%1$s), mais son enregistrement dans le portefeuille a échoué. Ne la payez pas une seconde fois.</string>
+    <string name="payment_paid_but_not_recorded">Payé, mais non enregistré dans le portefeuille</string>
+    <string name="cashu_recover_from_seed_hint">Utilisez « Récupérer depuis la graine » dans les paramètres du portefeuille Cashu pour récupérer les %1$s qui n'ont pas pu être enregistrés.</string>
+    <string name="nutzap_sent_unrecorded">Le nutzap (%1$s) a été envoyé, mais son enregistrement dans le portefeuille a échoué.</string>
+    <string name="nutzap_not_sent_denied">Le nutzap n'a pas été envoyé : la signature ou la publication a été refusée.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat est de retour dans le portefeuille.</item>
+        <item quantity="other">%1$s sats sont de retour dans le portefeuille.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat a été dépensé à la mint et n'a pas pu être récupéré.</item>
+        <item quantity="other">%1$s sats ont été dépensés à la mint et n'ont pas pu être récupérés.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Vous n'avez encore recommandé aucun mint. Appuyez sur le pouce levé à côté d'un mint pour l'approuver publiquement.</string>
     <string name="cashu_settings_delete_recommendation">Supprimer la recommandation</string>
     <string name="cashu_settings_delete_confirm_title">Retirer la recommandation ?</string>

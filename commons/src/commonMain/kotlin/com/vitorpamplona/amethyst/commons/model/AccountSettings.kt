@@ -48,6 +48,7 @@ import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupRepos
 import com.vitorpamplona.amethyst.commons.model.nip29RelayGroups.RelayGroupViewMode
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcBackupPayload
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcWalletEntryNorm
+import com.vitorpamplona.amethyst.commons.model.payments.EXTERNAL_WALLET_APP_ID
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSourceResolver
 import com.vitorpamplona.amethyst.commons.model.preferences.FollowListSlot
@@ -370,6 +371,9 @@ class AccountSettings(
     /** Whether this account signs through a NIP-46 remote signer it logged in with. */
     fun usesRemoteSigner(): Boolean = remoteSignerBunkerUri != null && remoteSignerTransportKey != null
 
+    /** Amber or a NIP-46 bunker: every signature is a prompt the user can deny. */
+    fun signsThroughExternalSigner(): Boolean = externalSignerPackageName != null || usesRemoteSigner()
+
     fun updateRelayGroupViewMode(mode: RelayGroupViewMode) {
         if (relayGroupViewMode.value != mode) {
             relayGroupViewMode.tryEmit(mode)
@@ -536,8 +540,40 @@ class AccountSettings(
         return false
     }
 
-    /** The selected default spend rail across both NWC wallets and CLINK debits. */
-    fun defaultPaymentSource(): PaymentSource? = PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, defaultPaymentSourceId.value)
+    /**
+     * The selected default spend rail across NWC wallets, CLINK debits and the cashu wallet;
+     * the one definition of "the default", which every payment path and the Wallet tab's
+     * marker ([isDefaultPaymentSource]) resolve through. `null` is another wallet app: picked
+     * through [EXTERNAL_WALLET_APP_ID], or all that is left.
+     */
+    fun defaultPaymentSource(): PaymentSource? = defaultPaymentSource(cashuWalletConfigured = backupCashuWallet != null)
+
+    /** [defaultPaymentSource] with the cashu wallet's presence given by the caller. */
+    fun defaultPaymentSource(cashuWalletConfigured: Boolean): PaymentSource? = resolveDefault(defaultPaymentSourceId.value, cashuWalletConfigured)
+
+    private fun resolveDefault(
+        sourceId: String?,
+        cashuWalletConfigured: Boolean,
+    ): PaymentSource? =
+        PaymentSourceResolver.resolveDefault(
+            nwcWallets.value,
+            clinkDebitWallets.value,
+            sourceId,
+            cashuWalletConfigured = cashuWalletConfigured,
+            cashuAsImplicitDefault = !signsThroughExternalSigner(),
+        )
+
+    /** Whether [defaultPaymentSource] would pay through [source]: what the Wallet tab marks as default. */
+    fun isDefaultPaymentSource(source: PaymentSource): Boolean = defaultPaymentSource() == source
+
+    /**
+     * The default spend rail with cashu excluded: where a zap melt that could not pay goes
+     * next — NWC, a CLINK debit, or null for the external wallet app.
+     */
+    fun fallbackPaymentSource(): PaymentSource? {
+        val id = defaultPaymentSourceId.value?.takeIf { it != PaymentSource.Cashu.ID }
+        return PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, id)
+    }
 
     /**
      * The NWC wallet to use for NWC-only flows (balance display, mint top-up). Resolves
@@ -676,22 +712,27 @@ class AccountSettings(
     /** Resets the default to the first remaining source if it no longer points at anything. */
     private fun reassignDefaultIfMissing() {
         val id = defaultPaymentSourceId.value ?: return
-        val exists = nwcWallets.value.any { it.id == id } || clinkDebitWallets.value.any { it.id == id }
-        if (!exists) {
+        if (!hasPaymentSource(id)) {
             defaultPaymentSourceId.tryEmit(PaymentSourceResolver.resolveDefault(nwcWallets.value, clinkDebitWallets.value, null)?.id)
         }
     }
 
-    /** Selects the unified default across both NWC wallets and CLINK debits. */
+    /** Selects the unified default across NWC wallets, CLINK debits, the cashu wallet and another wallet app. */
     fun setDefaultPaymentSource(sourceId: String): Boolean {
-        val exists = nwcWallets.value.any { it.id == sourceId } || clinkDebitWallets.value.any { it.id == sourceId }
-        if (defaultPaymentSourceId.value != sourceId && exists) {
+        if (defaultPaymentSourceId.value != sourceId && hasPaymentSource(sourceId)) {
             defaultPaymentSourceId.tryEmit(sourceId)
             saveAccountSettings()
             return true
         }
         return false
     }
+
+    /** Whether [sourceId] can be picked: a configured source, or another wallet app. */
+    private fun hasPaymentSource(sourceId: String): Boolean =
+        sourceId == EXTERNAL_WALLET_APP_ID ||
+            nwcWallets.value.any { it.id == sourceId } ||
+            clinkDebitWallets.value.any { it.id == sourceId } ||
+            (sourceId == PaymentSource.Cashu.ID && backupCashuWallet != null)
 
     fun renameNwcWallet(
         walletId: String,
@@ -1531,6 +1572,7 @@ class AccountSettings(
         backupGuard.drop(backupSlotOf(CashuWalletEvent.KIND))
         if (backupCashuWallet != null) {
             backupCashuWallet = null
+            reassignDefaultIfRemoved(PaymentSource.Cashu.ID)
             saveAccountSettings()
         }
     }

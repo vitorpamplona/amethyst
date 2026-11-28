@@ -52,6 +52,8 @@ import com.vitorpamplona.amethyst.commons.dvms.dal.DvmContentDiscoveryFeedViewMo
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
+import com.vitorpamplona.amethyst.commons.notices.ui.loadText
 import com.vitorpamplona.amethyst.commons.relayClient.event.observeNoteAndMap
 import com.vitorpamplona.amethyst.commons.relayClient.reqCommand.event.EventFinderFilterAssemblerSubscription
 import com.vitorpamplona.amethyst.commons.resources.Res
@@ -446,6 +448,17 @@ fun DvmPaymentActions(
                             }
                         },
                     )
+                }
+
+                is PaymentSource.Cashu -> {
+                    // Synchronous melt; one that paid but could not be recorded is a
+                    // success too, so the status never invites a double payment.
+                    accountViewModel.payInvoiceViaCashuMelt(invoice) { outcome ->
+                        when (outcome) {
+                            is CashuMeltOutcome.Paid, is CashuMeltOutcome.PaidUnrecorded -> onStatusUpdate(thankYou)
+                            is CashuMeltOutcome.NotPaid -> scope.launch { onStatusUpdate(outcome.failure.loadText()) }
+                        }
+                    }
                 }
 
                 null -> {

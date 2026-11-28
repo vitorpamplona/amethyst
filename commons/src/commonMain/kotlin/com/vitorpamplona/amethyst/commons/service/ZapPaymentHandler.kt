@@ -21,7 +21,12 @@
 package com.vitorpamplona.amethyst.commons.service
 
 import androidx.compose.runtime.Immutable
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltNotPaidException
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltRecordAbortedException
+import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
+import com.vitorpamplona.amethyst.commons.cashu.ops.toCashuMeltNotice
 import com.vitorpamplona.amethyst.commons.model.Account
+import com.vitorpamplona.amethyst.commons.model.CashuMeltZapEntry
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.User
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
@@ -50,12 +55,16 @@ import com.vitorpamplona.quartz.nip57Zaps.splits.zapSplitSetup
 import com.vitorpamplona.quartz.nip57Zaps.validate.LnurlForm
 import com.vitorpamplona.quartz.nip89AppHandlers.definition.AppDefinitionEvent
 import com.vitorpamplona.quartz.utils.Log
+import com.vitorpamplona.quartz.utils.TimeUtils
 import com.vitorpamplona.quartz.utils.mapNotNullAsync
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.concurrent.atomics.AtomicInt
@@ -306,8 +315,18 @@ class ZapPaymentHandler(
 
         // Route through the user's selected default payment source. A CLINK debit takes
         // precedence over NWC when it is the chosen default; NWC-only users are unaffected
-        // (defaultPaymentSource() resolves to their NWC wallet). No source -> wallet app.
+        // (defaultPaymentSource() resolves to their NWC wallet). No source at all -> wallet app.
         when (val source = account.settings.defaultPaymentSource()) {
+            is PaymentSource.Cashu -> {
+                payViaCashuMelt(
+                    payables = payables,
+                    note = note,
+                    onError = onError,
+                    onProgress = { onProgress(it * 0.25f + 0.75f) },
+                    onPayViaIntent = onPayViaIntent,
+                )
+            }
+
             is PaymentSource.ClinkDebit -> {
                 payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = {
                     onProgress(it * 0.25f + 0.75f)
@@ -614,6 +633,114 @@ class ZapPaymentHandler(
         )
     }
 
+    /**
+     * The cashu rail: settle each zap invoice by melting proofs at its planned mint
+     * (NUT-05 quote + melt, change rolled back into the wallet). Synchronous, unlike
+     * [payViaNWC]: each invoice settles with a preimage or fails before the next one, so
+     * the zap UI completes on real settlement.
+     *
+     * Each invoice is one lane: different mints melt in parallel, one mint serializes on
+     * its spend lock ([com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState.meltInvoiceAt]).
+     * A failed lane reports for its recipient and the others still pay, like the NWC lane's
+     * best-effort fan-out.
+     *
+     * No outer timeout, on purpose: the timed helpers cancel their lanes when the timer
+     * fires, and a melt cancelled mid-flight may leave the invoice settled while its refund
+     * and records never get published. The mint client's request timeouts bound a stuck melt.
+     *
+     * What a failure says about the money decides what happens next:
+     *  - [MeltNotPaidException]: nothing was spent (empty wallet, refused quote, refused
+     *    melt) and the wallet rolled itself back. The invoice goes through the account's
+     *    other payment sources: the ecash rail was unsuitable, not the zap.
+     *  - [MeltRecordAbortedException]: the invoice WAS paid and only the wallet's
+     *    bookkeeping failed. Counted as settled, with its own notice — a "failed" title
+     *    would invite a retry that pays the recipient twice.
+     *  - anything else (denied signer, inconclusive melt state): reported, never retried.
+     *
+     * Every settled melt is registered on the zapped note ([Note.addCashuMeltZap]), so the
+     * zap icon and amount update before any kind:9735 receipt arrives.
+     */
+    @OptIn(ExperimentalAtomicApi::class)
+    suspend fun payViaCashuMelt(
+        payables: List<Payable>,
+        note: Note,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        onPayViaIntent: (ImmutableList<Payable>) -> Unit,
+    ) {
+        val plan = account.cashuWalletState.planMeltFunding(payables.map { it.amountMilliSats / 1000 })
+        if (plan == null) {
+            // The wallet can't fund every split with fee slack: pay through the
+            // next payment source, exactly like an account that never picked cashu.
+            payViaFallbackSource(payables, note, onError, onProgress) { onPayViaIntent(payables.toImmutableList()) }
+            return
+        }
+
+        val total = payables.size.coerceAtLeast(1)
+        val settled = AtomicInt(0)
+
+        fun tick() {
+            onProgress(settled.incrementAndFetch().toFloat() / total)
+        }
+
+        val lanes = plan.flatMap { (mintUrl, indexes) -> indexes.map { mintUrl to it } }
+        runSpendLanes(lanes) { (mintUrl, index) ->
+            val payable = payables[index]
+            try {
+                val melt = account.cashuWalletState.meltInvoiceAt(mintUrl, payable.invoice)
+                note.addCashuMeltZap(CashuMeltZapEntry(payable.invoice, melt.preimage, melt.paidAmount, TimeUtils.now()))
+                Log.i("ZapPaymentHandler") { "Cashu melt settled ${melt.paidAmount} sat (fee ${melt.fees})" }
+                tick()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: MeltRecordAbortedException) {
+                note.addCashuMeltZap(CashuMeltZapEntry(payable.invoice, null, e.failure.paidSats, TimeUtils.now()))
+                Log.i("ZapPaymentHandler") { "Cashu melt settled ${e.failure.paidSats} sat but recording failed" }
+                tick()
+                onError.report(notices, ZapNotice.CashuMeltFailed(e.failure), payable.info.user)
+            } catch (e: MeltNotPaidException) {
+                Log.i("ZapPaymentHandler") { "Cashu melt did not pay the invoice; routing through the fallback rail" }
+                // With no other rail configured either, surface the melt's own reason instead
+                // of dropping the recipient.
+                payViaFallbackSource(
+                    payables = listOf(payable),
+                    note = note,
+                    onError = onError,
+                    onProgress = {},
+                    onNoRail = { onError.report(notices, ZapNotice.CashuMeltFailed(e.failure), payable.info.user) },
+                )
+                tick()
+            } catch (e: Exception) {
+                Log.i("ZapPaymentHandler") { "Cashu melt failed: ${describeMintError(e)}" }
+                tick()
+                onError.report(notices, ZapNotice.CashuMeltFailed(e.toCashuMeltNotice()), payable.info.user)
+            }
+        }
+    }
+
+    /**
+     * Routes payables through the account's other payment sources after the cashu rail
+     * proved unsuitable: [AccountSettings.fallbackPaymentSource] resolves the NWC/CLINK
+     * chain, never cashu, which just failed. [onNoRail] runs when none is configured.
+     */
+    private suspend fun payViaFallbackSource(
+        payables: List<Payable>,
+        note: Note,
+        onError: (String, String, User?) -> Unit,
+        onProgress: (percent: Float) -> Unit,
+        onNoRail: suspend () -> Unit,
+    ) {
+        when (val source = account.settings.fallbackPaymentSource()) {
+            is PaymentSource.ClinkDebit -> payViaClinkDebit(payables, source.wallet.pointer, onError = onError, onProgress = onProgress)
+
+            is PaymentSource.Nwc -> payViaNWC(payables, note, onError = onError, onProgress = onProgress)
+
+            is PaymentSource.Cashu,
+            null,
+            -> onNoRail()
+        }
+    }
+
     private suspend fun assembleInvoice(
         lud16: String,
         splitSetup: MyZapSplitSetup,
@@ -652,5 +779,23 @@ class ZapPaymentHandler(
             zapRequest = sentZapRequest,
             message = message,
         )
+    }
+}
+
+/**
+ * Runs every [pay] lane to completion, in parallel, under the caller's own cancellation.
+ *
+ * The timed joins (`mapNotNullAsync`, Quartz's `launchAndWaitAll`) suit rails that dispatch a
+ * request and wait for the wallet's callback. A melt is a synchronous spend in which every step
+ * may be a signer prompt, so a lane takes as long as the user needs; one cancelled on a timer
+ * can land after the mint spent the proofs, silently skipping the change, delete and history
+ * bookkeeping that keeps that money.
+ */
+internal suspend fun <T> runSpendLanes(
+    lanes: List<T>,
+    pay: suspend (T) -> Unit,
+) {
+    coroutineScope {
+        lanes.map { lane -> async { pay(lane) } }.joinAll()
     }
 }

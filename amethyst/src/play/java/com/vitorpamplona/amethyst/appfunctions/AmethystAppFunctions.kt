@@ -30,9 +30,11 @@ import com.vitorpamplona.amethyst.commons.actions.DmActions
 import com.vitorpamplona.amethyst.commons.actions.FollowActions
 import com.vitorpamplona.amethyst.commons.actions.SearchActions
 import com.vitorpamplona.amethyst.commons.actions.ZapActions
+import com.vitorpamplona.amethyst.commons.cashu.ops.describe
 import com.vitorpamplona.amethyst.commons.defaults.DefaultNIP65RelaySet
 import com.vitorpamplona.amethyst.commons.home.dal.HomeNewThreadFeedFilter
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.SubPurpose
 import com.vitorpamplona.amethyst.commons.relayClient.subscriptions.taggedAs
 import com.vitorpamplona.amethyst.commons.service.ClinkDebitPayer
@@ -1725,7 +1727,23 @@ class AmethystAppFunctions {
         when (val source = account.settings.defaultPaymentSource()) {
             is PaymentSource.Nwc -> payViaNwc(account, bolt11, zappedNote)
             is PaymentSource.ClinkDebit -> payViaClinkDebit(account, source.wallet.pointer, bolt11)
+            is PaymentSource.Cashu -> payViaCashuMelt(account, bolt11)
             null -> null
+        }
+
+    /**
+     * Pays [bolt11] by melting NIP-60 ecash from the account's cashu wallet. A melt that paid
+     * but could not be recorded is a success — a retry would pay the recipient twice — with
+     * the reason in [PayOutcome.errorMessage] instead of a preimage.
+     */
+    private suspend fun payViaCashuMelt(
+        account: com.vitorpamplona.amethyst.commons.model.Account,
+        bolt11: String,
+    ): PayOutcome =
+        when (val outcome = account.cashuWalletState.payInvoice(bolt11)) {
+            is CashuMeltOutcome.Paid -> PayOutcome(true, outcome.preimage, null)
+            is CashuMeltOutcome.PaidUnrecorded -> PayOutcome(true, null, outcome.failure.describe())
+            is CashuMeltOutcome.NotPaid -> PayOutcome(false, null, outcome.failure.describe())
         }
 
     /** Pays [bolt11] via a CLINK debit pointer, mapping the kind-21002 reply to a [PayOutcome]. */

@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.nip47WalletConnect.NwcSignerState
 import com.vitorpamplona.amethyst.commons.model.payments.PaymentSource
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltOutcome
 import com.vitorpamplona.amethyst.commons.notices.ClinkDebitFailed
 import com.vitorpamplona.amethyst.commons.notices.InvoiceNotice
 import com.vitorpamplona.amethyst.commons.notices.NwcFailure
@@ -276,6 +277,18 @@ class V4VPaymentHandler(
                     if (response?.isOk() != true) {
                         onError(ClinkDebitFailed(response?.failureDetail()))
                     }
+                    done++
+                    onProgress(done.toFloat() / payables.size)
+                }
+            }
+
+            is PaymentSource.Cashu -> {
+                var done = 0
+                payables.forEach { payable ->
+                    // A melt that paid but could not be recorded is not a failure: paying
+                    // again would pay the recipient twice.
+                    val outcome = account.cashuWalletState.payInvoice(payable.invoice)
+                    if (outcome is CashuMeltOutcome.NotPaid) onError(outcome.failure)
                     done++
                     onProgress(done.toFloat() / payables.size)
                 }
