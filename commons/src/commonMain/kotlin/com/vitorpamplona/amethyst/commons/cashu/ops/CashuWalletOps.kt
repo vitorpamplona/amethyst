@@ -1644,10 +1644,15 @@ class CashuWalletOps(
      *
      * Only the active keyset is scanned: it is the only one that ever receives new outputs.
      *
+     * Not scanned at all when the counter is already past [SETTLE_SCAN_MAX_COUNTER]: the scan
+     * walks every slot below it, and a counter that far is this install's own work. An install
+     * that started from 0 is refused at its first spend, long before it gets there. The keyset
+     * is marked settled all the same, and [withFreshOutputs] is what protects it.
+     *
      * Returns null while the wallet has no seed; the keyset stays unsettled. A mint without
-     * NUT-09 is marked settled all the same, since asking again would learn nothing and
-     * [withFreshOutputs] is what reports the refusal there. Any other failure is thrown, and
-     * the keyset stays unsettled for the next start.
+     * NUT-09, or one rate-limiting the scan, is marked settled all the same, since asking again
+     * would learn nothing and [withFreshOutputs] is what reports the refusal there. Any other
+     * failure is thrown, and the keyset stays unsettled for the next start.
      */
     suspend fun settleCounter(
         mintUrl: String,
@@ -1656,6 +1661,11 @@ class CashuWalletOps(
         val mintOps = ops(mintUrl)
         val keysetId = mintOps.activeKeyset().id
         if (isCashuCounterSettled(keysetId)) return CounterSettlement.AlreadySettled(keysetId)
+        if (peekCashuCounter(keysetId) > SETTLE_SCAN_MAX_COUNTER) {
+            markCashuCounterSettled(keysetId)
+            Log.i("CashuWalletOps") { "NUT-13 counter for $keysetId at $mintUrl is past $SETTLE_SCAN_MAX_COUNTER already: this install's own, left as it is" }
+            return CounterSettlement.Trusted(keysetId)
+        }
         val seed = seedForRestore() ?: return null
         val scanned =
             try {
@@ -1663,7 +1673,7 @@ class CashuWalletOps(
             } catch (e: MintHttpException) {
                 if (!e.isRestoreUnavailable()) throw e
                 markCashuCounterSettled(keysetId)
-                Log.i("CashuWalletOps") { "Mint $mintUrl has no NUT-09 restore: the NUT-13 counter for $keysetId stays this install's own" }
+                Log.i("CashuWalletOps") { "NUT-09 scan of $mintUrl unavailable (${describeMintError(e)}): the NUT-13 counter for $keysetId stays this install's own" }
                 return CounterSettlement.Unsupported(keysetId)
             }
         val counterBefore = peekCashuCounter(keysetId)
@@ -1703,6 +1713,14 @@ class CashuWalletOps(
          * past the slots of one request: a swap or melt blinds a handful of outputs.
          */
         private const val REUSED_OUTPUT_SCAN_BACK: Long = 32L
+
+        /**
+         * Up to where [settleCounter] scans a keyset from 0. The walk is one `/v1/restore` per
+         * batch of counters (as few as 15 on a keyset with every denomination), so a counter in
+         * the thousands would mean a thousand-odd requests at the first start after an upgrade;
+         * past this many slots the counter is the install's own, and the scan is skipped.
+         */
+        private const val SETTLE_SCAN_MAX_COUNTER: Long = 512L
 
         /**
          * How many of a mint's keysets [scanRecoverableProofs] walks at once.
@@ -1760,8 +1778,13 @@ sealed class CounterSettlement {
         override val keysetId: String,
     ) : CounterSettlement()
 
-    /** The mint has no NUT-09 restore, so nothing was aligned. Marked all the same. */
+    /** The mint gives no NUT-09 restore, so nothing was aligned. Marked all the same. */
     class Unsupported(
+        override val keysetId: String,
+    ) : CounterSettlement()
+
+    /** The counter was too far along to be a fresh install's, so it was not scanned. Marked. */
+    class Trusted(
         override val keysetId: String,
     ) : CounterSettlement()
 
@@ -1976,10 +1999,12 @@ private fun MintHttpException.refusesSignedOutputs(): Boolean {
 }
 
 /**
- * Whether the mint has no NUT-09 restore to scan with: the route is missing (404, 405, 501), or
- * the mint declined it as not allowed, Nutshell's 10000 for a nut that is switched off.
+ * Whether the mint gives [CashuWalletOps.settleCounter] no NUT-09 restore to scan with: the
+ * route is missing (404, 405, 501), the mint declined it as not allowed (Nutshell's 10000 for a
+ * nut that is switched off), or it is rate-limiting (429), which the next start would only
+ * repeat.
  */
-private fun MintHttpException.isRestoreUnavailable(): Boolean = httpStatus == 404 || httpStatus == 405 || httpStatus == 501 || code == 10000
+private fun MintHttpException.isRestoreUnavailable(): Boolean = httpStatus == 404 || httpStatus == 405 || httpStatus == 501 || httpStatus == 429 || code == 10000
 
 /** A nutzap that passed [CashuWalletOps.prepareNutzap]: its mint and its parsed, P2PK-locked proofs. */
 class PreparedNutzap(

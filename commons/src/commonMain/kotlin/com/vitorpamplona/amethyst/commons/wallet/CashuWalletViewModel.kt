@@ -217,7 +217,7 @@ class CashuWalletViewModel : ViewModel() {
     }
 
     /**
-     * Bring the wallet's view of its own money up to date, in the two ways it
+     * Bring the wallet's view of its own money up to date, in the three ways it
      * can be behind.
      *
      * First re-page the proof set off the relays: the live subscription takes
@@ -232,6 +232,9 @@ class CashuWalletViewModel : ViewModel() {
      * auto-redeemed from a mint we never configured (e.g. a nutzap on a mint
      * not in our kind:10019) still gets its stale proofs swept. Safe to call
      * repeatedly; no-ops when nothing is stale or the wallet hasn't started.
+     *
+     * Lastly settle this install's NUT-13 counters ([CashuWalletState.settleCounters]), which
+     * the startup pass can have missed for want of a decrypted wallet.
      */
     fun refresh() {
         val vm = accountViewModel ?: return
@@ -245,6 +248,15 @@ class CashuWalletViewModel : ViewModel() {
                 state.syncAllMints()
             } catch (e: Exception) {
                 Log.w("CashuWallet", "wallet refresh sync failed", e)
+            }
+            // And bring this install's NUT-13 counters level with the mints, for a keyset the
+            // startup pass could not settle: that needs the wallet seed, and with an external
+            // signer the kind:17375 decrypt only works with an activity in front. A keyset
+            // already settled costs one /v1/keys.
+            try {
+                state.settleCounters()
+            } catch (e: Exception) {
+                Log.w("CashuWallet", "wallet refresh could not settle the NUT-13 counters", e)
             }
         }
     }

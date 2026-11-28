@@ -570,12 +570,15 @@ class CashuWalletState(
      * or on a second device isn't refused for re-deriving outputs the mint signed already.
      *
      * Runs after the proof backfill, which is what tells which mints this wallet holds
-     * tokens at and which proofs it already holds, so a scan recovers nothing twice.
+     * tokens at and which proofs it already holds, so a scan recovers nothing twice, and
+     * again from [com.vitorpamplona.amethyst.commons.wallet.CashuWalletViewModel.refresh]:
+     * the scan needs the seed, which needs the kind:17375 decrypted, and an external signer
+     * can only do that with an activity in front, which a cold start may not have yet.
      * Best-effort per mint: one unreachable mint leaves its keyset unsettled, to be tried
      * at the next start, and costs the others nothing. A keyset settled by an earlier
      * start costs one `/v1/keys` and no scan.
      */
-    private suspend fun settleCounters() {
+    suspend fun settleCounters() {
         // displayMints is derived off the main thread and may lag the backfill by a dispatch;
         // the configured list is set where the wallet event lands.
         val mints = (_mints.value + displayMints.value).distinct()
@@ -586,8 +589,15 @@ class CashuWalletState(
                 .mapTo(HashSet()) { it.secret }
         for (mint in mints) {
             runCatchingCancellable { ops.settleCounter(mint, existingSecrets) }
-                .onSuccess { if (it is CounterSettlement.Settled) Log.i("CashuWallet") { "Counter at $mint settled: ${it.slotsSkipped} slot(s) skipped, ${it.proofsRecovered} proof(s) recovered" } }
-                .onFailure { Log.w("CashuWallet") { "Could not settle the NUT-13 counter at $mint: ${describeMintError(it)}" } }
+                .onSuccess { settlement ->
+                    when (settlement) {
+                        is CounterSettlement.Settled -> Log.i("CashuWallet") { "Counter at $mint settled: ${settlement.slotsSkipped} slot(s) skipped, ${settlement.proofsRecovered} proof(s) recovered" }
+                        // Nothing to scan with: the kind:17375 could not be decrypted. The
+                        // refresh retries it with an activity in front.
+                        null -> Log.i("CashuWallet") { "Counter at $mint not settled yet: no wallet seed" }
+                        else -> Unit
+                    }
+                }.onFailure { Log.w("CashuWallet") { "Could not settle the NUT-13 counter at $mint: ${describeMintError(it)}" } }
         }
     }
 

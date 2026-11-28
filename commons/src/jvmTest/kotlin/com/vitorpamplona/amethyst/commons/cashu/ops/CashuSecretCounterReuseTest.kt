@@ -608,6 +608,33 @@ class CashuSecretCounterReuseTest {
             assertEquals("nothing was aligned", 0L, install.counters[keysetId] ?: 0L)
         }
 
+    /** An established install upgrading: its counter is its own work, and scanning from 0 would cost more than it could tell. */
+    @Test
+    fun aCounterThisInstallCarriedFarIsTrustedWithoutAScan() =
+        runBlocking {
+            val mint = FakeMint()
+            val install = Install().apply { counters[keysetId] = 513L }
+
+            val settlement = install.ops(mint).settleCounter(mintUrl)
+
+            assertTrue(settlement.toString(), settlement is CounterSettlement.Trusted)
+            assertEquals("not scanned", 0, mint.restores)
+            assertEquals(513L, install.counters.getValue(keysetId))
+            assertTrue(keysetId in install.settled)
+        }
+
+    @Test
+    fun aRateLimitedScanIsNotRepeatedAtEveryStart() =
+        runBlocking {
+            val mint = FakeMint().apply { restoreStatus = 429 }
+            val install = Install()
+
+            val settlement = install.ops(mint).settleCounter(mintUrl)
+
+            assertTrue(settlement.toString(), settlement is CounterSettlement.Unsupported)
+            assertTrue(install.ops(mint).settleCounter(mintUrl) is CounterSettlement.AlreadySettled)
+        }
+
     @Test
     fun aFailedScanLeavesTheCounterUnsettled() =
         runBlocking {

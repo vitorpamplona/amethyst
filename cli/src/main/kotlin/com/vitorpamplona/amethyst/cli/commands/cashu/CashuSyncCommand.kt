@@ -77,6 +77,7 @@ object CashuSyncCommand {
         when (this) {
             is CounterSettlement.AlreadySettled -> mapOf("keyset_id" to keysetId, "status" to "already_settled")
             is CounterSettlement.Unsupported -> mapOf("keyset_id" to keysetId, "status" to "mint_has_no_restore")
+            is CounterSettlement.Trusted -> mapOf("keyset_id" to keysetId, "status" to "counter_too_far_to_scan")
             is CounterSettlement.Settled ->
                 mapOf(
                     "keyset_id" to keysetId,
