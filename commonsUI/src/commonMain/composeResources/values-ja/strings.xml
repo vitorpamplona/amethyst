@@ -1036,6 +1036,28 @@
     <string name="cashu_settings_edit_wallet_subtitle">ウォレットが使用するmintを追加または削除します。</string>
     <string name="cashu_settings_my_recommendations">マイmintおすすめ</string>
     <string name="cashu_settings_recommendations_subtitle">信頼するmintを公開でおすすめし、おすすめを取り消せます。</string>
+    <string name="zap_cashu_melt_failed">Cashuでの支払いに失敗しました：%1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashuウォレットでは、手数料の余裕を含めてこのインボイスを払えません。</string>
+    <string name="cashu_melt_insufficient">このmintのecashが足りません：ウォレットには%1$sありますが、支払いには%2$s必要です。</string>
+    <string name="cashu_melt_no_quote">mintがインボイスの見積もりを拒否しました（%1$s）。</string>
+    <string name="cashu_melt_wrong_quote">mintは%2$sのインボイスに対し%1$sと見積もりました。支払いは行われていません。</string>
+    <string name="cashu_melt_fee_too_high">mintは%2$sのインボイスの支払いに%1$sの手数料を要求しました。このウォレットが許可する%3$sを超えています。支払いは行われていません。</string>
+    <string name="cashu_melt_refused">mintはインボイスを支払いませんでした（%1$s）。</string>
+    <string name="cashu_melt_aborted">署名が拒否されたため、何も支払われていません。</string>
+    <string name="cashu_melt_paid_unrecorded">インボイスは支払われました（%1$s）が、ウォレットへの記録に失敗しました。再度支払わないでください。</string>
+    <string name="payment_paid_but_not_recorded">支払いましたが、ウォレットに記録できませんでした</string>
+    <string name="cashu_recover_from_seed_hint">記録できなかった%1$sを取り戻すには、Cashuウォレット設定の「シードから復元」を使ってください。</string>
+    <string name="nutzap_sent_unrecorded">nutzap（%1$s）は送信されましたが、ウォレットへの記録に失敗しました。</string>
+    <string name="nutzap_not_sent_denied">nutzapは送信されませんでした：署名または公開が拒否されました。</string>
+    <plurals name="cashu_sats">
+        <item quantity="other">%1$s sat</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="other">%1$sがウォレットに戻りました。</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="other">%1$sがmintで使われ、復元できませんでした。</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">まだmintをおすすめしていません。mintの横にあるサムズアップをタップして公開でおすすめしましょう。</string>
     <string name="cashu_settings_delete_recommendation">おすすめを削除</string>
     <string name="cashu_settings_delete_confirm_title">おすすめを取り消しますか？</string>

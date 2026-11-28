@@ -2144,6 +2144,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Mints, nutzap-nyckel</string>
     <string name="cashu_settings_my_recommendations">Mina mint-rekommendationer</string>
     <string name="cashu_settings_recommendations_subtitle">Gå offentligt i god för mints du litar på och återkalla rekommendationer.</string>
+    <string name="zap_cashu_melt_failed">Cashu-betalning misslyckades: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashu-plånboken kan inte täcka den här fakturan med marginal för sina avgifter.</string>
+    <string name="cashu_melt_insufficient">Det finns inte tillräckligt med ecash på den här minten: plånboken har %1$s och betalningen behöver %2$s.</string>
+    <string name="cashu_melt_no_quote">Minten ville inte ge en offert för fakturan (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Minten offererade %1$s för en faktura på %2$s. Ingenting betalades.</string>
+    <string name="cashu_melt_fee_too_high">Minten begär %1$s i avgifter för att betala en faktura på %2$s, mer än de %3$s den här plånboken tillåter. Ingenting betalades.</string>
+    <string name="cashu_melt_refused">Minten betalade inte fakturan (%1$s).</string>
+    <string name="cashu_melt_aborted">Signering nekades, så ingenting betalades.</string>
+    <string name="cashu_melt_paid_unrecorded">Fakturan betalades (%1$s), men det gick inte att registrera den i plånboken. Betala inte den igen.</string>
+    <string name="payment_paid_but_not_recorded">Betalt, men inte registrerat i plånboken</string>
+    <string name="cashu_recover_from_seed_hint">Använd ”Återställ från seed” i Cashu-plånbokens inställningar för att få tillbaka de %1$s som inte gick att registrera.</string>
+    <string name="nutzap_sent_unrecorded">Nutzapen (%1$s) skickades, men det gick inte att registrera den i plånboken.</string>
+    <string name="nutzap_not_sent_denied">Nutzapen skickades inte: signering eller publicering nekades.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat är tillbaka i plånboken.</item>
+        <item quantity="other">%1$s sats är tillbaka i plånboken.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat spenderades på minten och kunde inte återställas.</item>
+        <item quantity="other">%1$s sats spenderades på minten och kunde inte återställas.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Du har inte rekommenderat några mints än. Tryck på tummen upp bredvid en mint för att rekommendera den offentligt.</string>
     <string name="cashu_settings_delete_recommendation">Radera rekommendation</string>
     <string name="cashu_settings_delete_confirm_title">Dra tillbaka rekommendation?</string>

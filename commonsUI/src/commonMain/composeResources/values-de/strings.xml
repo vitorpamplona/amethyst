@@ -2144,6 +2144,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Mints, Nutzap-Schlüssel</string>
     <string name="cashu_settings_my_recommendations">Meine Mint-Empfehlungen</string>
     <string name="cashu_settings_recommendations_subtitle">Empfehle öffentlich Mints, denen du vertraust, und widerrufe Empfehlungen.</string>
+    <string name="zap_cashu_melt_failed">Cashu-Zahlung fehlgeschlagen: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Die Cashu-Wallet kann diese Rechnung samt Spielraum für die Gebühren nicht decken.</string>
+    <string name="cashu_melt_insufficient">Nicht genug Ecash bei dieser Mint: Die Wallet hat %1$s, die Zahlung braucht %2$s.</string>
+    <string name="cashu_melt_no_quote">Die Mint wollte die Rechnung nicht bewerten (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Die Mint hat für eine Rechnung über %2$s den Betrag %1$s verlangt. Es wurde nichts bezahlt.</string>
+    <string name="cashu_melt_fee_too_high">Die Mint verlangt %1$s an Gebühren für eine Rechnung über %2$s, mehr als die %3$s, die diese Wallet erlaubt. Es wurde nichts bezahlt.</string>
+    <string name="cashu_melt_refused">Die Mint hat die Rechnung nicht bezahlt (%1$s).</string>
+    <string name="cashu_melt_aborted">Das Signieren wurde abgelehnt, daher wurde nichts bezahlt.</string>
+    <string name="cashu_melt_paid_unrecorded">Die Rechnung wurde bezahlt (%1$s), aber das Aufzeichnen in der Wallet ist fehlgeschlagen. Nicht erneut bezahlen.</string>
+    <string name="payment_paid_but_not_recorded">Bezahlt, aber nicht in der Wallet aufgezeichnet</string>
+    <string name="cashu_recover_from_seed_hint">Nutze „Aus Seed wiederherstellen“ in den Cashu-Wallet-Einstellungen, um die %1$s zurückzuholen, die nicht aufgezeichnet werden konnten.</string>
+    <string name="nutzap_sent_unrecorded">Der Nutzap (%1$s) wurde gesendet, aber das Aufzeichnen in der Wallet ist fehlgeschlagen.</string>
+    <string name="nutzap_not_sent_denied">Der Nutzap wurde nicht gesendet: Signieren oder Veröffentlichen wurde abgelehnt.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s Sat</item>
+        <item quantity="other">%1$s Sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s Sat ist wieder in der Wallet.</item>
+        <item quantity="other">%1$s Sats sind wieder in der Wallet.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s Sat wurde bei der Mint ausgegeben und konnte nicht wiederhergestellt werden.</item>
+        <item quantity="other">%1$s Sats wurden bei der Mint ausgegeben und konnten nicht wiederhergestellt werden.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Du hast noch keine Mints empfohlen. Tippe auf das Daumen-hoch-Symbol neben einem Mint, um ihn öffentlich zu empfehlen.</string>
     <string name="cashu_settings_delete_recommendation">Empfehlung löschen</string>
     <string name="cashu_settings_delete_confirm_title">Empfehlung zurückziehen?</string>

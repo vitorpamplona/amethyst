@@ -25,11 +25,13 @@ import androidx.lifecycle.viewModelScope
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.MintQuoteStarted
 import com.vitorpamplona.amethyst.commons.cashu.ops.TokenEntry
+import com.vitorpamplona.amethyst.commons.cashu.ops.cashuMeltNotice
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeMintError
 import com.vitorpamplona.amethyst.commons.cashu.ops.describeRedeemError
 import com.vitorpamplona.amethyst.commons.cashu.ops.requireP2pkRedeemable
 import com.vitorpamplona.amethyst.commons.model.Account
 import com.vitorpamplona.amethyst.commons.model.nip60Cashu.CashuWalletState
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
 import com.vitorpamplona.amethyst.commons.viewmodels.BaseAccountViewModel
 import com.vitorpamplona.quartz.lightning.LnInvoiceUtil
 import com.vitorpamplona.quartz.nip60Cashu.mintApi.MeltQuoteBolt11ResponseDto
@@ -110,8 +112,10 @@ sealed class CashuMeltFlowState {
         val preimage: String?,
     ) : CashuMeltFlowState()
 
+    /** [failure] is set when the mint's own words aren't the whole story: the screen words it. */
     data class Error(
         val message: String,
+        val failure: CashuMeltNotice? = null,
     ) : CashuMeltFlowState()
 }
 
@@ -799,6 +803,7 @@ class CashuWalletViewModel : ViewModel() {
                     _meltState.value =
                         CashuMeltFlowState.Error(
                             "Need ${quote.amount + quote.feeReserve} sat (incl. fees) but only have $balance",
+                            CashuMeltNotice.CannotFund(heldSats = balance, neededSats = quote.amount + quote.feeReserve),
                         )
                     return@launchSigner
                 }
@@ -820,7 +825,7 @@ class CashuWalletViewModel : ViewModel() {
                 val result = state.meltToLightning(quoted.mintUrl, quoted.quote)
                 _meltState.value = CashuMeltFlowState.Completed(result.paidAmount, result.fees, result.preimage)
             } catch (e: Exception) {
-                _meltState.value = CashuMeltFlowState.Error(describeMintError(e))
+                _meltState.value = CashuMeltFlowState.Error(describeMintError(e), e.cashuMeltNotice)
             }
         }
     }

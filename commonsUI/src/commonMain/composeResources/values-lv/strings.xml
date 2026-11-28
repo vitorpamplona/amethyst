@@ -1053,6 +1053,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Pievienot vai noņemt mints, ko izmanto jūsu maks.</string>
     <string name="cashu_settings_my_recommendations">Mani mint ieteikumi</string>
     <string name="cashu_settings_recommendations_subtitle">Publiski atbalstiet mints, kuriem uzticaties, un atsauciet ieteikumus.</string>
+    <string name="zap_cashu_melt_failed">Cashu maksājums neizdevās: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashu maka nevar segt šo rēķinu ar rezervi maksām.</string>
+    <string name="cashu_melt_insufficient">Šajā mint nav pietiekami daudz ecash: makā ir %1$s, bet maksājumam vajag %2$s.</string>
+    <string name="cashu_melt_no_quote">Mint atteicās noteikt rēķina summu (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Mint noteica %1$s rēķinam par %2$s. Nekas netika samaksāts.</string>
+    <string name="cashu_melt_fee_too_high">Mint prasa %1$s maksu, lai samaksātu rēķinu par %2$s; tas ir vairāk nekā %3$s, ko atļauj šī maka. Nekas netika samaksāts.</string>
+    <string name="cashu_melt_refused">Mint nesamaksāja rēķinu (%1$s).</string>
+    <string name="cashu_melt_aborted">Paraksts tika liegts, tāpēc nekas netika samaksāts.</string>
+    <string name="cashu_melt_paid_unrecorded">Rēķins ir samaksāts (%1$s), bet tā reģistrēšana makā neizdevās. Nemaksā to vēlreiz.</string>
+    <string name="payment_paid_but_not_recorded">Samaksāts, bet nav reģistrēts makā</string>
+    <string name="cashu_recover_from_seed_hint">Izmanto “Atjaunot no sēklas” Cashu makas iestatījumos, lai atgūtu %1$s, ko neizdevās reģistrēt.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) tika nosūtīts, bet tā reģistrēšana makā neizdevās.</string>
+    <string name="nutzap_not_sent_denied">Nutzap netika nosūtīts: parakstīšana vai publicēšana tika liegta.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sati</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat ir atpakaļ makā.</item>
+        <item quantity="other">%1$s sati ir atpakaļ makā.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat tika iztērēts mint un to nevar atgūt.</item>
+        <item quantity="other">%1$s sati tika iztērēti mint un tos nevar atgūt.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Jūs vēl neesat ieteicis nevienu mint. Pieskarieties īkšķim uz augšu blakus mint, lai publiski to atbalstītu.</string>
     <string name="cashu_settings_delete_recommendation">Dzēst ieteikumu</string>
     <string name="cashu_settings_delete_confirm_title">Atsaukt ieteikumu?</string>

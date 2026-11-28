@@ -1041,6 +1041,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">உங்கள் பணப்பை பயன்படுத்தும் mints-ஐ சேர்க்கவும் அல்லது அகற்றவும்.</string>
     <string name="cashu_settings_my_recommendations">என் mint பரிந்துரைகள்</string>
     <string name="cashu_settings_recommendations_subtitle">நீங்கள் நம்பும் mints-க்கு பொதுவில் ஆதரவளிக்கவும், பரிந்துரைகளை திரும்பப் பெறவும்.</string>
+    <string name="zap_cashu_melt_failed">Cashu பணம் செலுத்த முடியவில்லை: %1$s</string>
+    <string name="cashu_melt_cannot_fund">கட்டண இடத்துடன் Cashu பணப்பையால் இந்த விலைப்பட்டியலை செலுத்த முடியாது.</string>
+    <string name="cashu_melt_insufficient">இந்த mint-இல் போதுமான ecash இல்லை: பணப்பையில் %1$s உள்ளது, பணம் செலுத்த %2$s தேவை.</string>
+    <string name="cashu_melt_no_quote">mint விலைப்பட்டியலுக்கு மேற்கோள் வழங்க மறுத்தது (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">%2$s விலைப்பட்டியலுக்கு mint %1$s என்று மேற்கோளிட்டது. எதுவும் செலுத்தப்படவில்லை.</string>
+    <string name="cashu_melt_fee_too_high">%2$s விலைப்பட்டியலை செலுத்த %1$s கட்டணம் mint கேட்கிறது; இந்த பணப்பை அனுமதிக்கும் %3$s ஐ விட அதிகம். எதுவும் செலுத்தப்படவில்லை.</string>
+    <string name="cashu_melt_refused">mint விலைப்பட்டியலை செலுத்தவில்லை (%1$s).</string>
+    <string name="cashu_melt_aborted">கையொப்பம் மறுக்கப்பட்டது, எனவே எதுவும் செலுத்தப்படவில்லை.</string>
+    <string name="cashu_melt_paid_unrecorded">விலைப்பட்டியல் செலுத்தப்பட்டது (%1$s), ஆனால் பணப்பையில் பதிவு செய்ய முடியவில்லை. மீண்டும் செலுத்த வேண்டாம்.</string>
+    <string name="payment_paid_but_not_recorded">செலுத்தப்பட்டது, ஆனால் பணப்பையில் பதிவு செய்யப்படவில்லை</string>
+    <string name="cashu_recover_from_seed_hint">பதிவு செய்ய முடியாத %1$s ஐ மீட்க Cashu பணப்பை அமைப்புகளில் “விதையிலிருந்து மீட்டெடுக்கவும்” ஐப் பயன்படுத்துங்கள்.</string>
+    <string name="nutzap_sent_unrecorded">nutzap (%1$s) அனுப்பப்பட்டது, ஆனால் பணப்பையில் பதிவு செய்ய முடியவில்லை.</string>
+    <string name="nutzap_not_sent_denied">nutzap அனுப்பப்படவில்லை: கையொப்பம் அல்லது வெளியீடு மறுக்கப்பட்டது.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sats</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat பணப்பையில் திரும்ப வந்தது.</item>
+        <item quantity="other">%1$s sats பணப்பையில் திரும்ப வந்தன.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat mint-இல் செலவாகியது, மீட்க முடியாது.</item>
+        <item quantity="other">%1$s sats mint-இல் செலவாகின, மீட்க முடியாது.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">நீங்கள் இன்னும் எந்த mint-ஐயும் பரிந்துரைக்கவில்லை. பொதுவில் ஆதரவளிக்க ஒரு mint-க்கு அடுத்த கட்டை விரல் ஐகானை தட்டவும்.</string>
     <string name="cashu_settings_delete_recommendation">பரிந்துரையை நீக்கவும்</string>
     <string name="cashu_settings_delete_confirm_title">பரிந்துரையை திரும்பப் பெறவா?</string>

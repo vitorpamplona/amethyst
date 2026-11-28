@@ -24,6 +24,7 @@ import com.vitorpamplona.amethyst.commons.cashu.CashuWalletReader
 import com.vitorpamplona.amethyst.commons.cashu.ops.CashuWalletOps
 import com.vitorpamplona.amethyst.commons.cashu.ops.CounterSettlement
 import com.vitorpamplona.amethyst.commons.cashu.ops.MeltCompleted
+import com.vitorpamplona.amethyst.commons.cashu.ops.MeltNotPaidException
 import com.vitorpamplona.amethyst.commons.cashu.ops.NutzapSent
 import com.vitorpamplona.amethyst.commons.cashu.ops.RestoreOutcome
 import com.vitorpamplona.amethyst.commons.cashu.ops.SendTokenCompleted
@@ -34,6 +35,7 @@ import com.vitorpamplona.amethyst.commons.model.AccountSettings
 import com.vitorpamplona.amethyst.commons.model.Note
 import com.vitorpamplona.amethyst.commons.model.cache.LocalCache
 import com.vitorpamplona.amethyst.commons.model.localPrivKeyOrNull
+import com.vitorpamplona.amethyst.commons.notices.CashuMeltNotice
 import com.vitorpamplona.amethyst.commons.relayClient.assemblers.cashuProofBackfillFilters
 import com.vitorpamplona.quartz.nip01Core.core.Event
 import com.vitorpamplona.quartz.nip01Core.core.HexKey
@@ -1751,11 +1753,18 @@ class CashuWalletState(
         // it passes skipScrub=true to avoid a second NUT-07 /checkstate round-trip.
         if (!skipScrub) scrubLocallyStaleProofs(mintUrl)
 
+        // The outcome is applied to the local indexes before the caller sees it: the new
+        // keep/change events otherwise reach [_tokenEntries] only through
+        // `cache.live.newEventBundles` (~1s later). Applying here is idempotent, the bundle
+        // path adds with `putIfAbsent`.
         val available = _tokenEntries.value.filter { it.content.mint == mintUrl }
         if (available.isEmpty()) {
-            throw IllegalStateException("No proofs available at $mintUrl")
+            throw MeltNotPaidException(CashuMeltNotice.CannotFund(heldSats = 0L, neededSats = quote.amount + quote.feeReserve))
         }
-        return ops.meltToLightning(mintUrl, quote, available)
+        val completed = ops.meltToLightning(mintUrl, quote, available)
+        applyEvents(listOfNotNull(completed.newTokenEvent, completed.prePaidChangeEvent))
+        removeEvents(completed.deleteEvent.deleteEventIds().toSet())
+        return completed
     }
 
     /**

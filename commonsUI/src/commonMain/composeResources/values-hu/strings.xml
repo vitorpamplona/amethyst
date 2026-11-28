@@ -2147,6 +2147,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Adja hozzá vagy távolítsa el a pénztárcájában használt pénzverdéket.</string>
     <string name="cashu_settings_my_recommendations">Saját pénzverde-ajánlások</string>
     <string name="cashu_settings_recommendations_subtitle">Vállaljon nyilvánosan kezességet az Ön által megbízhatónak tartott pénzverdékért, és vonja vissza az ajánlásokat.</string>
+    <string name="zap_cashu_melt_failed">A Cashu fizetés nem sikerült: %1$s</string>
+    <string name="cashu_melt_cannot_fund">A Cashu pénztárca a díjak ráhagyásával nem fedi ezt a számlát.</string>
+    <string name="cashu_melt_insufficient">Nincs elég ecash ezen a pénzverdénél: a pénztárcában %1$s van, a fizetéshez %2$s kell.</string>
+    <string name="cashu_melt_no_quote">A pénzverde nem adott árajánlatot a számlára (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">A pénzverde egy %2$s összegű számlára %1$s összegű ajánlatot adott. Semmi sem lett kifizetve.</string>
+    <string name="cashu_melt_fee_too_high">A pénzverde %1$s díjat kér egy %2$s összegű számla kifizetéséhez, többet, mint amennyit ez a pénztárca megenged (%3$s). Semmi sem lett kifizetve.</string>
+    <string name="cashu_melt_refused">A pénzverde nem fizette ki a számlát (%1$s).</string>
+    <string name="cashu_melt_aborted">Az aláírás megtagadva, így semmi sem lett kifizetve.</string>
+    <string name="cashu_melt_paid_unrecorded">A számla ki lett fizetve (%1$s), de a pénztárcába való rögzítése nem sikerült. Ne fizesse ki újra.</string>
+    <string name="payment_paid_but_not_recorded">Kifizetve, de nem sikerült rögzíteni a pénztárcában</string>
+    <string name="cashu_recover_from_seed_hint">A rögzíthetetlen %1$s visszaszerzéséhez használja a „Helyrehozás seed-ből” lehetőséget a Cashu pénztárca beállításaiban.</string>
+    <string name="nutzap_sent_unrecorded">A nutzap (%1$s) el lett küldve, de a pénztárcába való rögzítése nem sikerült.</string>
+    <string name="nutzap_not_sent_denied">A nutzap nem lett elküldve: az aláírás vagy a közzététel megtagadva.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s sat</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat visszakerült a pénztárcába.</item>
+        <item quantity="other">%1$s sat visszakerült a pénztárcába.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">A pénzverdénél elköltve, nem helyreállítható: %1$s.</item>
+        <item quantity="other">A pénzverdénél elköltve, nem helyreállítható: %1$s.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Még nem ajánlott egy pénzverdét sem. Koppintson a felfelé mutató hüvelykujjra egy pénzverde mellett, hogy nyilvánosan ajánlja azt.</string>
     <string name="cashu_settings_delete_recommendation">Ajánlás törlése</string>
     <string name="cashu_settings_delete_confirm_title">Visszavonja az ajánlást?</string>

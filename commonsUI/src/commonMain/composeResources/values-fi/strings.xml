@@ -1038,6 +1038,31 @@
     <string name="cashu_settings_edit_wallet_subtitle">Lisää tai poista lompakkosi käyttämiä minttejä.</string>
     <string name="cashu_settings_my_recommendations">Omat mint-suositukseni</string>
     <string name="cashu_settings_recommendations_subtitle">Suosittele julkisesti luottamiasi minttejä ja peruuta suosituksia.</string>
+    <string name="zap_cashu_melt_failed">Cashu-maksu epäonnistui: %1$s</string>
+    <string name="cashu_melt_cannot_fund">Cashu-lompakon saldo ei riitä tähän laskuun ja sen maksuihin varauksineen.</string>
+    <string name="cashu_melt_insufficient">Tällä mintillä ei ole riittävästi ecashia: lompakossa on %1$s ja maksu vaatii %2$s.</string>
+    <string name="cashu_melt_no_quote">Mint ei antanut tarjousta laskusta (%1$s).</string>
+    <string name="cashu_melt_wrong_quote">Mint noteerasi laskulle, jonka summa on %2$s, hinnan %1$s. Mitään ei maksettu.</string>
+    <string name="cashu_melt_fee_too_high">Mint vaatii %1$s maksuina %2$s summaisen laskun maksamiseksi; enemmän kuin tämä lompakko sallii (%3$s). Mitään ei maksettu.</string>
+    <string name="cashu_melt_refused">Mint ei maksanut laskua (%1$s).</string>
+    <string name="cashu_melt_aborted">Allekirjoitus estettiin, joten mitään ei maksettu.</string>
+    <string name="cashu_melt_paid_unrecorded">Lasku maksettiin (%1$s), mutta sen tallentaminen lompakkoon epäonnistui. Älä maksa sitä uudelleen.</string>
+    <string name="payment_paid_but_not_recorded">Maksettu, mutta ei tallennettu lompakkoon</string>
+    <string name="cashu_recover_from_seed_hint">Palauta tallentamattomat %1$s Cashu-lompakon asetuksien toiminnolla ”Palauta siemenestä”.</string>
+    <string name="nutzap_sent_unrecorded">Nutzap (%1$s) lähetettiin, mutta sen tallentaminen lompakkoon epäonnistui.</string>
+    <string name="nutzap_not_sent_denied">Nutzapia ei lähetetty: allekirjoitus tai julkaisu estettiin.</string>
+    <plurals name="cashu_sats">
+        <item quantity="one">%1$s sat</item>
+        <item quantity="other">%1$s satia</item>
+    </plurals>
+    <plurals name="cashu_sats_returned">
+        <item quantity="one">%1$s sat on takaisin lompakossa.</item>
+        <item quantity="other">%1$s satia on takaisin lompakossa.</item>
+    </plurals>
+    <plurals name="cashu_sats_lost">
+        <item quantity="one">%1$s sat käytettiin mintissä eikä sitä voitu palauttaa.</item>
+        <item quantity="other">%1$s satia käytettiin mintissä eikä niitä voitu palauttaa.</item>
+    </plurals>
     <string name="cashu_settings_no_recommendations">Et ole vielä suositellut yhtään minttiä. Napauta peukkua ylös mintin vieressä suositellaksesi sitä julkisesti.</string>
     <string name="cashu_settings_delete_recommendation">Poista suositus</string>
     <string name="cashu_settings_delete_confirm_title">Peruuta suositus?</string>
